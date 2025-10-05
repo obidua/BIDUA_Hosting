@@ -1,14 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Server, Menu, X, ChevronDown, ShoppingCart } from 'lucide-react';
+import { Server, Menu, X, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useCart } from '../../contexts/CartContext';
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [productsOpen, setProductsOpen] = useState(false);
   const { user } = useAuth();
-  const { itemCount } = useCart();
 
   const handleProductsMouseEnter = () => {
     setProductsOpen(true);
@@ -74,19 +72,6 @@ export function Header() {
           </div>
 
           <div className="hidden md:flex items-center space-x-4">
-            {user && (
-              <Link
-                to="/cart"
-                className="relative p-2 text-gray-700 hover:text-blue-600 transition"
-              >
-                <ShoppingCart className="h-6 w-6" />
-                {itemCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                    {itemCount}
-                  </span>
-                )}
-              </Link>
-            )}
             {user ? (
               <Link
                 to="/dashboard"
