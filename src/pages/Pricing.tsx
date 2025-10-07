@@ -514,7 +514,7 @@ export function Pricing() {
   };
 
   return (
-    <div className="bg-white">
+    <div className="bg-slate-950">
       <section className="bg-gradient-to-br from-slate-900 via-cyan-900 to-slate-900 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
@@ -545,15 +545,15 @@ export function Pricing() {
         </div>
       </section>
 
-      <section className="py-12 bg-gradient-to-b from-gray-50 to-white">
+      <section className="py-12 bg-slate-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Choose Your Configuration</h2>
-            <p className="text-lg text-gray-600">Select billing cycle and server type to view pricing</p>
+            <h2 className="text-3xl font-bold text-white mb-4">Choose Your Configuration</h2>
+            <p className="text-lg text-slate-400">Select billing cycle and server type to view pricing</p>
           </div>
 
           <div className="flex justify-center mb-8">
-            <div className="inline-flex flex-wrap items-center bg-white rounded-xl p-2 shadow-lg border border-gray-200 gap-2">
+            <div className="inline-flex flex-wrap items-center bg-slate-950 rounded-xl p-2 shadow-lg border-2 border-cyan-500 gap-2">
               {billingCycles.map((cycle) => (
                 <button
                   key={cycle.id}
@@ -561,7 +561,7 @@ export function Pricing() {
                   className={`px-4 py-2.5 rounded-lg font-semibold text-sm transition-all ${
                     billingCycle === cycle.id
                       ? 'bg-cyan-600 text-white shadow-md'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800 border border-cyan-500/30'
                   }`}
                 >
                   {cycle.name}
@@ -584,8 +584,8 @@ export function Pricing() {
                 onClick={() => setSelectedType(type.id)}
                 className={`flex items-center space-x-3 px-6 py-4 rounded-xl font-semibold transition-all shadow-md ${
                   selectedType === type.id
-                    ? `bg-${type.color}-600 text-white shadow-lg scale-105`
-                    : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-cyan-300 hover:shadow-lg'
+                    ? 'bg-cyan-600 text-white shadow-lg scale-105 border-2 border-cyan-400'
+                    : 'bg-slate-950 text-cyan-400 border-2 border-cyan-500 hover:bg-slate-800 hover:shadow-lg hover:shadow-cyan-500/30'
                 }`}
               >
                 <type.icon className="h-6 w-6" />
@@ -596,13 +596,13 @@ export function Pricing() {
         </div>
       </section>
 
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-slate-950">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">
+            <h2 className="text-3xl font-bold text-white mb-3">
               {selectedPlanType?.name} Plans
             </h2>
-            <p className="text-lg text-gray-600">
+            <p className="text-lg text-slate-400">
               Save up to {getDiscountPercent()}% on {billingCycle} billing • Pricing shown per month
             </p>
           </div>
@@ -611,8 +611,8 @@ export function Pricing() {
             {currentPlans.map((plan, index) => (
               <div
                 key={index}
-                className={`bg-white rounded-2xl shadow-lg overflow-hidden transition-all transform hover:scale-105 hover:shadow-2xl ${
-                  plan.popular ? 'ring-2 ring-blue-600' : 'border border-gray-200'
+                className={`bg-slate-900 rounded-2xl shadow-lg overflow-hidden transition-all transform hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/30 ${
+                  plan.popular ? 'ring-2 ring-cyan-500 border-2 border-cyan-500' : 'border-2 border-cyan-500'
                 }`}
               >
                 {plan.popular && (
@@ -622,7 +622,7 @@ export function Pricing() {
                 )}
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-2xl font-bold text-gray-900">{plan.name}</h3>
+                    <h3 className="text-2xl font-bold text-white">{plan.name}</h3>
                     {getDiscountPercent() > 0 && (
                       <div className="bg-green-100 text-green-700 px-2 py-1 rounded-md text-xs font-bold">
                         SAVE {getDiscountPercent()}%
@@ -632,15 +632,15 @@ export function Pricing() {
 
                   <div className="mb-6">
                     {getDiscountPercent() > 0 && (
-                      <div className="text-sm text-gray-500 line-through mb-1">
+                      <div className="text-sm text-slate-500 line-through mb-1">
                         ₹{calculateOriginalPrice(plan).toLocaleString()}/month
                       </div>
                     )}
                     <div className="flex items-baseline">
-                      <span className="text-4xl font-bold text-gray-900">
+                      <span className="text-4xl font-bold text-white">
                         ₹{calculateDisplayPrice(plan).toLocaleString()}
                       </span>
-                      <span className="text-gray-600 ml-2">/month</span>
+                      <span className="text-slate-400 ml-2">/month</span>
                     </div>
                     {billingCycle !== 'monthly' && (
                       <p className="text-sm text-green-600 mt-2 font-medium">
@@ -649,22 +649,22 @@ export function Pricing() {
                     )}
                   </div>
 
-                  <div className="space-y-3 mb-6 border-t border-b border-gray-100 py-4">
+                  <div className="space-y-3 mb-6 border-t border-b border-cyan-500/30 py-4">
                     <div className="flex items-center text-sm">
                       <Cpu className="h-4 w-4 text-cyan-400 mr-2 flex-shrink-0" />
-                      <span className="font-semibold text-gray-700">{plan.vcpu} vCPU</span>
+                      <span className="font-semibold text-white">{plan.vcpu} vCPU</span>
                     </div>
                     <div className="flex items-center text-sm">
                       <MemoryStick className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
-                      <span className="font-semibold text-gray-700">{plan.ram}GB RAM</span>
+                      <span className="font-semibold text-white">{plan.ram}GB RAM</span>
                     </div>
                     <div className="flex items-center text-sm">
                       <HardDrive className="h-4 w-4 text-orange-600 mr-2 flex-shrink-0" />
-                      <span className="font-semibold text-gray-700">{plan.storage}GB SSD</span>
+                      <span className="font-semibold text-white">{plan.storage}GB SSD</span>
                     </div>
                     <div className="flex items-center text-sm">
                       <Network className="h-4 w-4 text-purple-600 mr-2 flex-shrink-0" />
-                      <span className="font-semibold text-gray-700">{plan.bandwidth}TB Bandwidth</span>
+                      <span className="font-semibold text-white">{plan.bandwidth}TB Bandwidth</span>
                     </div>
                   </div>
 
@@ -672,7 +672,7 @@ export function Pricing() {
                     {plan.features.slice(4).map((feature, i) => (
                       <li key={i} className="flex items-start text-sm">
                         <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                        <span className="text-gray-700">{feature}</span>
+                        <span className="text-slate-300">{feature}</span>
                       </li>
                     ))}
                   </ul>
@@ -682,7 +682,7 @@ export function Pricing() {
                     className={`block w-full text-center px-6 py-3.5 rounded-lg font-bold transition-all ${
                       plan.popular
                         ? 'bg-gradient-to-r from-cyan-600 to-teal-600 text-white hover:from-cyan-500 hover:to-teal-500 shadow-md'
-                        : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                        : 'bg-slate-800 text-cyan-400 hover:bg-slate-700 border-2 border-cyan-500'
                     }`}
                   >
                     Deploy Now
@@ -694,13 +694,13 @@ export function Pricing() {
         </div>
       </section>
 
-      <section className="py-16 bg-gradient-to-br from-gray-50 to-gray-100">
+      <section className="py-16 bg-slate-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl font-bold text-white mb-4">
               All Plans Include
             </h2>
-            <p className="text-lg text-gray-600">Enterprise features included at no extra cost</p>
+            <p className="text-lg text-slate-400">Enterprise features included at no extra cost</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
@@ -713,31 +713,31 @@ export function Pricing() {
               { icon: CheckCircle, title: 'Free Upgrades', desc: 'Flexible scaling options' },
               { icon: Database, title: 'Automated Backups', desc: 'Daily snapshots included' },
             ].map((feature, index) => (
-              <div key={index} className="bg-white p-6 rounded-xl shadow-sm hover:shadow-lg transition border border-gray-200">
+              <div key={index} className="bg-slate-950 p-6 rounded-xl shadow-sm hover:shadow-lg hover:shadow-cyan-500/30 transition border-2 border-cyan-500">
                 <feature.icon className="h-10 w-10 text-cyan-400 mb-3" />
-                <h3 className="font-bold text-gray-900 mb-1">{feature.title}</h3>
-                <p className="text-sm text-gray-600">{feature.desc}</p>
+                <h3 className="font-bold text-white mb-1">{feature.title}</h3>
+                <p className="text-sm text-slate-400">{feature.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-slate-950">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl font-bold text-white mb-4">
               Choose the Right Plan for Your Needs
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-gradient-to-br from-blue-50 to-white p-8 rounded-2xl border-2 border-blue-200">
+            <div className="bg-slate-900 p-8 rounded-2xl border-2 border-cyan-500 hover:shadow-lg hover:shadow-cyan-500/30 transition">
               <Server className="h-12 w-12 text-cyan-400 mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 mb-3">General Purpose VM</h3>
-              <p className="text-gray-700 mb-4">
+              <h3 className="text-xl font-bold text-white mb-3">General Purpose VM</h3>
+              <p className="text-slate-300 mb-4">
                 Balanced CPU and memory resources perfect for web applications, development environments, and small to medium databases.
               </p>
-              <ul className="space-y-2 text-sm text-gray-600">
+              <ul className="space-y-2 text-sm text-slate-400">
                 <li>• Web hosting and CMS platforms</li>
                 <li>• Application development</li>
                 <li>• Small business workloads</li>
@@ -745,13 +745,13 @@ export function Pricing() {
               </ul>
             </div>
 
-            <div className="bg-gradient-to-br from-orange-50 to-white p-8 rounded-2xl border-2 border-orange-200">
-              <Zap className="h-12 w-12 text-orange-600 mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 mb-3">CPU Optimized VM</h3>
-              <p className="text-gray-700 mb-4">
+            <div className="bg-slate-900 p-8 rounded-2xl border-2 border-cyan-500 hover:shadow-lg hover:shadow-cyan-500/30 transition">
+              <Zap className="h-12 w-12 text-cyan-400 mb-4" />
+              <h3 className="text-xl font-bold text-white mb-3">CPU Optimized VM</h3>
+              <p className="text-slate-300 mb-4">
                 Dedicated CPU cores with high-performance Intel Xeon processors for compute-intensive applications and workloads.
               </p>
-              <ul className="space-y-2 text-sm text-gray-600">
+              <ul className="space-y-2 text-sm text-slate-400">
                 <li>• Video encoding and rendering</li>
                 <li>• Scientific computing</li>
                 <li>• High-traffic web servers</li>
@@ -759,13 +759,13 @@ export function Pricing() {
               </ul>
             </div>
 
-            <div className="bg-gradient-to-br from-green-50 to-white p-8 rounded-2xl border-2 border-green-200">
-              <Database className="h-12 w-12 text-green-600 mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Memory Optimized VM</h3>
-              <p className="text-gray-700 mb-4">
+            <div className="bg-slate-900 p-8 rounded-2xl border-2 border-cyan-500 hover:shadow-lg hover:shadow-cyan-500/30 transition">
+              <Database className="h-12 w-12 text-cyan-400 mb-4" />
+              <h3 className="text-xl font-bold text-white mb-3">Memory Optimized VM</h3>
+              <p className="text-slate-300 mb-4">
                 High memory-to-CPU ratio designed for memory-intensive applications, large databases, and in-memory processing.
               </p>
-              <ul className="space-y-2 text-sm text-gray-600">
+              <ul className="space-y-2 text-sm text-slate-400">
                 <li>• Large database systems</li>
                 <li>• In-memory caching (Redis, Memcached)</li>
                 <li>• Big data analytics</li>
@@ -776,7 +776,7 @@ export function Pricing() {
         </div>
       </section>
 
-      <section className="py-16 bg-gradient-to-br from-slate-900 to-blue-900 text-white">
+      <section className="py-16 bg-gradient-to-br from-slate-900 via-cyan-900 to-slate-900 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Need a Custom Solution?
@@ -789,7 +789,7 @@ export function Pricing() {
           </p>
           <Link
             to="/contact"
-            className="inline-block px-8 py-4 bg-white text-cyan-400 rounded-lg font-bold hover:bg-blue-50 transition transform hover:scale-105 shadow-lg"
+            className="inline-block px-8 py-4 bg-white text-cyan-600 rounded-lg font-bold hover:bg-cyan-50 transition transform hover:scale-105 shadow-lg border-2 border-cyan-400"
           >
             Contact Sales Team
           </Link>

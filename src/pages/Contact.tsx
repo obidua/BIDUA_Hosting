@@ -41,7 +41,7 @@ export function Contact() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
             <div className="lg:col-span-2">
-              <div className="bg-slate-900 rounded-xl shadow-lg p-8">
+              <div className="bg-slate-900 rounded-xl shadow-lg p-8 border-2 border-cyan-500">
                 <h2 className="text-2xl font-bold text-white mb-6">
                   Send us a message
                 </h2>
@@ -62,7 +62,7 @@ export function Contact() {
                         value={formData.name}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-3 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                        className="w-full px-4 py-3 bg-slate-800 border-2 border-cyan-500 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-slate-400"
                         placeholder="John Doe"
                       />
                     </div>
@@ -76,7 +76,7 @@ export function Contact() {
                         value={formData.email}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-3 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                        className="w-full px-4 py-3 bg-slate-800 border-2 border-cyan-500 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-slate-400"
                         placeholder="john@example.com"
                       />
                     </div>
@@ -92,7 +92,7 @@ export function Contact() {
                         name="phone"
                         value={formData.phone}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                        className="w-full px-4 py-3 bg-slate-800 border-2 border-cyan-500 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-slate-400"
                         placeholder="+1 (555) 000-0000"
                       />
                     </div>
@@ -105,7 +105,7 @@ export function Contact() {
                         value={formData.subject}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-3 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                        className="w-full px-4 py-3 bg-slate-800 border-2 border-cyan-500 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-slate-400"
                       >
                         <option value="">Select a subject</option>
                         <option value="sales">Sales Inquiry</option>
@@ -144,7 +144,7 @@ export function Contact() {
             </div>
 
             <div className="space-y-6">
-              <div className="bg-slate-900 rounded-xl shadow-lg p-8">
+              <div className="bg-slate-900 rounded-xl shadow-lg p-8 border-2 border-cyan-500">
                 <h3 className="text-xl font-bold text-white mb-6">
                   Contact Information
                 </h3>
@@ -187,7 +187,7 @@ export function Contact() {
                 </div>
               </div>
 
-              <div className="bg-slate-800 rounded-xl p-8 border border-cyan-500/30">
+              <div className="bg-slate-800 rounded-xl p-8 border-2 border-cyan-500">
                 <h3 className="text-lg font-bold text-white mb-3">
                   Business Hours
                 </h3>

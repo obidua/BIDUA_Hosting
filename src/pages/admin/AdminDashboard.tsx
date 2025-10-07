@@ -89,7 +89,7 @@ export function AdminDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Admin Dashboard</h2>
+        <h2 className="text-2xl font-bold text-white">Admin Dashboard</h2>
         <p className="text-slate-400">Overview of your hosting platform</p>
       </div>
 
@@ -98,7 +98,7 @@ export function AdminDashboard() {
           const colors = colorClasses[stat.color];
           const isPositive = stat.change.startsWith('+');
           return (
-            <div key={index} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div key={index} className="bg-slate-900 p-6 rounded-xl shadow-sm border-2 border-cyan-500 hover:shadow-lg hover:shadow-cyan-500/30 transition">
               <div className="flex items-center justify-between mb-4">
                 <div className={`w-12 h-12 ${colors.bg} rounded-lg flex items-center justify-center`}>
                   <stat.icon className={`h-6 w-6 ${colors.text}`} />
@@ -108,23 +108,23 @@ export function AdminDashboard() {
                 </span>
               </div>
               <p className="text-sm text-slate-400 mb-1">{stat.label}</p>
-              <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+              <p className="text-2xl font-bold text-white">{stat.value}</p>
             </div>
           );
         })}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+        <div className="bg-slate-900 rounded-xl shadow-sm border-2 border-cyan-500">
+          <div className="p-6 border-b border-cyan-500">
+            <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
           </div>
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-cyan-500/30">
             {recentActivity.map((activity) => (
               <div key={activity.id} className="p-6 hover:bg-slate-800 transition">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="font-medium text-gray-900">{activity.action}</p>
+                    <p className="font-medium text-white">{activity.action}</p>
                     <p className="text-sm text-slate-400 mt-1">{activity.user}</p>
                   </div>
                   <span className="text-sm text-slate-500">{activity.time}</span>
@@ -134,10 +134,10 @@ export function AdminDashboard() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+        <div className="bg-slate-900 rounded-xl shadow-sm border-2 border-cyan-500 p-6">
+          <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
           <div className="space-y-3">
-            <button className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold text-left">
+            <button className="w-full px-4 py-3 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition font-semibold text-left border-2 border-cyan-500">
               Add New User
             </button>
             <button className="w-full px-4 py-3 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-lg hover:from-emerald-400 hover:to-green-400 transition font-semibold text-left">

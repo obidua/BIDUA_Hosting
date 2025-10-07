@@ -77,7 +77,7 @@ export function Solutions() {
               return (
                 <div
                   key={index}
-                  className="bg-slate-900 rounded-xl shadow-md hover:shadow-xl transition border border-cyan-500/20 overflow-hidden group"
+                  className="bg-slate-900 rounded-xl shadow-md hover:shadow-xl hover:shadow-cyan-500/30 transition border-2 border-cyan-500 overflow-hidden group"
                 >
                   <div className="p-8">
                     <div className={`inline-flex items-center justify-center w-16 h-16 ${colors.bg} rounded-lg mb-4 group-hover:scale-110 transition`}>
@@ -123,7 +123,7 @@ export function Solutions() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-slate-900 p-8 rounded-xl shadow-sm">
+            <div className="bg-slate-900 p-8 rounded-xl shadow-sm border-2 border-cyan-500">
               <h3 className="text-2xl font-bold text-white mb-4">Migration Services</h3>
               <p className="text-slate-400 mb-6">
                 Seamlessly migrate your existing infrastructure to our cloud platform with minimal downtime.
@@ -148,7 +148,7 @@ export function Solutions() {
               </ul>
             </div>
 
-            <div className="bg-slate-900 p-8 rounded-xl shadow-sm">
+            <div className="bg-slate-900 p-8 rounded-xl shadow-sm border-2 border-cyan-500">
               <h3 className="text-2xl font-bold text-white mb-4">Consulting Services</h3>
               <p className="text-slate-400 mb-6">
                 Get expert advice on cloud architecture, optimization, and best practices.

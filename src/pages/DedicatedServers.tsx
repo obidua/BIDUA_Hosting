@@ -69,7 +69,7 @@ export function DedicatedServers() {
               { icon: Network, title: 'Premium Network', desc: 'Up to 10Gbps bandwidth' },
               { icon: Shield, title: 'DDoS Protection', desc: 'Enterprise-grade security' },
             ].map((item, index) => (
-              <div key={index} className="bg-slate-900 p-6 rounded-lg shadow-sm text-center">
+              <div key={index} className="bg-slate-900 p-6 rounded-lg shadow-sm text-center border-2 border-cyan-500">
                 <item.icon className="h-10 w-10 text-cyan-400 mx-auto mb-3" />
                 <h3 className="font-semibold text-white mb-1">{item.title}</h3>
                 <p className="text-sm text-slate-400">{item.desc}</p>
@@ -94,8 +94,8 @@ export function DedicatedServers() {
             {servers.map((server, index) => (
               <div
                 key={index}
-                className={`bg-slate-900 rounded-xl shadow-lg overflow-hidden ${
-                  server.popular ? 'ring-2 ring-cyan-500 transform scale-105' : 'border border-cyan-500/20'
+                className={`bg-slate-900 rounded-xl shadow-lg overflow-hidden hover:shadow-cyan-500/30 transition ${
+                  server.popular ? 'ring-2 ring-cyan-500 transform scale-105 border-2 border-cyan-500' : 'border-2 border-cyan-500'
                 }`}
               >
                 {server.popular && (
@@ -115,7 +115,7 @@ export function DedicatedServers() {
                     <span className="text-slate-400">/month</span>
                   </div>
 
-                  <div className="space-y-3 mb-6 bg-slate-900 p-4 rounded-lg">
+                  <div className="space-y-3 mb-6 bg-slate-950 p-4 rounded-lg border-2 border-cyan-500/50">
                     <div>
                       <p className="text-sm text-slate-400">Processor</p>
                       <p className="font-semibold text-white">{server.specs.cpu}</p>
@@ -173,7 +173,7 @@ export function DedicatedServers() {
           </p>
           <Link
             to="/contact"
-            className="inline-block px-8 py-4 bg-slate-900 text-cyan-400 rounded-lg font-semibold hover:bg-cyan-400 transition"
+            className="inline-block px-8 py-4 bg-white text-cyan-600 rounded-lg font-semibold hover:bg-cyan-50 transition border-2 border-cyan-400"
           >
             Contact Sales Team
           </Link>

@@ -98,7 +98,7 @@ export function Overview() {
             <Link
               key={index}
               to={stat.link}
-              className={`bg-slate-900 p-6 rounded-xl shadow-sm border border-cyan-500/20 ${colors.hover} transition`}
+              className={`bg-slate-900 p-6 rounded-xl shadow-sm border-2 border-cyan-500 ${colors.hover} transition hover:shadow-lg hover:shadow-cyan-500/30`}
             >
               <div className="flex items-center justify-between mb-4">
                 <div className={`w-12 h-12 ${colors.bg} rounded-lg flex items-center justify-center`}>
@@ -113,8 +113,8 @@ export function Overview() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-slate-900 rounded-xl shadow-sm border border-cyan-500/20">
-          <div className="p-6 border-b border-cyan-500/20">
+        <div className="bg-slate-900 rounded-xl shadow-sm border-2 border-cyan-500">
+          <div className="p-6 border-b border-cyan-500">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-white">Your Servers</h3>
               <Link
@@ -153,8 +153,8 @@ export function Overview() {
           </div>
         </div>
 
-        <div className="bg-slate-900 rounded-xl shadow-sm border border-cyan-500/20">
-          <div className="p-6 border-b border-cyan-500/20">
+        <div className="bg-slate-900 rounded-xl shadow-sm border-2 border-cyan-500">
+          <div className="p-6 border-b border-cyan-500">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-white">Recent Invoices</h3>
               <Link
@@ -192,14 +192,14 @@ export function Overview() {
         </div>
       </div>
 
-      <div className="bg-gradient-to-br from-slate-900 via-cyan-900 to-slate-900 rounded-xl shadow-lg p-8 text-white">
+      <div className="bg-gradient-to-br from-slate-900 via-cyan-900 to-slate-900 rounded-xl shadow-lg p-8 text-white border-2 border-cyan-500">
         <h3 className="text-2xl font-bold mb-2">Need More Resources?</h3>
         <p className="text-cyan-200 mb-6">
           Upgrade your servers or add new ones to scale your infrastructure
         </p>
         <Link
           to="/pricing"
-          className="inline-block px-6 py-3 bg-slate-900 text-cyan-400 rounded-lg font-semibold hover:bg-cyan-400 transition"
+          className="inline-block px-6 py-3 bg-white text-cyan-600 rounded-lg font-semibold hover:bg-cyan-50 transition border-2 border-cyan-400"
         >
           View Plans
         </Link>
