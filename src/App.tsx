@@ -9,6 +9,7 @@ import { Pricing } from './pages/Pricing';
 import { DedicatedServers } from './pages/DedicatedServers';
 import { Solutions } from './pages/Solutions';
 import { Contact } from './pages/Contact';
+import { Calculator } from './pages/Calculator';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
 
@@ -25,6 +26,7 @@ function App() {
           <Route element={<PublicLayout />}>
             <Route path="/" element={<Home />} />
             <Route path="/pricing" element={<Pricing />} />
+            <Route path="/calculator" element={<Calculator />} />
             <Route path="/dedicated-servers" element={<DedicatedServers />} />
             <Route path="/solutions" element={<Solutions />} />
             <Route path="/contact" element={<Contact />} />

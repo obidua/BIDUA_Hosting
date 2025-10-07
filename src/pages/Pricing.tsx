@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { CheckCircle, Server, Zap, Database, MapPin, Clock, Shield, Award, HardDrive, Cpu, MemoryStick, Network } from 'lucide-react';
+import { MobileFilters } from '../components/pricing/MobileFilters';
 
 type BillingCycle = 'monthly' | 'quarterly' | 'semiannually' | 'annually' | 'biennially' | 'triennially';
 
@@ -515,6 +516,15 @@ export function Pricing() {
 
   return (
     <div className="bg-slate-950">
+      <MobileFilters
+        billingCycle={billingCycle}
+        setBillingCycle={setBillingCycle}
+        selectedType={selectedType}
+        setSelectedType={setSelectedType}
+        planTypes={planTypes}
+        billingCycles={billingCycles}
+      />
+
       <section className="bg-gradient-to-br from-slate-900 via-cyan-900 to-slate-900 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">

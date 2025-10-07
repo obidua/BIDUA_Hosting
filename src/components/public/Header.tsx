@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { Server, Menu, X, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -7,6 +7,12 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [productsOpen, setProductsOpen] = useState(false);
   const { user } = useAuth();
+  const location = useLocation();
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [location.pathname]);
 
   const handleProductsMouseEnter = () => {
     setProductsOpen(true);
@@ -14,6 +20,11 @@ export function Header() {
 
   const handleProductsMouseLeave = () => {
     setProductsOpen(false);
+  };
+
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -67,6 +78,9 @@ export function Header() {
             <Link to="/pricing" className="text-slate-300 hover:text-cyan-400 transition">
               Pricing
             </Link>
+            <Link to="/calculator" className="text-slate-300 hover:text-cyan-400 transition">
+              Calculator
+            </Link>
             <Link to="/solutions" className="text-slate-300 hover:text-cyan-400 transition">
               Solutions
             </Link>
@@ -112,36 +126,41 @@ export function Header() {
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-cyan-500/30">
             <div className="flex flex-col space-y-4">
-              <Link to="/" className="text-slate-300 hover:text-cyan-400">
+              <Link to="/" className="text-slate-300 hover:text-cyan-400" onClick={closeMobileMenu}>
                 Home
               </Link>
-              <Link to="/pricing" className="text-slate-300 hover:text-cyan-400">
+              <Link to="/pricing" className="text-slate-300 hover:text-cyan-400" onClick={closeMobileMenu}>
                 Pricing
               </Link>
-              <Link to="/dedicated-servers" className="text-slate-300 hover:text-cyan-400">
+              <Link to="/calculator" className="text-slate-300 hover:text-cyan-400" onClick={closeMobileMenu}>
+                Calculator
+              </Link>
+              <Link to="/dedicated-servers" className="text-slate-300 hover:text-cyan-400" onClick={closeMobileMenu}>
                 Dedicated Servers
               </Link>
-              <Link to="/solutions" className="text-slate-300 hover:text-cyan-400">
+              <Link to="/solutions" className="text-slate-300 hover:text-cyan-400" onClick={closeMobileMenu}>
                 Solutions
               </Link>
-              <Link to="/contact" className="text-slate-300 hover:text-cyan-400">
+              <Link to="/contact" className="text-slate-300 hover:text-cyan-400" onClick={closeMobileMenu}>
                 Contact
               </Link>
               {user ? (
                 <Link
                   to="/dashboard"
                   className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg hover:from-cyan-400 hover:to-teal-400 text-center shadow-lg shadow-cyan-500/50"
+                  onClick={closeMobileMenu}
                 >
                   Dashboard
                 </Link>
               ) : (
                 <>
-                  <Link to="/login" className="text-slate-300 hover:text-cyan-400">
+                  <Link to="/login" className="text-slate-300 hover:text-cyan-400" onClick={closeMobileMenu}>
                     Login
                   </Link>
                   <Link
                     to="/signup"
                     className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg hover:from-cyan-400 hover:to-teal-400 text-center shadow-lg shadow-cyan-500/50"
+                    onClick={closeMobileMenu}
                   >
                     Get Started
                   </Link>
