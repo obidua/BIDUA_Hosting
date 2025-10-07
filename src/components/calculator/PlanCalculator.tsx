@@ -219,6 +219,7 @@ export function PlanCalculator() {
                     const firstRam = Object.keys(planConfigurations[value as PlanType])[0];
                     setSelectedRam(Number(firstRam));
                   }}
+                  label="Select Plan Type"
                 />
               </div>
 
@@ -394,6 +395,7 @@ export function PlanCalculator() {
                   options={billingOptions}
                   value={billingCycle}
                   onChange={(value) => setBillingCycle(value as BillingCycle)}
+                  label="Select Billing Cycle"
                 />
               </div>
 
