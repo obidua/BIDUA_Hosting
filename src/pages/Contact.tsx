@@ -25,13 +25,13 @@ export function Contact() {
   };
 
   return (
-    <div className="bg-white">
-      <section className="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16">
+    <div className="bg-slate-950">
+      <section className="bg-gradient-to-br from-slate-900 via-cyan-900 to-slate-900 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Get In Touch
           </h1>
-          <p className="text-xl text-blue-100">
+          <p className="text-xl text-cyan-100">
             Our team is here to help you with any questions or concerns
           </p>
         </div>
@@ -41,8 +41,8 @@ export function Contact() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
             <div className="lg:col-span-2">
-              <div className="bg-white rounded-xl shadow-lg p-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              <div className="bg-slate-900 rounded-xl shadow-lg p-8">
+                <h2 className="text-2xl font-bold text-white mb-6">
                   Send us a message
                 </h2>
                 {submitted && (
@@ -53,7 +53,7 @@ export function Contact() {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <label className="block text-sm font-semibold text-slate-200 mb-2">
                         Full Name *
                       </label>
                       <input
@@ -62,12 +62,12 @@ export function Contact() {
                         value={formData.name}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                        className="w-full px-4 py-3 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                         placeholder="John Doe"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <label className="block text-sm font-semibold text-slate-200 mb-2">
                         Email Address *
                       </label>
                       <input
@@ -76,7 +76,7 @@ export function Contact() {
                         value={formData.email}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                        className="w-full px-4 py-3 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                         placeholder="john@example.com"
                       />
                     </div>
@@ -84,7 +84,7 @@ export function Contact() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <label className="block text-sm font-semibold text-slate-200 mb-2">
                         Phone Number
                       </label>
                       <input
@@ -92,12 +92,12 @@ export function Contact() {
                         name="phone"
                         value={formData.phone}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                        className="w-full px-4 py-3 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                         placeholder="+1 (555) 000-0000"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <label className="block text-sm font-semibold text-slate-200 mb-2">
                         Subject *
                       </label>
                       <select
@@ -105,7 +105,7 @@ export function Contact() {
                         value={formData.subject}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                        className="w-full px-4 py-3 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                       >
                         <option value="">Select a subject</option>
                         <option value="sales">Sales Inquiry</option>
@@ -118,7 +118,7 @@ export function Contact() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-slate-200 mb-2">
                       Message *
                     </label>
                     <textarea
@@ -127,14 +127,14 @@ export function Contact() {
                       onChange={handleChange}
                       required
                       rows={6}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent resize-none"
+                      className="w-full px-4 py-3 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none"
                       placeholder="Tell us how we can help you..."
                     />
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full md:w-auto px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition flex items-center justify-center space-x-2"
+                    className="w-full md:w-auto px-8 py-3 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg font-semibold hover:from-cyan-400 hover:to-teal-400 transition flex items-center justify-center space-x-2"
                   >
                     <span>Send Message</span>
                     <Send className="h-5 w-5" />
@@ -144,40 +144,40 @@ export function Contact() {
             </div>
 
             <div className="space-y-6">
-              <div className="bg-white rounded-xl shadow-lg p-8">
-                <h3 className="text-xl font-bold text-gray-900 mb-6">
+              <div className="bg-slate-900 rounded-xl shadow-lg p-8">
+                <h3 className="text-xl font-bold text-white mb-6">
                   Contact Information
                 </h3>
                 <div className="space-y-6">
                   <div className="flex items-start space-x-4">
-                    <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Mail className="h-6 w-6 text-blue-600" />
+                    <div className="flex-shrink-0 w-12 h-12 bg-cyan-500/20 rounded-lg flex items-center justify-center">
+                      <Mail className="h-6 w-6 text-cyan-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-gray-900 mb-1">Email</p>
-                      <p className="text-gray-600">support@biduahosting.com</p>
-                      <p className="text-gray-600">sales@biduahosting.com</p>
+                      <p className="text-sm font-semibold text-white mb-1">Email</p>
+                      <p className="text-slate-400">support@biduahosting.com</p>
+                      <p className="text-slate-400">sales@biduahosting.com</p>
                     </div>
                   </div>
 
                   <div className="flex items-start space-x-4">
-                    <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Phone className="h-6 w-6 text-blue-600" />
+                    <div className="flex-shrink-0 w-12 h-12 bg-cyan-500/20 rounded-lg flex items-center justify-center">
+                      <Phone className="h-6 w-6 text-cyan-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-gray-900 mb-1">Phone</p>
-                      <p className="text-gray-600">+1 (555) 123-4567</p>
-                      <p className="text-gray-600">+1 (555) 987-6543</p>
+                      <p className="text-sm font-semibold text-white mb-1">Phone</p>
+                      <p className="text-slate-400">+1 (555) 123-4567</p>
+                      <p className="text-slate-400">+1 (555) 987-6543</p>
                     </div>
                   </div>
 
                   <div className="flex items-start space-x-4">
-                    <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <MapPin className="h-6 w-6 text-blue-600" />
+                    <div className="flex-shrink-0 w-12 h-12 bg-cyan-500/20 rounded-lg flex items-center justify-center">
+                      <MapPin className="h-6 w-6 text-cyan-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-gray-900 mb-1">Address</p>
-                      <p className="text-gray-600">
+                      <p className="text-sm font-semibold text-white mb-1">Address</p>
+                      <p className="text-slate-400">
                         123 Cloud Street<br />
                         Tech City, TC 12345<br />
                         United States
@@ -187,11 +187,11 @@ export function Contact() {
                 </div>
               </div>
 
-              <div className="bg-blue-50 rounded-xl p-8 border border-blue-100">
-                <h3 className="text-lg font-bold text-gray-900 mb-3">
+              <div className="bg-slate-800 rounded-xl p-8 border border-cyan-500/30">
+                <h3 className="text-lg font-bold text-white mb-3">
                   Business Hours
                 </h3>
-                <div className="space-y-2 text-gray-700">
+                <div className="space-y-2 text-slate-200">
                   <div className="flex justify-between">
                     <span>Monday - Friday:</span>
                     <span className="font-semibold">9:00 AM - 6:00 PM</span>
@@ -205,7 +205,7 @@ export function Contact() {
                     <span className="font-semibold">Closed</span>
                   </div>
                 </div>
-                <p className="text-sm text-gray-600 mt-4">
+                <p className="text-sm text-slate-400 mt-4">
                   Technical support available 24/7
                 </p>
               </div>

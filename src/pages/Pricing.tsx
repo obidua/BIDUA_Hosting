@@ -515,29 +515,29 @@ export function Pricing() {
 
   return (
     <div className="bg-white">
-      <section className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white py-20">
+      <section className="bg-gradient-to-br from-slate-900 via-cyan-900 to-slate-900 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
               Cloud Solutions Pricing
             </h1>
-            <p className="text-xl md:text-2xl mb-4 text-blue-100">
+            <p className="text-xl md:text-2xl mb-4 text-cyan-100">
               Enterprise-grade cloud servers powered by Intel® Xeon® Gold Processors
             </p>
-            <p className="text-lg text-blue-200 mb-8">
+            <p className="text-lg text-cyan-200 mb-8">
               Deploy in 5 minutes • Full Root Access • 1TB Bandwidth • 99.9% Uptime SLA
             </p>
             <div className="flex flex-wrap justify-center gap-4 text-sm">
               <div className="flex items-center space-x-2 bg-white/10 px-4 py-2 rounded-lg backdrop-blur-sm">
-                <MapPin className="h-4 w-4 text-blue-300" />
+                <MapPin className="h-4 w-4 text-cyan-300" />
                 <span>Noida, India</span>
               </div>
               <div className="flex items-center space-x-2 bg-white/10 px-4 py-2 rounded-lg backdrop-blur-sm">
-                <MapPin className="h-4 w-4 text-blue-300" />
+                <MapPin className="h-4 w-4 text-cyan-300" />
                 <span>Milton Keynes, UK</span>
               </div>
               <div className="flex items-center space-x-2 bg-white/10 px-4 py-2 rounded-lg backdrop-blur-sm">
-                <Clock className="h-4 w-4 text-blue-300" />
+                <Clock className="h-4 w-4 text-cyan-300" />
                 <span>24/7 Support</span>
               </div>
             </div>
@@ -560,7 +560,7 @@ export function Pricing() {
                   onClick={() => setBillingCycle(cycle.id)}
                   className={`px-4 py-2.5 rounded-lg font-semibold text-sm transition-all ${
                     billingCycle === cycle.id
-                      ? 'bg-blue-600 text-white shadow-md'
+                      ? 'bg-cyan-600 text-white shadow-md'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                   }`}
                 >
@@ -585,7 +585,7 @@ export function Pricing() {
                 className={`flex items-center space-x-3 px-6 py-4 rounded-xl font-semibold transition-all shadow-md ${
                   selectedType === type.id
                     ? `bg-${type.color}-600 text-white shadow-lg scale-105`
-                    : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300 hover:shadow-lg'
+                    : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-cyan-300 hover:shadow-lg'
                 }`}
               >
                 <type.icon className="h-6 w-6" />
@@ -616,7 +616,7 @@ export function Pricing() {
                 }`}
               >
                 {plan.popular && (
-                  <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white text-center py-2.5 text-sm font-bold">
+                  <div className="bg-gradient-to-r from-cyan-600 to-teal-600 text-white text-center py-2.5 text-sm font-bold">
                     ⭐ MOST POPULAR
                   </div>
                 )}
@@ -651,7 +651,7 @@ export function Pricing() {
 
                   <div className="space-y-3 mb-6 border-t border-b border-gray-100 py-4">
                     <div className="flex items-center text-sm">
-                      <Cpu className="h-4 w-4 text-blue-600 mr-2 flex-shrink-0" />
+                      <Cpu className="h-4 w-4 text-cyan-400 mr-2 flex-shrink-0" />
                       <span className="font-semibold text-gray-700">{plan.vcpu} vCPU</span>
                     </div>
                     <div className="flex items-center text-sm">
@@ -681,7 +681,7 @@ export function Pricing() {
                     to="/signup"
                     className={`block w-full text-center px-6 py-3.5 rounded-lg font-bold transition-all ${
                       plan.popular
-                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-md'
+                        ? 'bg-gradient-to-r from-cyan-600 to-teal-600 text-white hover:from-cyan-500 hover:to-teal-500 shadow-md'
                         : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                     }`}
                   >
@@ -714,7 +714,7 @@ export function Pricing() {
               { icon: Database, title: 'Automated Backups', desc: 'Daily snapshots included' },
             ].map((feature, index) => (
               <div key={index} className="bg-white p-6 rounded-xl shadow-sm hover:shadow-lg transition border border-gray-200">
-                <feature.icon className="h-10 w-10 text-blue-600 mb-3" />
+                <feature.icon className="h-10 w-10 text-cyan-400 mb-3" />
                 <h3 className="font-bold text-gray-900 mb-1">{feature.title}</h3>
                 <p className="text-sm text-gray-600">{feature.desc}</p>
               </div>
@@ -732,7 +732,7 @@ export function Pricing() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="bg-gradient-to-br from-blue-50 to-white p-8 rounded-2xl border-2 border-blue-200">
-              <Server className="h-12 w-12 text-blue-600 mb-4" />
+              <Server className="h-12 w-12 text-cyan-400 mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-3">General Purpose VM</h3>
               <p className="text-gray-700 mb-4">
                 Balanced CPU and memory resources perfect for web applications, development environments, and small to medium databases.
@@ -781,15 +781,15 @@ export function Pricing() {
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Need a Custom Solution?
           </h2>
-          <p className="text-xl mb-3 text-blue-100">
+          <p className="text-xl mb-3 text-cyan-100">
             Contact our sales team for enterprise pricing, custom configurations, and dedicated support
           </p>
-          <p className="text-lg mb-8 text-blue-200">
+          <p className="text-lg mb-8 text-cyan-200">
             📞 +91 120 416 8464 • Mon-Sat 9:00-18:00
           </p>
           <Link
             to="/contact"
-            className="inline-block px-8 py-4 bg-white text-blue-600 rounded-lg font-bold hover:bg-blue-50 transition transform hover:scale-105 shadow-lg"
+            className="inline-block px-8 py-4 bg-white text-cyan-400 rounded-lg font-bold hover:bg-blue-50 transition transform hover:scale-105 shadow-lg"
           >
             Contact Sales Team
           </Link>

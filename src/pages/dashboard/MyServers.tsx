@@ -50,7 +50,7 @@ export function MyServers() {
   const getStatusColor = (status: string) => {
     const colors = {
       active: 'bg-green-100 text-green-700',
-      stopped: 'bg-gray-100 text-gray-700',
+      stopped: 'bg-slate-800 text-slate-300',
       provisioning: 'bg-blue-100 text-blue-700',
       error: 'bg-red-100 text-red-700',
     };
@@ -62,7 +62,7 @@ export function MyServers() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">My Servers</h2>
-          <p className="text-gray-600">Manage and monitor all your servers</p>
+          <p className="text-slate-400">Manage and monitor all your servers</p>
         </div>
         <Link
           to="/pricing"
@@ -83,42 +83,42 @@ export function MyServers() {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">{server.name}</h3>
-                    <p className="text-sm text-gray-600 mb-2">{server.hostname}</p>
+                    <p className="text-sm text-slate-400 mb-2">{server.hostname}</p>
                     <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(server.status)}`}>
                       {server.status}
                     </span>
                   </div>
                 </div>
-                <button className="text-gray-400 hover:text-gray-600">
+                <button className="text-gray-400 hover:text-slate-400">
                   <MoreVertical className="h-5 w-5" />
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6 bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6 bg-slate-950 p-4 rounded-lg">
                 <div>
-                  <p className="text-xs text-gray-600 mb-1">Plan</p>
+                  <p className="text-xs text-slate-400 mb-1">Plan</p>
                   <p className="font-semibold text-gray-900">{server.plan}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-600 mb-1">IP Address</p>
+                  <p className="text-xs text-slate-400 mb-1">IP Address</p>
                   <p className="font-semibold text-gray-900">{server.ip}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-600 mb-1">Resources</p>
+                  <p className="text-xs text-slate-400 mb-1">Resources</p>
                   <p className="font-semibold text-gray-900">{server.vcpu} vCPU, {server.ram}GB RAM</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-600 mb-1">Storage</p>
+                  <p className="text-xs text-slate-400 mb-1">Storage</p>
                   <p className="font-semibold text-gray-900">{server.storage}GB NVMe</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-600 mb-1">Operating System</p>
+                  <p className="text-xs text-slate-400 mb-1">Operating System</p>
                   <p className="font-semibold text-gray-900">{server.os}</p>
                 </div>
               </div>
 
               <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-slate-400">
                   Created: {new Date(server.created).toLocaleDateString()} •
                   Expires: {new Date(server.expires).toLocaleDateString()}
                 </div>
@@ -134,7 +134,7 @@ export function MyServers() {
                       <span>Start</span>
                     </button>
                   )}
-                  <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-semibold flex items-center space-x-2">
+                  <button className="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition font-semibold flex items-center space-x-2">
                     <RefreshCw className="h-4 w-4" />
                     <span>Reboot</span>
                   </button>

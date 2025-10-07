@@ -46,21 +46,21 @@ export function DedicatedServers() {
   ];
 
   return (
-    <div className="bg-white">
-      <section className="bg-gradient-to-br from-gray-900 to-gray-800 text-white py-20">
+    <div className="bg-slate-900">
+      <section className="bg-gradient-to-br from-slate-950 via-cyan-950 to-slate-950 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto">
             <h1 className="text-4xl md:text-5xl font-bold mb-6">
               Bare Metal Dedicated Servers
             </h1>
-            <p className="text-xl text-gray-300">
+            <p className="text-xl text-cyan-200">
               Maximum performance with dedicated hardware. No shared resources, complete control, and unmatched reliability.
             </p>
           </div>
         </div>
       </section>
 
-      <section className="py-16 bg-gray-50">
+      <section className="py-16 bg-slate-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
@@ -69,10 +69,10 @@ export function DedicatedServers() {
               { icon: Network, title: 'Premium Network', desc: 'Up to 10Gbps bandwidth' },
               { icon: Shield, title: 'DDoS Protection', desc: 'Enterprise-grade security' },
             ].map((item, index) => (
-              <div key={index} className="bg-white p-6 rounded-lg shadow-sm text-center">
-                <item.icon className="h-10 w-10 text-blue-600 mx-auto mb-3" />
-                <h3 className="font-semibold text-gray-900 mb-1">{item.title}</h3>
-                <p className="text-sm text-gray-600">{item.desc}</p>
+              <div key={index} className="bg-slate-900 p-6 rounded-lg shadow-sm text-center">
+                <item.icon className="h-10 w-10 text-cyan-400 mx-auto mb-3" />
+                <h3 className="font-semibold text-white mb-1">{item.title}</h3>
+                <p className="text-sm text-slate-400">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -82,10 +82,10 @@ export function DedicatedServers() {
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
               Choose Your Dedicated Server
             </h2>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-slate-400">
               All servers come with instant provisioning and full IPMI access
             </p>
           </div>
@@ -94,48 +94,48 @@ export function DedicatedServers() {
             {servers.map((server, index) => (
               <div
                 key={index}
-                className={`bg-white rounded-xl shadow-lg overflow-hidden ${
-                  server.popular ? 'ring-2 ring-blue-600 transform scale-105' : 'border border-gray-200'
+                className={`bg-slate-900 rounded-xl shadow-lg overflow-hidden ${
+                  server.popular ? 'ring-2 ring-cyan-500 transform scale-105' : 'border border-cyan-500/20'
                 }`}
               >
                 {server.popular && (
-                  <div className="bg-blue-600 text-white text-center py-2 text-sm font-semibold">
+                  <div className="bg-gradient-to-r from-cyan-500 to-teal-500 text-white text-center py-2 text-sm font-semibold">
                     Most Popular
                   </div>
                 )}
                 <div className="p-8">
                   <div className="flex items-center justify-center mb-4">
-                    <Server className="h-12 w-12 text-blue-600" />
+                    <Server className="h-12 w-12 text-cyan-400" />
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900 text-center mb-2">
+                  <h3 className="text-2xl font-bold text-white text-center mb-2">
                     {server.name}
                   </h3>
                   <div className="text-center mb-6">
-                    <span className="text-4xl font-bold text-gray-900">₹{server.price}</span>
-                    <span className="text-gray-600">/month</span>
+                    <span className="text-4xl font-bold text-white">₹{server.price}</span>
+                    <span className="text-slate-400">/month</span>
                   </div>
 
-                  <div className="space-y-3 mb-6 bg-gray-50 p-4 rounded-lg">
+                  <div className="space-y-3 mb-6 bg-slate-900 p-4 rounded-lg">
                     <div>
-                      <p className="text-sm text-gray-600">Processor</p>
-                      <p className="font-semibold text-gray-900">{server.specs.cpu}</p>
-                      <p className="text-sm text-gray-600">{server.specs.cores}</p>
+                      <p className="text-sm text-slate-400">Processor</p>
+                      <p className="font-semibold text-white">{server.specs.cpu}</p>
+                      <p className="text-sm text-slate-400">{server.specs.cores}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Memory</p>
-                      <p className="font-semibold text-gray-900">{server.specs.ram}</p>
+                      <p className="text-sm text-slate-400">Memory</p>
+                      <p className="font-semibold text-white">{server.specs.ram}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Storage</p>
-                      <p className="font-semibold text-gray-900">{server.specs.storage}</p>
+                      <p className="text-sm text-slate-400">Storage</p>
+                      <p className="font-semibold text-white">{server.specs.storage}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Bandwidth</p>
-                      <p className="font-semibold text-gray-900">{server.specs.bandwidth}</p>
+                      <p className="text-sm text-slate-400">Bandwidth</p>
+                      <p className="font-semibold text-white">{server.specs.bandwidth}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">IP Addresses</p>
-                      <p className="font-semibold text-gray-900">{server.specs.ipv4}</p>
+                      <p className="text-sm text-slate-400">IP Addresses</p>
+                      <p className="font-semibold text-white">{server.specs.ipv4}</p>
                     </div>
                   </div>
 
@@ -143,7 +143,7 @@ export function DedicatedServers() {
                     {server.features.map((feature, i) => (
                       <li key={i} className="flex items-center text-sm">
                         <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                        <span className="text-gray-700">{feature}</span>
+                        <span className="text-slate-300">{feature}</span>
                       </li>
                     ))}
                   </ul>
@@ -152,8 +152,8 @@ export function DedicatedServers() {
                     to="/signup"
                     className={`block w-full text-center px-6 py-3 rounded-lg font-semibold transition ${
                       server.popular
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                        : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                        ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white hover:from-cyan-400 hover:to-teal-400'
+                        : 'bg-gray-100 text-white hover:bg-gray-200'
                     }`}
                   >
                     Order Now
@@ -165,15 +165,15 @@ export function DedicatedServers() {
         </div>
       </section>
 
-      <section className="py-16 bg-gradient-to-br from-blue-600 to-blue-800 text-white">
+      <section className="py-16 bg-gradient-to-br from-slate-900 via-cyan-900 to-slate-900 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold mb-4">Need Custom Configuration?</h2>
-          <p className="text-xl text-blue-100 mb-8">
+          <p className="text-xl text-cyan-100 mb-8">
             Contact us for custom server builds with your exact specifications
           </p>
           <Link
             to="/contact"
-            className="inline-block px-8 py-4 bg-white text-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition"
+            className="inline-block px-8 py-4 bg-slate-900 text-cyan-400 rounded-lg font-semibold hover:bg-cyan-400 transition"
           >
             Contact Sales Team
           </Link>
