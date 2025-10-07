@@ -209,8 +209,8 @@ export function PlanCalculator() {
               <ChevronDown className={`h-5 w-5 text-cyan-400 transition-transform lg:hidden ${expandedSection === 'plan' ? 'rotate-180' : ''}`} />
             </button>
 
-            <div className={`px-4 pb-4 lg:px-6 lg:pb-6 ${expandedSection === 'plan' || window.innerWidth >= 1024 ? 'block' : 'hidden'} lg:block`}>
-              <div className="block lg:hidden">
+            <div className={`px-4 pb-4 lg:px-6 lg:pb-6 ${expandedSection === 'plan' ? 'block' : 'hidden'} lg:block`}>
+              <div className="lg:hidden">
                 <MobileDropdown
                   options={planTypeOptions}
                   value={planType}
@@ -262,8 +262,8 @@ export function PlanCalculator() {
               <ChevronDown className={`h-5 w-5 text-cyan-400 transition-transform lg:hidden ${expandedSection === 'ram' ? 'rotate-180' : ''}`} />
             </button>
 
-            <div className={`px-4 pb-4 lg:px-6 lg:pb-6 space-y-4 ${expandedSection === 'ram' || window.innerWidth >= 1024 ? 'block' : 'hidden'} lg:block`}>
-              <div className="block lg:hidden">
+            <div className={`px-4 pb-4 lg:px-6 lg:pb-6 space-y-4 ${expandedSection === 'ram' ? 'block' : 'hidden'} lg:block`}>
+              <div className="lg:hidden">
                 <MobileDropdown
                   options={ramOptions}
                   value={selectedRam}
@@ -328,8 +328,8 @@ export function PlanCalculator() {
               <ChevronDown className={`h-5 w-5 text-cyan-400 transition-transform lg:hidden ${expandedSection === 'addons' ? 'rotate-180' : ''}`} />
             </button>
 
-            <div className={`px-4 pb-4 lg:px-6 lg:pb-6 space-y-4 ${expandedSection === 'addons' || window.innerWidth >= 1024 ? 'block' : 'hidden'} lg:block`}>
-              <div className="block lg:hidden space-y-4">
+            <div className={`px-4 pb-4 lg:px-6 lg:pb-6 space-y-4 ${expandedSection === 'addons' ? 'block' : 'hidden'} lg:block`}>
+              <div className="lg:hidden space-y-4">
                 <MobileDropdown
                   options={storageDropdownOptions}
                   value={extraStorage}
@@ -388,8 +388,8 @@ export function PlanCalculator() {
               <ChevronDown className={`h-5 w-5 text-cyan-400 transition-transform lg:hidden ${expandedSection === 'billing' ? 'rotate-180' : ''}`} />
             </button>
 
-            <div className={`px-4 pb-4 lg:px-6 lg:pb-6 ${expandedSection === 'billing' || window.innerWidth >= 1024 ? 'block' : 'hidden'} lg:block`}>
-              <div className="block lg:hidden">
+            <div className={`px-4 pb-4 lg:px-6 lg:pb-6 ${expandedSection === 'billing' ? 'block' : 'hidden'} lg:block`}>
+              <div className="lg:hidden">
                 <MobileDropdown
                   options={billingOptions}
                   value={billingCycle}
