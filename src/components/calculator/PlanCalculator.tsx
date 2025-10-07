@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Server, Zap, Database, Cpu, MemoryStick, HardDrive, Network, Calculator, RefreshCw } from 'lucide-react';
+import { Server, Zap, Database, Cpu, MemoryStick, HardDrive, Network, Calculator, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { MobileDropdown } from './MobileDropdown';
 
 type PlanType = 'general_purpose' | 'cpu_optimized' | 'memory_optimized';
 type BillingCycle = 'monthly' | 'quarterly' | 'semiannually' | 'annually' | 'biennially' | 'triennially';
@@ -78,12 +79,17 @@ const planTypeInfo = {
   }
 };
 
+const storageOptions = [0, 50, 100, 200, 300, 500];
+const bandwidthOptions = [0, 1, 2, 3, 5, 10];
+
 export function PlanCalculator() {
   const [planType, setPlanType] = useState<PlanType>('general_purpose');
   const [selectedRam, setSelectedRam] = useState<number>(8);
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const [extraStorage, setExtraStorage] = useState<number>(0);
   const [extraBandwidth, setExtraBandwidth] = useState<number>(0);
+  const [showPriceSummary, setShowPriceSummary] = useState(false);
+  const [expandedSection, setExpandedSection] = useState<string | null>('plan');
 
   const availableRamOptions = Object.keys(planConfigurations[planType]).map(Number).sort((a, b) => a - b);
   const currentConfig = planConfigurations[planType][selectedRam];
@@ -129,8 +135,49 @@ export function PlanCalculator() {
   const planInfo = planTypeInfo[planType];
   const PlanIcon = planInfo.icon;
 
+  const planTypeOptions = (Object.keys(planTypeInfo) as PlanType[]).map(type => ({
+    value: type,
+    label: planTypeInfo[type].name,
+    sublabel: planTypeInfo[type].description,
+    icon: planTypeInfo[type].icon
+  }));
+
+  const ramOptions = availableRamOptions.map(ram => {
+    const config = planConfigurations[planType][ram];
+    return {
+      value: ram,
+      label: `${ram}GB RAM`,
+      sublabel: `${config.vcpu} vCPU • ${config.storage}GB Storage • ₹${config.basePrice.toLocaleString()}/mo`
+    };
+  });
+
+  const billingOptions = (Object.keys(billingCycles) as BillingCycle[]).map(cycle => {
+    const info = billingCycles[cycle];
+    return {
+      value: cycle,
+      label: info.name,
+      sublabel: info.discount > 0 ? `Save ${info.discount}%` : 'No discount'
+    };
+  });
+
+  const storageDropdownOptions = storageOptions.map(storage => ({
+    value: storage,
+    label: storage === 0 ? 'No extra storage' : `+${storage}GB`,
+    sublabel: storage > 0 ? `₹${(storage * STORAGE_PRICE_PER_GB).toLocaleString()}/month` : undefined
+  }));
+
+  const bandwidthDropdownOptions = bandwidthOptions.map(bandwidth => ({
+    value: bandwidth,
+    label: bandwidth === 0 ? 'No extra bandwidth' : `+${bandwidth}TB`,
+    sublabel: bandwidth > 0 ? `₹${(bandwidth * BANDWIDTH_PRICE_PER_TB).toLocaleString()}/month` : undefined
+  }));
+
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section);
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 lg:pb-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center space-x-2 sm:space-x-3">
@@ -149,148 +196,235 @@ export function PlanCalculator() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-slate-900 rounded-xl p-6 border border-cyan-500/30">
-            <h3 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
-              <Server className="h-5 w-5 text-cyan-400" />
-              <span>Plan Type</span>
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {(Object.keys(planTypeInfo) as PlanType[]).map((type) => {
-                const info = planTypeInfo[type];
-                const TypeIcon = info.icon;
-                return (
-                  <button
-                    key={type}
-                    onClick={() => {
-                      setPlanType(type);
-                      const firstRam = Object.keys(planConfigurations[type])[0];
-                      setSelectedRam(Number(firstRam));
-                    }}
-                    className={`flex flex-col items-center space-y-2 p-4 rounded-lg transition-all ${
-                      planType === type
-                        ? 'bg-cyan-600 text-white shadow-lg'
-                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-cyan-500/30'
-                    }`}
-                  >
-                    <TypeIcon className="h-8 w-8" />
-                    <span className="font-semibold text-sm text-center">{info.name}</span>
-                    <span className="text-xs opacity-80 text-center">{info.description}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+        <div className="lg:col-span-2 space-y-4">
+          <div className="bg-slate-900 rounded-xl border border-cyan-500/30 overflow-hidden">
+            <button
+              onClick={() => toggleSection('plan')}
+              className="w-full flex items-center justify-between p-4 lg:p-6 hover:bg-slate-800/50 transition lg:cursor-default"
+            >
+              <h3 className="text-lg lg:text-xl font-bold text-white flex items-center space-x-2">
+                <Server className="h-5 w-5 text-cyan-400" />
+                <span>Plan Type</span>
+              </h3>
+              <ChevronDown className={`h-5 w-5 text-cyan-400 transition-transform lg:hidden ${expandedSection === 'plan' ? 'rotate-180' : ''}`} />
+            </button>
 
-          <div className="bg-slate-900 rounded-xl p-6 border border-cyan-500/30">
-            <h3 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
-              <MemoryStick className="h-5 w-5 text-cyan-400" />
-              <span>RAM Configuration</span>
-            </h3>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Select RAM: {selectedRam}GB
-              </label>
-              <input
-                type="range"
-                min={0}
-                max={availableRamOptions.length - 1}
-                value={availableRamOptions.indexOf(selectedRam)}
-                onChange={(e) => setSelectedRam(availableRamOptions[parseInt(e.target.value)])}
-                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
-              />
-              <div className="flex justify-between text-xs text-slate-400 mt-2 overflow-x-auto">
-                {availableRamOptions.map((ram, idx) => (
-                  <span key={ram} className={`${idx % 2 === 1 ? 'hidden sm:inline' : ''}`}>{ram}GB</span>
-                ))}
+            <div className={`px-4 pb-4 lg:px-6 lg:pb-6 ${expandedSection === 'plan' || window.innerWidth >= 1024 ? 'block' : 'hidden'} lg:block`}>
+              <div className="block lg:hidden">
+                <MobileDropdown
+                  options={planTypeOptions}
+                  value={planType}
+                  onChange={(value) => {
+                    setPlanType(value as PlanType);
+                    const firstRam = Object.keys(planConfigurations[value as PlanType])[0];
+                    setSelectedRam(Number(firstRam));
+                  }}
+                />
               </div>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-4">
-              <div className="bg-slate-800 p-2 sm:p-3 rounded-lg border border-cyan-500/20">
-                <Cpu className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-400 mb-1" />
-                <div className="text-xs text-slate-400">vCPU</div>
-                <div className="text-base sm:text-lg font-bold text-white">{currentConfig.vcpu}</div>
-              </div>
-              <div className="bg-slate-800 p-2 sm:p-3 rounded-lg border border-cyan-500/20">
-                <MemoryStick className="h-4 w-4 sm:h-5 sm:w-5 text-green-400 mb-1" />
-                <div className="text-xs text-slate-400">RAM</div>
-                <div className="text-base sm:text-lg font-bold text-white">{currentConfig.ram}GB</div>
-              </div>
-              <div className="bg-slate-800 p-2 sm:p-3 rounded-lg border border-cyan-500/20">
-                <HardDrive className="h-4 w-4 sm:h-5 sm:w-5 text-orange-400 mb-1" />
-                <div className="text-xs text-slate-400">Storage</div>
-                <div className="text-base sm:text-lg font-bold text-white">{currentConfig.storage}GB</div>
-              </div>
-              <div className="bg-slate-800 p-2 sm:p-3 rounded-lg border border-cyan-500/20">
-                <Network className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400 mb-1" />
-                <div className="text-xs text-slate-400">Bandwidth</div>
-                <div className="text-base sm:text-lg font-bold text-white">1TB</div>
+
+              <div className="hidden lg:grid lg:grid-cols-3 gap-4">
+                {(Object.keys(planTypeInfo) as PlanType[]).map((type) => {
+                  const info = planTypeInfo[type];
+                  const TypeIcon = info.icon;
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => {
+                        setPlanType(type);
+                        const firstRam = Object.keys(planConfigurations[type])[0];
+                        setSelectedRam(Number(firstRam));
+                      }}
+                      className={`flex flex-col items-center space-y-2 p-4 rounded-lg transition-all ${
+                        planType === type
+                          ? 'bg-cyan-600 text-white shadow-lg'
+                          : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-cyan-500/30'
+                      }`}
+                    >
+                      <TypeIcon className="h-8 w-8" />
+                      <span className="font-semibold text-sm text-center">{info.name}</span>
+                      <span className="text-xs opacity-80 text-center">{info.description}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
 
-          <div className="bg-slate-900 rounded-xl p-6 border border-cyan-500/30">
-            <h3 className="text-xl font-bold text-white mb-4">Add-ons</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-2 break-words">
-                  Extra Storage: +{extraStorage}GB (₹{STORAGE_PRICE_PER_GB}/GB/month)
+          <div className="bg-slate-900 rounded-xl border border-cyan-500/30 overflow-hidden">
+            <button
+              onClick={() => toggleSection('ram')}
+              className="w-full flex items-center justify-between p-4 lg:p-6 hover:bg-slate-800/50 transition lg:cursor-default"
+            >
+              <h3 className="text-lg lg:text-xl font-bold text-white flex items-center space-x-2">
+                <MemoryStick className="h-5 w-5 text-cyan-400" />
+                <span>RAM Configuration</span>
+              </h3>
+              <ChevronDown className={`h-5 w-5 text-cyan-400 transition-transform lg:hidden ${expandedSection === 'ram' ? 'rotate-180' : ''}`} />
+            </button>
+
+            <div className={`px-4 pb-4 lg:px-6 lg:pb-6 space-y-4 ${expandedSection === 'ram' || window.innerWidth >= 1024 ? 'block' : 'hidden'} lg:block`}>
+              <div className="block lg:hidden">
+                <MobileDropdown
+                  options={ramOptions}
+                  value={selectedRam}
+                  onChange={(value) => setSelectedRam(value as number)}
+                  label="Select RAM"
+                />
+              </div>
+
+              <div className="hidden lg:block">
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Select RAM: {selectedRam}GB
                 </label>
                 <input
                   type="range"
                   min={0}
-                  max={500}
-                  step={50}
+                  max={availableRamOptions.length - 1}
+                  value={availableRamOptions.indexOf(selectedRam)}
+                  onChange={(e) => setSelectedRam(availableRamOptions[parseInt(e.target.value)])}
+                  className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                />
+                <div className="flex justify-between text-xs text-slate-400 mt-2 overflow-x-auto">
+                  {availableRamOptions.map((ram, idx) => (
+                    <span key={ram} className={`${idx % 2 === 1 ? 'hidden sm:inline' : ''}`}>{ram}GB</span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-4">
+                <div className="bg-slate-800 p-2 sm:p-3 rounded-lg border border-cyan-500/20">
+                  <Cpu className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-400 mb-1" />
+                  <div className="text-xs text-slate-400">vCPU</div>
+                  <div className="text-base sm:text-lg font-bold text-white">{currentConfig.vcpu}</div>
+                </div>
+                <div className="bg-slate-800 p-2 sm:p-3 rounded-lg border border-cyan-500/20">
+                  <MemoryStick className="h-4 w-4 sm:h-5 sm:w-5 text-green-400 mb-1" />
+                  <div className="text-xs text-slate-400">RAM</div>
+                  <div className="text-base sm:text-lg font-bold text-white">{currentConfig.ram}GB</div>
+                </div>
+                <div className="bg-slate-800 p-2 sm:p-3 rounded-lg border border-cyan-500/20">
+                  <HardDrive className="h-4 w-4 sm:h-5 sm:w-5 text-orange-400 mb-1" />
+                  <div className="text-xs text-slate-400">Storage</div>
+                  <div className="text-base sm:text-lg font-bold text-white">{currentConfig.storage}GB</div>
+                </div>
+                <div className="bg-slate-800 p-2 sm:p-3 rounded-lg border border-cyan-500/20">
+                  <Network className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400 mb-1" />
+                  <div className="text-xs text-slate-400">Bandwidth</div>
+                  <div className="text-base sm:text-lg font-bold text-white">1TB</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-900 rounded-xl border border-cyan-500/30 overflow-hidden">
+            <button
+              onClick={() => toggleSection('addons')}
+              className="w-full flex items-center justify-between p-4 lg:p-6 hover:bg-slate-800/50 transition lg:cursor-default"
+            >
+              <h3 className="text-lg lg:text-xl font-bold text-white flex items-center space-x-2">
+                <HardDrive className="h-5 w-5 text-cyan-400" />
+                <span>Add-ons</span>
+              </h3>
+              <ChevronDown className={`h-5 w-5 text-cyan-400 transition-transform lg:hidden ${expandedSection === 'addons' ? 'rotate-180' : ''}`} />
+            </button>
+
+            <div className={`px-4 pb-4 lg:px-6 lg:pb-6 space-y-4 ${expandedSection === 'addons' || window.innerWidth >= 1024 ? 'block' : 'hidden'} lg:block`}>
+              <div className="block lg:hidden space-y-4">
+                <MobileDropdown
+                  options={storageDropdownOptions}
                   value={extraStorage}
-                  onChange={(e) => setExtraStorage(parseInt(e.target.value))}
-                  className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                  onChange={(value) => setExtraStorage(value as number)}
+                  label="Extra Storage"
+                />
+                <MobileDropdown
+                  options={bandwidthDropdownOptions}
+                  value={extraBandwidth}
+                  onChange={(value) => setExtraBandwidth(value as number)}
+                  label="Extra Bandwidth"
                 />
               </div>
-              <div>
-                <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-2 break-words">
-                  Extra Bandwidth: +{extraBandwidth}TB (₹{BANDWIDTH_PRICE_PER_TB}/TB/month)
-                </label>
-                <input
-                  type="range"
-                  min={0}
-                  max={10}
-                  value={extraBandwidth}
-                  onChange={(e) => setExtraBandwidth(parseInt(e.target.value))}
-                  className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
-                />
+
+              <div className="hidden lg:block space-y-4">
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-2 break-words">
+                    Extra Storage: +{extraStorage}GB (₹{STORAGE_PRICE_PER_GB}/GB/month)
+                  </label>
+                  <input
+                    type="range"
+                    min={0}
+                    max={500}
+                    step={50}
+                    value={extraStorage}
+                    onChange={(e) => setExtraStorage(parseInt(e.target.value))}
+                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-2 break-words">
+                    Extra Bandwidth: +{extraBandwidth}TB (₹{BANDWIDTH_PRICE_PER_TB}/TB/month)
+                  </label>
+                  <input
+                    type="range"
+                    min={0}
+                    max={10}
+                    value={extraBandwidth}
+                    onChange={(e) => setExtraBandwidth(parseInt(e.target.value))}
+                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-slate-900 rounded-xl p-6 border border-cyan-500/30">
-            <h3 className="text-xl font-bold text-white mb-4">Billing Cycle</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {(Object.keys(billingCycles) as BillingCycle[]).map((cycle) => {
-                const info = billingCycles[cycle];
-                return (
-                  <button
-                    key={cycle}
-                    onClick={() => setBillingCycle(cycle)}
-                    className={`p-3 rounded-lg transition-all ${
-                      billingCycle === cycle
-                        ? 'bg-cyan-600 text-white shadow-lg'
-                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-cyan-500/30'
-                    }`}
-                  >
-                    <div className="font-semibold text-sm">{info.name}</div>
-                    {info.discount > 0 && (
-                      <div className={`text-xs mt-1 ${billingCycle === cycle ? 'opacity-80' : 'text-green-400'}`}>
-                        Save {info.discount}%
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
+          <div className="bg-slate-900 rounded-xl border border-cyan-500/30 overflow-hidden">
+            <button
+              onClick={() => toggleSection('billing')}
+              className="w-full flex items-center justify-between p-4 lg:p-6 hover:bg-slate-800/50 transition lg:cursor-default"
+            >
+              <h3 className="text-lg lg:text-xl font-bold text-white flex items-center space-x-2">
+                <Calculator className="h-5 w-5 text-cyan-400" />
+                <span>Billing Cycle</span>
+              </h3>
+              <ChevronDown className={`h-5 w-5 text-cyan-400 transition-transform lg:hidden ${expandedSection === 'billing' ? 'rotate-180' : ''}`} />
+            </button>
+
+            <div className={`px-4 pb-4 lg:px-6 lg:pb-6 ${expandedSection === 'billing' || window.innerWidth >= 1024 ? 'block' : 'hidden'} lg:block`}>
+              <div className="block lg:hidden">
+                <MobileDropdown
+                  options={billingOptions}
+                  value={billingCycle}
+                  onChange={(value) => setBillingCycle(value as BillingCycle)}
+                />
+              </div>
+
+              <div className="hidden lg:grid lg:grid-cols-3 gap-3">
+                {(Object.keys(billingCycles) as BillingCycle[]).map((cycle) => {
+                  const info = billingCycles[cycle];
+                  return (
+                    <button
+                      key={cycle}
+                      onClick={() => setBillingCycle(cycle)}
+                      className={`p-3 rounded-lg transition-all ${
+                        billingCycle === cycle
+                          ? 'bg-cyan-600 text-white shadow-lg'
+                          : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-cyan-500/30'
+                      }`}
+                    >
+                      <div className="font-semibold text-sm">{info.name}</div>
+                      {info.discount > 0 && (
+                        <div className={`text-xs mt-1 ${billingCycle === cycle ? 'opacity-80' : 'text-green-400'}`}>
+                          Save {info.discount}%
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 hidden lg:block">
           <div className="lg:sticky lg:top-24 space-y-4">
             <div className="bg-gradient-to-br from-cyan-900 to-slate-900 rounded-xl p-6 border-2 border-cyan-500 shadow-lg shadow-cyan-500/30">
               <h3 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
@@ -368,6 +502,74 @@ export function PlanCalculator() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-gradient-to-br from-cyan-900 to-slate-900 border-t-2 border-cyan-500 shadow-2xl z-40">
+        <button
+          onClick={() => setShowPriceSummary(!showPriceSummary)}
+          className="w-full px-4 py-3 flex items-center justify-between text-white"
+        >
+          <div className="flex items-center space-x-3">
+            <PlanIcon className="h-5 w-5 text-cyan-400" />
+            <div className="text-left">
+              <div className="text-xs text-slate-300">Total Price</div>
+              <div className="text-lg font-bold">₹{Math.round(pricing.totalAfterDiscount).toLocaleString()}</div>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-cyan-300">Details</span>
+            {showPriceSummary ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
+          </div>
+        </button>
+
+        {showPriceSummary && (
+          <div className="px-4 pb-4 max-h-96 overflow-y-auto">
+            <div className="space-y-3 mb-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-300">Base Plan</span>
+                <span className="text-white font-semibold">₹{pricing.baseMonthly.toLocaleString()}/mo</span>
+              </div>
+              {pricing.storageAddon > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-300">Extra Storage</span>
+                  <span className="text-white font-semibold">₹{pricing.storageAddon.toLocaleString()}/mo</span>
+                </div>
+              )}
+              {pricing.bandwidthAddon > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-300">Extra Bandwidth</span>
+                  <span className="text-white font-semibold">₹{pricing.bandwidthAddon.toLocaleString()}/mo</span>
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-cyan-500/30 pt-3 mb-3">
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-slate-300">Subtotal ({cycleInfo.months} months)</span>
+                <span className="text-white">₹{pricing.totalBeforeDiscount.toLocaleString()}</span>
+              </div>
+              {pricing.discount > 0 && (
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-green-400">Discount ({pricing.savingsPercent}%)</span>
+                  <span className="text-green-400">-₹{pricing.discount.toLocaleString()}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-slate-950 rounded-lg p-3 mb-3">
+              <div className="text-xs text-cyan-400 mb-1">
+                ₹{Math.round(pricing.effectiveMonthly).toLocaleString()}/month effective
+              </div>
+            </div>
+
+            <Link
+              to="/signup"
+              className="block w-full text-center px-6 py-3 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg font-bold hover:from-cyan-400 hover:to-teal-400 transition shadow-lg"
+            >
+              Deploy This Configuration
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
