@@ -210,7 +210,7 @@ export function PlanCalculator() {
               <ChevronDown className={`h-5 w-5 text-cyan-400 transition-transform duration-300 ${expandedSection === 'plan' ? 'rotate-180' : ''}`} />
             </button>
 
-            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${expandedSection === 'plan' ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className={`transition-all duration-300 ease-in-out ${expandedSection === 'plan' ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
               <div className="px-4 pb-4 lg:px-6 lg:pb-6">
                 <div className="block lg:hidden">
                   <MobileDropdown
@@ -266,7 +266,7 @@ export function PlanCalculator() {
               <ChevronDown className={`h-5 w-5 text-cyan-400 transition-transform duration-300 ${expandedSection === 'ram' ? 'rotate-180' : ''}`} />
             </button>
 
-            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${expandedSection === 'ram' ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className={`transition-all duration-300 ease-in-out ${expandedSection === 'ram' ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
               <div className="px-4 pb-4 lg:px-6 lg:pb-6 space-y-4">
                 <div className="block lg:hidden">
                   <MobileDropdown
@@ -334,7 +334,7 @@ export function PlanCalculator() {
               <ChevronDown className={`h-5 w-5 text-cyan-400 transition-transform duration-300 ${expandedSection === 'addons' ? 'rotate-180' : ''}`} />
             </button>
 
-            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${expandedSection === 'addons' ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className={`transition-all duration-300 ease-in-out ${expandedSection === 'addons' ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
               <div className="px-4 pb-4 lg:px-6 lg:pb-6 space-y-4">
                 <div className="block lg:hidden space-y-4">
                   <MobileDropdown
@@ -396,7 +396,7 @@ export function PlanCalculator() {
               <ChevronDown className={`h-5 w-5 text-cyan-400 transition-transform duration-300 ${expandedSection === 'billing' ? 'rotate-180' : ''}`} />
             </button>
 
-            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${expandedSection === 'billing' ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className={`transition-all duration-300 ease-in-out ${expandedSection === 'billing' ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
               <div className="px-4 pb-4 lg:px-6 lg:pb-6">
                 <div className="block lg:hidden">
                   <MobileDropdown
@@ -515,7 +515,7 @@ export function PlanCalculator() {
         </div>
       </div>
 
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-gradient-to-br from-cyan-900 to-slate-900 border-t-2 border-cyan-500 shadow-2xl z-40 safe-area-inset">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-gradient-to-br from-cyan-900 to-slate-900 border-t-2 border-cyan-500 shadow-2xl z-50 safe-area-inset">
         <button
           onClick={() => setShowPriceSummary(!showPriceSummary)}
           className="w-full px-4 py-4 flex items-center justify-between text-white touch-manipulation active:bg-slate-900/50 transition-colors"

@@ -55,4 +55,8 @@
   .animate-slideUp {
     animation: slideUp 0.3s ease-out;
   }
+
+  .overscroll-contain {
+    overscroll-behavior: contain;
+  }
 }
