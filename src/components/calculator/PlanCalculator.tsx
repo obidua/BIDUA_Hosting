@@ -131,17 +131,17 @@ export function PlanCalculator() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h2 className="text-3xl font-bold text-white mb-2 flex items-center space-x-3">
-            <Calculator className="h-8 w-8 text-cyan-400" />
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center space-x-2 sm:space-x-3">
+            <Calculator className="h-6 w-6 sm:h-8 sm:w-8 text-cyan-400" />
             <span>Custom Server Calculator</span>
           </h2>
-          <p className="text-slate-400">Configure your perfect server and see real-time pricing</p>
+          <p className="text-sm sm:text-base text-slate-400">Configure your perfect server and see real-time pricing</p>
         </div>
         <button
           onClick={handleReset}
-          className="flex items-center space-x-2 px-4 py-2 bg-slate-800 text-cyan-400 rounded-lg hover:bg-slate-700 transition border border-cyan-500/30"
+          className="flex items-center justify-center space-x-2 px-4 py-2 bg-slate-800 text-cyan-400 rounded-lg hover:bg-slate-700 transition border border-cyan-500/30 w-full sm:w-auto"
         >
           <RefreshCw className="h-4 w-4" />
           <span>Reset</span>
@@ -199,32 +199,32 @@ export function PlanCalculator() {
                 onChange={(e) => setSelectedRam(availableRamOptions[parseInt(e.target.value)])}
                 className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
               />
-              <div className="flex justify-between text-xs text-slate-400 mt-2">
-                {availableRamOptions.map((ram) => (
-                  <span key={ram}>{ram}GB</span>
+              <div className="flex justify-between text-xs text-slate-400 mt-2 overflow-x-auto">
+                {availableRamOptions.map((ram, idx) => (
+                  <span key={ram} className={`${idx % 2 === 1 ? 'hidden sm:inline' : ''}`}>{ram}GB</span>
                 ))}
               </div>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-              <div className="bg-slate-800 p-3 rounded-lg border border-cyan-500/20">
-                <Cpu className="h-5 w-5 text-cyan-400 mb-1" />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-4">
+              <div className="bg-slate-800 p-2 sm:p-3 rounded-lg border border-cyan-500/20">
+                <Cpu className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-400 mb-1" />
                 <div className="text-xs text-slate-400">vCPU</div>
-                <div className="text-lg font-bold text-white">{currentConfig.vcpu}</div>
+                <div className="text-base sm:text-lg font-bold text-white">{currentConfig.vcpu}</div>
               </div>
-              <div className="bg-slate-800 p-3 rounded-lg border border-cyan-500/20">
-                <MemoryStick className="h-5 w-5 text-green-400 mb-1" />
+              <div className="bg-slate-800 p-2 sm:p-3 rounded-lg border border-cyan-500/20">
+                <MemoryStick className="h-4 w-4 sm:h-5 sm:w-5 text-green-400 mb-1" />
                 <div className="text-xs text-slate-400">RAM</div>
-                <div className="text-lg font-bold text-white">{currentConfig.ram}GB</div>
+                <div className="text-base sm:text-lg font-bold text-white">{currentConfig.ram}GB</div>
               </div>
-              <div className="bg-slate-800 p-3 rounded-lg border border-cyan-500/20">
-                <HardDrive className="h-5 w-5 text-orange-400 mb-1" />
+              <div className="bg-slate-800 p-2 sm:p-3 rounded-lg border border-cyan-500/20">
+                <HardDrive className="h-4 w-4 sm:h-5 sm:w-5 text-orange-400 mb-1" />
                 <div className="text-xs text-slate-400">Storage</div>
-                <div className="text-lg font-bold text-white">{currentConfig.storage}GB</div>
+                <div className="text-base sm:text-lg font-bold text-white">{currentConfig.storage}GB</div>
               </div>
-              <div className="bg-slate-800 p-3 rounded-lg border border-cyan-500/20">
-                <Network className="h-5 w-5 text-purple-400 mb-1" />
+              <div className="bg-slate-800 p-2 sm:p-3 rounded-lg border border-cyan-500/20">
+                <Network className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400 mb-1" />
                 <div className="text-xs text-slate-400">Bandwidth</div>
-                <div className="text-lg font-bold text-white">1TB</div>
+                <div className="text-base sm:text-lg font-bold text-white">1TB</div>
               </div>
             </div>
           </div>
@@ -233,7 +233,7 @@ export function PlanCalculator() {
             <h3 className="text-xl font-bold text-white mb-4">Add-ons</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-2 break-words">
                   Extra Storage: +{extraStorage}GB (₹{STORAGE_PRICE_PER_GB}/GB/month)
                 </label>
                 <input
@@ -247,7 +247,7 @@ export function PlanCalculator() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-2 break-words">
                   Extra Bandwidth: +{extraBandwidth}TB (₹{BANDWIDTH_PRICE_PER_TB}/TB/month)
                 </label>
                 <input
@@ -291,7 +291,7 @@ export function PlanCalculator() {
         </div>
 
         <div className="lg:col-span-1">
-          <div className="sticky top-24 space-y-4">
+          <div className="lg:sticky lg:top-24 space-y-4">
             <div className="bg-gradient-to-br from-cyan-900 to-slate-900 rounded-xl p-6 border-2 border-cyan-500 shadow-lg shadow-cyan-500/30">
               <h3 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
                 <PlanIcon className="h-6 w-6 text-cyan-400" />
@@ -331,11 +331,11 @@ export function PlanCalculator() {
               </div>
 
               <div className="bg-slate-950 rounded-lg p-4 mb-4">
-                <div className="flex justify-between items-baseline mb-2">
-                  <span className="text-slate-300">Total Price</span>
-                  <span className="text-3xl font-bold text-white">₹{Math.round(pricing.totalAfterDiscount).toLocaleString()}</span>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-baseline mb-2 gap-1">
+                  <span className="text-slate-300 text-sm sm:text-base">Total Price</span>
+                  <span className="text-2xl sm:text-3xl font-bold text-white">₹{Math.round(pricing.totalAfterDiscount).toLocaleString()}</span>
                 </div>
-                <div className="text-sm text-cyan-400">
+                <div className="text-xs sm:text-sm text-cyan-400">
                   ₹{Math.round(pricing.effectiveMonthly).toLocaleString()}/month effective
                 </div>
               </div>
@@ -348,9 +348,9 @@ export function PlanCalculator() {
               </Link>
             </div>
 
-            <div className="bg-slate-900 rounded-xl p-6 border border-cyan-500/30">
-              <h4 className="font-bold text-white mb-3">Comparison Across Cycles</h4>
-              <div className="space-y-2 text-sm">
+            <div className="bg-slate-900 rounded-xl p-4 sm:p-6 border border-cyan-500/30">
+              <h4 className="font-bold text-white mb-3 text-sm sm:text-base">Comparison Across Cycles</h4>
+              <div className="space-y-2 text-xs sm:text-sm">
                 {(Object.keys(billingCycles) as BillingCycle[]).map((cycle) => {
                   const info = billingCycles[cycle];
                   const cyclePrice = pricing.monthlyTotal * info.months;

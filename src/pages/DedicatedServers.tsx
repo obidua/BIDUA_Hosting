@@ -153,7 +153,7 @@ export function DedicatedServers() {
                     className={`block w-full text-center px-6 py-3 rounded-lg font-semibold transition ${
                       server.popular
                         ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white hover:from-cyan-400 hover:to-teal-400'
-                        : 'bg-gray-100 text-white hover:bg-gray-200'
+                        : 'bg-slate-800 text-white hover:bg-slate-700 border-2 border-cyan-500/50'
                     }`}
                   >
                     Order Now
