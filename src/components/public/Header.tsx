@@ -43,19 +43,23 @@ export function Header() {
                 <ChevronDown className={`h-4 w-4 transition-transform ${productsOpen ? 'rotate-180' : ''}`} />
               </button>
               {productsOpen && (
-                <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-lg shadow-lg py-2 border border-gray-100">
-                  <Link
-                    to="/pricing"
-                    className="block px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
-                  >
-                    Cloud Servers
-                  </Link>
-                  <Link
-                    to="/dedicated-servers"
-                    className="block px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
-                  >
-                    Dedicated Servers
-                  </Link>
+                <div className="absolute top-full left-0 pt-2 -mt-2 w-56">
+                  <div className="bg-white rounded-lg shadow-lg py-2 border border-gray-100">
+                    <Link
+                      to="/pricing"
+                      className="block px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
+                      onClick={() => setProductsOpen(false)}
+                    >
+                      Cloud Servers
+                    </Link>
+                    <Link
+                      to="/dedicated-servers"
+                      className="block px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
+                      onClick={() => setProductsOpen(false)}
+                    >
+                      Dedicated Servers
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
