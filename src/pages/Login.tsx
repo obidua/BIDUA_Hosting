@@ -104,6 +104,20 @@ export function Login() {
               </Link>
             </p>
           </div>
+
+          <div className="mt-6 pt-6 border-t border-cyan-500/20">
+            <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-4">
+              <p className="text-xs font-semibold text-cyan-300 mb-2">Demo Credentials:</p>
+              <div className="space-y-1">
+                <p className="text-sm text-slate-300">
+                  <span className="text-cyan-400">Email:</span> test@demo.com
+                </p>
+                <p className="text-sm text-slate-300">
+                  <span className="text-cyan-400">Password:</span> 1234
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
