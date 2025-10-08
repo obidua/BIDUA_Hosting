@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 
 interface DropdownOption {
@@ -18,22 +18,10 @@ interface MobileDropdownProps {
 
 export function MobileDropdown({ options, value, onChange, label, placeholder }: MobileDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 0 });
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const selectedOption = options.find(opt => opt.value === value);
-
-  const updateMenuPosition = useCallback(() => {
-    if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setMenuPosition({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
-        width: rect.width
-      });
-    }
-  }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent | TouchEvent) {
@@ -42,27 +30,16 @@ export function MobileDropdown({ options, value, onChange, label, placeholder }:
       }
     }
 
-    function handleScroll() {
-      if (isOpen) {
-        updateMenuPosition();
-      }
-    }
-
     if (isOpen) {
-      updateMenuPosition();
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('touchstart', handleClickOutside);
-      window.addEventListener('scroll', handleScroll, true);
-      window.addEventListener('resize', updateMenuPosition);
 
       return () => {
         document.removeEventListener('mousedown', handleClickOutside);
         document.removeEventListener('touchstart', handleClickOutside);
-        window.removeEventListener('scroll', handleScroll, true);
-        window.removeEventListener('resize', updateMenuPosition);
       };
     }
-  }, [isOpen, updateMenuPosition]);
+  }, [isOpen]);
 
   return (
     <div ref={dropdownRef} className="relative w-full">
@@ -105,51 +82,48 @@ export function MobileDropdown({ options, value, onChange, label, placeholder }:
             onClick={() => setIsOpen(false)}
             style={{ touchAction: 'none' }}
           />
-          <div
-            className="fixed z-[110] bg-slate-800 border-2 border-cyan-500/50 rounded-xl shadow-2xl overflow-hidden animate-slideDown"
-            style={{
-              top: `${menuPosition.top + 8}px`,
-              left: `${menuPosition.left}px`,
-              width: `${menuPosition.width}px`,
-              maxHeight: 'min(70vh, 400px)'
-            }}
-          >
-            <div className="overflow-y-auto max-h-[inherit] overscroll-contain">
-            {options.map((option) => {
-              const OptionIcon = option.icon;
-              const isSelected = option.value === value;
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 pointer-events-none">
+            <div
+              className="bg-slate-800 border-2 border-cyan-500/50 rounded-xl shadow-2xl overflow-hidden animate-scaleIn pointer-events-auto w-full max-w-md"
+              style={{ maxHeight: '70vh' }}
+            >
+              <div className="overflow-y-auto max-h-[70vh] overscroll-contain">
+                {options.map((option) => {
+                  const OptionIcon = option.icon;
+                  const isSelected = option.value === value;
 
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => {
-                    onChange(option.value);
-                    setIsOpen(false);
-                  }}
-                  className={`w-full flex items-center space-x-3 px-4 py-3.5 hover:bg-slate-700/70 active:bg-slate-700 transition-all min-h-[56px] touch-manipulation ${
-                    isSelected ? 'bg-cyan-600/20 border-l-4 border-cyan-500' : 'border-l-4 border-transparent'
-                  } ${option === options[options.length - 1] ? '' : 'border-b border-slate-700/50'}`}
-                >
-                  {OptionIcon && (
-                    <OptionIcon className={`h-5 w-5 flex-shrink-0 transition-colors ${isSelected ? 'text-cyan-400' : 'text-slate-400'}`} />
-                  )}
-                  <div className="flex flex-col items-start flex-1 min-w-0">
-                    <span className={`font-medium truncate w-full text-left text-base transition-colors ${isSelected ? 'text-white' : 'text-slate-300'}`}>
-                      {option.label}
-                    </span>
-                    {option.sublabel && (
-                      <span className="text-xs text-slate-400 truncate w-full text-left mt-0.5">
-                        {option.sublabel}
-                      </span>
-                    )}
-                  </div>
-                  {isSelected && (
-                    <Check className="h-5 w-5 text-cyan-400 flex-shrink-0" />
-                  )}
-                </button>
-              );
-            })}
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => {
+                        onChange(option.value);
+                        setIsOpen(false);
+                      }}
+                      className={`w-full flex items-center space-x-3 px-4 py-3.5 hover:bg-slate-700/70 active:bg-slate-700 transition-all min-h-[56px] touch-manipulation ${
+                        isSelected ? 'bg-cyan-600/20 border-l-4 border-cyan-500' : 'border-l-4 border-transparent'
+                      } ${option === options[options.length - 1] ? '' : 'border-b border-slate-700/50'}`}
+                    >
+                      {OptionIcon && (
+                        <OptionIcon className={`h-5 w-5 flex-shrink-0 transition-colors ${isSelected ? 'text-cyan-400' : 'text-slate-400'}`} />
+                      )}
+                      <div className="flex flex-col items-start flex-1 min-w-0">
+                        <span className={`font-medium truncate w-full text-left text-base transition-colors ${isSelected ? 'text-white' : 'text-slate-300'}`}>
+                          {option.label}
+                        </span>
+                        {option.sublabel && (
+                          <span className="text-xs text-slate-400 truncate w-full text-left mt-0.5">
+                            {option.sublabel}
+                          </span>
+                        )}
+                      </div>
+                      {isSelected && (
+                        <Check className="h-5 w-5 text-cyan-400 flex-shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </>
