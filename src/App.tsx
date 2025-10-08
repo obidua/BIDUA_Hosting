@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { TawkToWidget } from './components/TawkToWidget';
 import { PublicLayout } from './layouts/PublicLayout';
 import { DashboardLayout } from './layouts/DashboardLayout';
 
@@ -22,6 +23,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <TawkToWidget hideOnRoutes={['/login', '/signup']} />
         <Routes>
           <Route element={<PublicLayout />}>
             <Route path="/" element={<Home />} />
