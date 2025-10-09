@@ -2,11 +2,14 @@ export type UserRole = 'super_admin' | 'admin' | 'customer';
 export type AccountStatus = 'active' | 'suspended' | 'pending';
 export type ServerStatus = 'active' | 'stopped' | 'suspended' | 'provisioning' | 'error';
 export type PlanType = 'general_purpose' | 'cpu_optimized' | 'memory_optimized' | 'storage_optimized';
-export type BillingCycle = 'monthly' | 'annual';
-export type OrderStatus = 'pending' | 'completed' | 'cancelled' | 'refunded';
+export type BillingCycle = 'monthly' | 'quarterly' | 'semiannually' | 'annually' | 'biennially' | 'triennially';
+export type OrderStatus = 'pending' | 'processing' | 'completed' | 'cancelled' | 'failed' | 'refunded';
 export type TicketCategory = 'technical' | 'billing' | 'general' | 'urgent';
 export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type TicketStatus = 'open' | 'in_progress' | 'waiting' | 'resolved' | 'closed';
+export type BillingType = 'recurring' | 'onetime';
+export type EarningStatus = 'pending' | 'approved' | 'paid' | 'rejected' | 'reversed';
+export type PayoutStatus = 'requested' | 'under_review' | 'approved' | 'processing' | 'completed' | 'rejected';
 
 export interface UserProfile {
   id: string;
@@ -18,6 +21,11 @@ export interface UserProfile {
   country?: string;
   role: UserRole;
   account_status: AccountStatus;
+  referral_code?: string;
+  referred_by?: string;
+  total_earnings?: number;
+  available_balance?: number;
+  total_withdrawn?: number;
   created_at: string;
   updated_at: string;
 }
@@ -116,4 +124,68 @@ export interface TicketMessage {
   is_internal: boolean;
   created_at: string;
   user?: UserProfile;
+}
+
+export interface ReferralEarning {
+  id: string;
+  user_id: string;
+  referred_user_id: string;
+  order_id: string;
+  referral_level: number;
+  billing_type: BillingType;
+  commission_rate: number;
+  order_amount: number;
+  commission_amount: number;
+  status: EarningStatus;
+  renewal_cycle: number;
+  created_at: string;
+  approved_at?: string;
+  paid_at?: string;
+  referred_user?: {
+    id: string;
+    full_name: string;
+    referral_code?: string;
+  };
+}
+
+export interface ReferralPayout {
+  id: string;
+  user_id: string;
+  payout_number: string;
+  gross_amount: number;
+  tds_amount: number;
+  service_tax_amount: number;
+  net_amount: number;
+  status: PayoutStatus;
+  payment_method: string;
+  payment_reference?: string;
+  bank_account_details?: Record<string, any>;
+  requested_at: string;
+  approved_at?: string;
+  completed_at?: string;
+  rejected_reason?: string;
+  tax_year?: number;
+  tax_quarter?: number;
+  created_at: string;
+}
+
+export interface ReferralStats {
+  referral_code: string;
+  total_referrals: number;
+  l1_referrals: number;
+  l2_referrals: number;
+  l3_referrals: number;
+  total_earnings: number;
+  available_balance: number;
+  total_withdrawn: number;
+  pending_earnings: number;
+  approved_earnings: number;
+  can_request_payout: boolean;
+}
+
+export interface ReferralChainMember {
+  level: number;
+  referrer_id: string;
+  referrer_name: string;
+  referrer_code: string;
 }

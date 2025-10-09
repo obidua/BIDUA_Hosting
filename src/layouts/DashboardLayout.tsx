@@ -11,7 +11,8 @@ import {
   LayoutDashboard,
   Users,
   ShoppingCart,
-  FileText
+  FileText,
+  Gift
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -29,6 +30,7 @@ export function DashboardLayout() {
   const customerLinks = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Overview' },
     { to: '/dashboard/servers', icon: Server, label: 'My Servers' },
+    { to: '/dashboard/referrals', icon: Gift, label: 'Referrals' },
     { to: '/dashboard/billing', icon: CreditCard, label: 'Billing' },
     { to: '/dashboard/support', icon: MessageSquare, label: 'Support' },
     { to: '/dashboard/settings', icon: Settings, label: 'Settings' },
