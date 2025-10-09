@@ -13,6 +13,10 @@ import { Contact } from './pages/Contact';
 import { Calculator } from './pages/Calculator';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
+import { AboutUs } from './pages/AboutUs';
+import { TermsOfService } from './pages/TermsOfService';
+import { PrivacyPolicy } from './pages/PrivacyPolicy';
+import { AdminLogin } from './pages/AdminLogin';
 
 import { Overview } from './pages/dashboard/Overview';
 import { MyServers } from './pages/dashboard/MyServers';
@@ -34,10 +38,14 @@ function App() {
             <Route path="/dedicated-servers" element={<DedicatedServers />} />
             <Route path="/solutions" element={<Solutions />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/about" element={<AboutUs />} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           </Route>
 
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/admin-login" element={<AdminLogin />} />
 
           <Route
             path="/dashboard"

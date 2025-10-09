@@ -70,13 +70,18 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link to="/terms" className="hover:text-cyan-400 transition">
+                <Link to="/terms-of-service" className="hover:text-cyan-400 transition">
                   Terms of Service
                 </Link>
               </li>
               <li>
-                <Link to="/privacy" className="hover:text-cyan-400 transition">
+                <Link to="/privacy-policy" className="hover:text-cyan-400 transition">
                   Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link to="/admin-login" className="hover:text-cyan-400 transition font-semibold">
+                  Admin Login
                 </Link>
               </li>
             </ul>
