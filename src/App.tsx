@@ -21,6 +21,9 @@ import { AdminLogin } from './pages/AdminLogin';
 import { Overview } from './pages/dashboard/Overview';
 import { MyServers } from './pages/dashboard/MyServers';
 import { Referrals } from './pages/dashboard/Referrals';
+import { Billing } from './pages/dashboard/Billing';
+import { Support } from './pages/dashboard/Support';
+import { Settings } from './pages/dashboard/Settings';
 
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { ReferralManagement } from './pages/admin/ReferralManagement';
@@ -58,9 +61,9 @@ function App() {
             <Route index element={<Overview />} />
             <Route path="servers" element={<MyServers />} />
             <Route path="referrals" element={<Referrals />} />
-            <Route path="billing" element={<div className="text-center py-20"><h2 className="text-2xl font-bold text-gray-900">Billing Page</h2><p className="text-gray-600">Coming soon</p></div>} />
-            <Route path="support" element={<div className="text-center py-20"><h2 className="text-2xl font-bold text-gray-900">Support Page</h2><p className="text-gray-600">Coming soon</p></div>} />
-            <Route path="settings" element={<div className="text-center py-20"><h2 className="text-2xl font-bold text-gray-900">Settings Page</h2><p className="text-gray-600">Coming soon</p></div>} />
+            <Route path="billing" element={<Billing />} />
+            <Route path="support" element={<Support />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
 
           <Route
