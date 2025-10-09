@@ -42,6 +42,7 @@ export function DashboardLayout() {
     { to: '/admin/servers', icon: Server, label: 'Servers' },
     { to: '/admin/plans', icon: FileText, label: 'Plans' },
     { to: '/admin/orders', icon: ShoppingCart, label: 'Orders' },
+    { to: '/admin/referrals', icon: Gift, label: 'Referrals' },
     { to: '/admin/support', icon: MessageSquare, label: 'Support' },
   ];
 

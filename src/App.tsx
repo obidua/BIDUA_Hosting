@@ -19,6 +19,7 @@ import { MyServers } from './pages/dashboard/MyServers';
 import { Referrals } from './pages/dashboard/Referrals';
 
 import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { ReferralManagement } from './pages/admin/ReferralManagement';
 
 function App() {
   return (
@@ -67,6 +68,7 @@ function App() {
             <Route path="servers" element={<div className="text-center py-20"><h2 className="text-2xl font-bold text-gray-900">Server Management</h2><p className="text-gray-600">Coming soon</p></div>} />
             <Route path="plans" element={<div className="text-center py-20"><h2 className="text-2xl font-bold text-gray-900">Plans Management</h2><p className="text-gray-600">Coming soon</p></div>} />
             <Route path="orders" element={<div className="text-center py-20"><h2 className="text-2xl font-bold text-gray-900">Orders Management</h2><p className="text-gray-600">Coming soon</p></div>} />
+            <Route path="referrals" element={<ReferralManagement />} />
             <Route path="support" element={<div className="text-center py-20"><h2 className="text-2xl font-bold text-gray-900">Support Management</h2><p className="text-gray-600">Coming soon</p></div>} />
           </Route>
 
