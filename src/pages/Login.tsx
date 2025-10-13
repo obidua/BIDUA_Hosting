@@ -113,7 +113,7 @@ export function Login() {
                   <span className="text-cyan-400">Email:</span> test@demo.com
                 </p>
                 <p className="text-sm text-slate-300">
-                  <span className="text-cyan-400">Password:</span> 1234
+                  <span className="text-cyan-400">Password:</span> demo1234
                 </p>
               </div>
             </div>
