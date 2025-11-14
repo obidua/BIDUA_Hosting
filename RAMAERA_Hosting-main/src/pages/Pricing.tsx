@@ -915,58 +915,6 @@ export function Pricing() {
         </div>
       </section>
 
-      {/* Configuration Filters Section - Moved here for better UX */}
-      <section className="py-12 bg-slate-900 hidden md:block">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-white mb-4">Choose Your Configuration</h2>
-            <p className="text-lg text-slate-400">Select billing cycle and server type to view pricing</p>
-          </div>
-
-          <div className="flex justify-center mb-8">
-            <div className="inline-flex flex-wrap items-center bg-slate-950 rounded-xl p-2 shadow-lg border-2 border-cyan-500 gap-2">
-              {billingCycles.map((cycle) => (
-                <button
-                  key={cycle.id}
-                  onClick={() => setBillingCycle(cycle.id)}
-                  className={`px-4 py-2.5 rounded-lg font-semibold text-sm transition-all ${
-                    billingCycle === cycle.id
-                      ? 'bg-cyan-600 text-white shadow-md'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800 border border-cyan-500/30'
-                  }`}
-                >
-                  {cycle.name}
-                  {cycle.discount > 0 && (
-                    <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${
-                      billingCycle === cycle.id ? 'bg-white/20' : 'bg-green-100 text-green-700'
-                    }`}>
-                      Save {cycle.discount}%
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex justify-center flex-wrap gap-4 mb-12">
-            {planTypes.map((type) => (
-              <button
-                key={type.id}
-                onClick={() => setSelectedType(type.id)}
-                className={`flex items-center space-x-3 px-6 py-4 rounded-xl font-semibold transition-all shadow-md ${
-                  selectedType === type.id
-                    ? 'bg-cyan-600 text-white shadow-lg scale-105 border-2 border-cyan-400'
-                    : 'bg-slate-950 text-cyan-400 border-2 border-cyan-500 hover:bg-slate-800 hover:shadow-lg hover:shadow-cyan-500/30'
-                }`}
-              >
-                <type.icon className="h-6 w-6" />
-                <span>{type.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <section className="py-16  text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
