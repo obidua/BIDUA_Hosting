@@ -279,14 +279,6 @@ export function MobileBottomNav() {
                     <LogIn className="h-5 w-5" />
                     <span className="font-medium">Login</span>
                   </Link>
-                  <Link
-                    to="/signup"
-                    className="flex items-center space-x-3 px-4 py-3 rounded-lg bg-gradient-to-r from-cyan-500 to-teal-500 text-white shadow-lg shadow-cyan-500/30"
-                    onClick={closeMoreMenu}
-                  >
-                    <User className="h-5 w-5" />
-                    <span className="font-medium">Get Started</span>
-                  </Link>
                 </>
               )}
             </div>

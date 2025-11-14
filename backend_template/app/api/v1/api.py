@@ -1,9 +1,10 @@
 from fastapi import APIRouter
 from app.api.v1.endpoints import (
     auth, users, plans, servers, orders, 
-    invoices, support, settings, billing, 
+    invoices, settings, billing, 
     dashboard, referrals, payments
 )
+from app.api.v1.endpoints import support_enhanced as support
 from app.api.v1 import pricing
 
 api_router = APIRouter()

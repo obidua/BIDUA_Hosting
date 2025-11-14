@@ -1,40 +1,58 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MessageSquare, Plus, Search, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { api } from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext'; // Keep this line for context
 
 export function Support() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'tickets' | 'new'>('tickets');
   const [searchQuery, setSearchQuery] = useState('');
+  const [tickets, setTickets] = useState<SupportTicketData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
-  const tickets = [
-    {
-      id: 'TICK-001',
-      subject: 'Server connectivity issue',
-      status: 'open',
-      priority: 'high',
-      created: '2024-10-14',
-      lastUpdated: '2024-10-14',
-      messages: 3,
-    },
-    {
-      id: 'TICK-002',
-      subject: 'Billing inquiry',
-      status: 'answered',
-      priority: 'medium',
-      created: '2024-10-12',
-      lastUpdated: '2024-10-13',
-      messages: 5,
-    },
-    {
-      id: 'TICK-003',
-      subject: 'Upgrade request',
-      status: 'closed',
-      priority: 'low',
-      created: '2024-10-10',
-      lastUpdated: '2024-10-11',
-      messages: 2,
-    },
-  ];
+  interface SupportTicketData {
+    id: string;
+    subject: string;
+    status: string;
+    priority: string;
+    created: string;
+    lastUpdated: string;
+    messages: number;
+    description?: string;
+    department?: string;
+  }
 
+  // Load tickets from database
+  useEffect(() => {
+    loadTickets();
+  }, []);
+
+  const loadTickets = async () => {
+    try {
+      setLoading(true);
+      const response: any = await api.getSupportTickets();
+      
+      // Transform backend data to match frontend format
+      const transformedTickets: SupportTicketData[] = (response || []).map((ticket: any) => ({
+        id: ticket.ticket_number,
+        subject: ticket.subject,
+        status: ticket.status,
+        priority: ticket.priority,
+        created: ticket.created_at.split('T')[0],
+        lastUpdated: ticket.updated_at ? ticket.updated_at.split('T')[0] : ticket.created_at.split('T')[0],
+        messages: 0, // We'll implement message count later
+        description: ticket.description,
+        department: ticket.department
+      }));
+      
+      setTickets(transformedTickets);
+    } catch (error) {
+      console.error('Failed to load tickets:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   const [formData, setFormData] = useState({
     subject: '',
     priority: 'medium',
@@ -42,9 +60,36 @@ export function Support() {
     message: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Ticket submitted:', formData);
+    
+    try {
+      setSubmitting(true);
+      await api.createSupportTicket({
+        subject: formData.subject,
+        description: formData.message,
+        priority: formData.priority,
+        department: formData.department
+      });
+      
+      // Reset form and reload tickets
+      setFormData({
+        subject: '',
+        priority: 'medium',
+        department: 'technical',
+        message: '',
+      });
+      
+      setActiveTab('tickets');
+      await loadTickets();
+      
+      alert('Ticket created successfully!');
+    } catch (error) {
+      console.error('Failed to create ticket:', error);
+      alert('Failed to create ticket. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -136,6 +181,13 @@ export function Support() {
         <div className="p-6">
           {activeTab === 'tickets' && (
             <div className="space-y-4">
+                {loading ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto"></div>
+                    <p className="text-slate-400 mt-4">Loading tickets...</p>
+                  </div>
+                ) : (
+                  <>
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
                 <input
@@ -198,6 +250,8 @@ export function Support() {
                   ))}
                 </div>
               )}
+                  </>
+                )}
             </div>
           )}
 
@@ -274,9 +328,10 @@ export function Support() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg font-semibold hover:from-cyan-400 hover:to-teal-400 transition shadow-lg shadow-cyan-500/50"
+              disabled={submitting}
+              className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg font-semibold hover:from-cyan-400 hover:to-teal-400 transition shadow-lg shadow-cyan-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Submit Ticket
+              {submitting ? 'Submitting...' : 'Submit Ticket'}
                 </button>
               </div>
             </form>

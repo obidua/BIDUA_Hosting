@@ -37,14 +37,14 @@ export function DashboardLayout() {
 
   return (
     <div className="min-h-screen bg-slate-950 overflow-x-hidden">
-      <div className="flex w-full">
+      <div className="flex w-full h-screen">
         <aside
           className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 border-r border-cyan-500/20 transform transition-transform duration-200 ease-in-out ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-          } lg:static lg:inset-0`}
+          }`}
         >
           <div className="flex flex-col h-full">
-            <div className="flex items-center justify-between h-16 px-6 border-b border-cyan-500/20">
+            <div className="flex items-center justify-between h-16 px-6 border-b border-cyan-500/20 flex-shrink-0">
               <Link to="/dashboard" className="flex items-center space-x-2">
                 <Server className="h-8 w-8 text-cyan-400 animate-serverGlow" />
                 <span className="text-xl font-bold text-white">BIDUA</span>
@@ -87,7 +87,7 @@ export function DashboardLayout() {
               )}
             </nav>
 
-            <div className="border-t border-cyan-500/20 p-4">
+            <div className="border-t border-cyan-500/20 p-4 flex-shrink-0">
               <div className="flex items-center space-x-3 px-4 py-3 bg-slate-950 rounded-lg mb-2">
                 <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-teal-500 rounded-full flex items-center justify-center text-white font-semibold">
                   {profile?.full_name?.charAt(0) || 'U'}
@@ -112,8 +112,8 @@ export function DashboardLayout() {
           </div>
         </aside>
 
-        <div className="flex-1 flex flex-col min-h-screen w-full overflow-x-hidden">
-          <header className="sticky top-0 z-40 flex items-center h-16 px-4 sm:px-6 lg:px-8 bg-slate-900 border-b border-cyan-500/20 md:flex hidden">
+        <div className="flex-1 flex flex-col h-screen w-full overflow-x-hidden lg:ml-64">
+          <header className="sticky top-0 z-40 flex items-center h-16 px-4 sm:px-6 lg:px-8 bg-slate-900 border-b border-cyan-500/20 md:flex hidden flex-shrink-0">
             <button
               onClick={() => setSidebarOpen(true)}
               className="lg:hidden text-slate-400 hover:text-slate-300 mr-4"
@@ -129,7 +129,7 @@ export function DashboardLayout() {
             </div>
           </header>
 
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-20 md:pb-8 w-full overflow-x-hidden">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-20 md:pb-8 w-full overflow-y-auto overflow-x-hidden">
             <Outlet />
           </main>
         </div>

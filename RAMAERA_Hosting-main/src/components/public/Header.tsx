@@ -91,20 +91,12 @@ export function Header() {
                 Dashboard
               </Link>
             ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="text-slate-300 hover:text-cyan-400 transition"
-                >
-                  Login
-                </Link>
-                <Link
-                  to="/signup"
-                  className="px-4 py-1  text-white rounded-lg hover:from-cyan-400 hover:to-teal-400 transition shadow-lg border-2 border-cyan-500"
-                >
-                  Get Started
-                </Link>
-              </>
+              <Link
+                to="/login"
+                className="text-slate-300 hover:text-cyan-400 transition"
+              >
+                Login
+              </Link>
             )}
           </div>
         </div>

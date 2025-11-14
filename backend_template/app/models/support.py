@@ -113,3 +113,8 @@ class SupportTicket(Base):
         back_populates="assigned_tickets",
         foreign_keys=[assigned_to]
     )
+    messages = relationship(
+        "TicketMessage",
+        back_populates="ticket",
+        cascade="all, delete-orphan"
+    )

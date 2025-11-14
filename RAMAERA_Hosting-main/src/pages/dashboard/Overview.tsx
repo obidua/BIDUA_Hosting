@@ -78,10 +78,10 @@ export function Overview() {
   ];
 
   const colorClasses: Record<string, { bg: string; text: string; hover: string }> = {
-    blue: { bg: 'bg-blue-100', text: 'text-cyan-400', hover: 'hover:bg-cyan-400' },
-    green: { bg: 'bg-green-100', text: 'text-green-600', hover: 'hover:bg-green-50' },
-    orange: { bg: 'bg-orange-100', text: 'text-orange-600', hover: 'hover:bg-orange-50' },
-    purple: { bg: 'bg-purple-100', text: 'text-purple-600', hover: 'hover:bg-purple-50' },
+    blue: { bg: 'bg-blue-100', text: 'text-cyan-400', hover: 'hover:bg-cyan-500/10' },
+    green: { bg: 'bg-green-100', text: 'text-green-600', hover: 'hover:bg-green-500/10' },
+    orange: { bg: 'bg-orange-100', text: 'text-orange-600', hover: 'hover:bg-orange-500/10' },
+    purple: { bg: 'bg-purple-100', text: 'text-purple-600', hover: 'hover:bg-purple-500/10' },
   };
 
   return (

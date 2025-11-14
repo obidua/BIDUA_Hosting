@@ -287,26 +287,26 @@ class ApiClient {
     if (params?.user_id) query.append('user_id', params.user_id);
     if (params?.status) query.append('status', params.status);
     
-    return this.request(`/api/v1/support?${query.toString()}`, {
+      return this.request(`/api/v1/support/tickets?${query.toString()}`, {
       method: 'GET',
     });
   }
 
   async getSupportTicket(ticketId: string) {
-    return this.request(`/api/v1/support/${ticketId}`, {
+      return this.request(`/api/v1/support/tickets/${ticketId}`, {
       method: 'GET',
     });
   }
 
   async createSupportTicket(data: any) {
-    return this.request('/api/v1/support', {
+      return this.request('/api/v1/support/tickets', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
   async updateSupportTicket(ticketId: string, data: any) {
-    return this.request(`/api/v1/support/${ticketId}`, {
+      return this.request(`/api/v1/support/tickets/${ticketId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });

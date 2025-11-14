@@ -20,7 +20,7 @@ import { Overview } from './pages/dashboard/Overview';
 import { MyServers } from './pages/dashboard/MyServers';
 import { Referrals } from './pages/dashboard/Referrals';
 import { Billing } from './pages/dashboard/Billing';
-import { Support } from './pages/dashboard/Support';
+import { SupportEnhanced as Support } from './pages/dashboard/SupportEnhanced';
 import { Settings } from './pages/dashboard/Settings';
 
 import { AdminDashboard } from './pages/admin/AdminDashboard';
@@ -29,7 +29,7 @@ import { UserManagement } from './pages/admin/UserManagement';
 import { ServerManagement } from './pages/admin/ServerManagement';
 import { PlansManagement } from './pages/admin/PlansManagement';
 import { OrdersManagement } from './pages/admin/OrdersManagement';
-import { SupportManagement } from './pages/admin/SupportManagement';
+import { SupportManagementEnhanced as SupportManagement } from './pages/admin/SupportManagementEnhanced';
 import SplashCursor from './components/SplashCurser';
 
 function App() {
