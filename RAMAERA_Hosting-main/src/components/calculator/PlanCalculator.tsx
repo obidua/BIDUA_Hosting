@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Server, Zap, Database, Cpu, MemoryStick, HardDrive, Network, Calculator, RefreshCw, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { MobileDropdown } from './MobileDropdown';
+import { pricingService, type HostingPlan, type BillingCycle as ApiBillingCycle } from '../../lib/pricingService';
 
 type PlanType = 'general_purpose' | 'cpu_optimized' | 'memory_optimized';
 type BillingCycle = 'monthly' | 'quarterly' | 'semiannually' | 'annually' | 'biennially' | 'triennially';
@@ -12,51 +13,6 @@ interface PlanConfig {
   storage: number;
   basePrice: number;
 }
-
-const planConfigurations: Record<PlanType, Record<number, PlanConfig>> = {
-  general_purpose: {
-    4: { ram: 4, vcpu: 2, storage: 80, basePrice: 1120 },
-    8: { ram: 8, vcpu: 4, storage: 160, basePrice: 2240 },
-    16: { ram: 16, vcpu: 6, storage: 320, basePrice: 4080 },
-    32: { ram: 32, vcpu: 8, storage: 480, basePrice: 6720 },
-    48: { ram: 48, vcpu: 10, storage: 512, basePrice: 8848 },
-    64: { ram: 64, vcpu: 12, storage: 640, basePrice: 11360 },
-    96: { ram: 96, vcpu: 16, storage: 740, basePrice: 15760 },
-    128: { ram: 128, vcpu: 16, storage: 840, basePrice: 19360 },
-    256: { ram: 256, vcpu: 24, storage: 1280, basePrice: 35520 }
-  },
-  cpu_optimized: {
-    4: { ram: 4, vcpu: 2, storage: 80, basePrice: 1520 },
-    8: { ram: 8, vcpu: 4, storage: 160, basePrice: 3040 },
-    16: { ram: 16, vcpu: 6, storage: 320, basePrice: 5280 },
-    32: { ram: 32, vcpu: 8, storage: 480, basePrice: 8320 },
-    48: { ram: 48, vcpu: 10, storage: 512, basePrice: 10848 },
-    64: { ram: 64, vcpu: 12, storage: 640, basePrice: 13760 },
-    96: { ram: 96, vcpu: 16, storage: 740, basePrice: 18960 },
-    128: { ram: 128, vcpu: 16, storage: 840, basePrice: 22560 },
-    256: { ram: 256, vcpu: 24, storage: 1280, basePrice: 40320 }
-  },
-  memory_optimized: {
-    8: { ram: 8, vcpu: 1, storage: 80, basePrice: 1320 },
-    16: { ram: 16, vcpu: 2, storage: 160, basePrice: 2640 },
-    32: { ram: 32, vcpu: 4, storage: 320, basePrice: 5280 },
-    64: { ram: 64, vcpu: 6, storage: 480, basePrice: 9520 },
-    96: { ram: 96, vcpu: 8, storage: 512, basePrice: 13248 },
-    128: { ram: 128, vcpu: 10, storage: 640, basePrice: 17360 },
-    192: { ram: 192, vcpu: 12, storage: 740, basePrice: 24560 },
-    256: { ram: 256, vcpu: 16, storage: 840, basePrice: 32160 },
-    384: { ram: 384, vcpu: 24, storage: 1280, basePrice: 48320 }
-  }
-};
-
-const billingCycles: Record<BillingCycle, { name: string; months: number; discount: number }> = {
-  monthly: { name: 'Monthly', months: 1, discount: 0 },
-  quarterly: { name: 'Quarterly', months: 3, discount: 10 },
-  semiannually: { name: 'Semi-Annually', months: 6, discount: 15 },
-  annually: { name: 'Annually', months: 12, discount: 20 },
-  biennially: { name: 'Biennially', months: 24, discount: 25 },
-  triennially: { name: 'Triennially', months: 36, discount: 35 }
-};
 
 const planTypeInfo = {
   general_purpose: {
@@ -90,10 +46,125 @@ export function PlanCalculator() {
   const [extraBandwidth, setExtraBandwidth] = useState<number>(0);
   const [showPriceSummary, setShowPriceSummary] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>('plan');
+  
+  // Dynamic pricing state
+  const [plans, setPlans] = useState<HostingPlan[]>([]);
+  const [billingCyclesData, setBillingCyclesData] = useState<ApiBillingCycle[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Load pricing data from API
+  useEffect(() => {
+    async function loadPricingData() {
+      try {
+  console.log('🔄 [Calculator] Fetching pricing data from API...');
+        const [plansData, cyclesData] = await Promise.all([
+          pricingService.getPlans(),
+          pricingService.getBillingCycles()
+        ]);
+        console.log('✅ [Calculator] Received plans from database:', {
+          totalPlans: plansData.length,
+          planTypes: {
+            general_purpose: plansData.filter(p => p.plan_type === 'general_purpose').length,
+            cpu_optimized: plansData.filter(p => p.plan_type === 'cpu_optimized').length,
+            memory_optimized: plansData.filter(p => p.plan_type === 'memory_optimized').length,
+          },
+          sampleCPUOptimized: plansData.find(p => p.plan_type === 'cpu_optimized' && p.name === 'C.8GB') ? {
+            name: plansData.find(p => p.plan_type === 'cpu_optimized' && p.name === 'C.8GB')!.name,
+            cpu: plansData.find(p => p.plan_type === 'cpu_optimized' && p.name === 'C.8GB')!.cpu_cores,
+            ram: plansData.find(p => p.plan_type === 'cpu_optimized' && p.name === 'C.8GB')!.ram_gb,
+          } : null
+        });
+        console.log('💰 [Calculator] Billing cycles:', cyclesData);
+        setPlans(plansData);
+        setBillingCyclesData(cyclesData);
+        
+  // Success banner
+  console.log('%c✅ CALCULATOR DATA LOADED FROM DATABASE', 'background: #3b82f6; color: white; padding: 8px 16px; font-weight: bold; font-size: 14px;');
+  console.log('%cAll configurations are now fetched dynamically from PostgreSQL!', 'color: #3b82f6; font-weight: bold;');
+      } catch (error) {
+  console.error('❌ [Calculator] Failed to load pricing data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadPricingData();
+  }, []);
+  
+  // Build plan configurations from API data
+  const planConfigurations: Record<PlanType, Record<number, PlanConfig>> = {
+    general_purpose: {},
+    cpu_optimized: {},
+    memory_optimized: {}
+  };
+  
+  plans.forEach(plan => {
+    const config: PlanConfig = {
+      ram: plan.ram_gb,
+      vcpu: plan.cpu_cores,
+      storage: plan.storage_gb,
+      basePrice: parseFloat(plan.monthly_price)
+    };
+    planConfigurations[plan.plan_type as PlanType][plan.ram_gb] = config;
+  });
+  
+  // Build billing cycles from API data
+  const billingCycles: Record<BillingCycle, { name: string; months: number; discount: number }> = {
+    monthly: { name: 'Monthly', months: 1, discount: 5 },
+    quarterly: { name: 'Quarterly', months: 3, discount: 10 },
+    semiannually: { name: 'Semi-Annually', months: 6, discount: 15 },
+    annually: { name: 'Annually', months: 12, discount: 20 },
+    biennially: { name: 'Biennially', months: 24, discount: 25 },
+    triennially: { name: 'Triennially', months: 36, discount: 35 }
+  };
+  
+  billingCyclesData.forEach(cycle => {
+    if (cycle.id in billingCycles) {
+      billingCycles[cycle.id as BillingCycle] = {
+        name: cycle.name,
+        months: cycle.months,
+        discount: cycle.discount
+      };
+    }
+  });
 
   const availableRamOptions = Object.keys(planConfigurations[planType]).map(Number).sort((a, b) => a - b);
   const currentConfig = planConfigurations[planType][selectedRam];
   const cycleInfo = billingCycles[billingCycle];
+  
+  // Log selected configuration for debugging
+  useEffect(() => {
+    if (plans.length > 0 && currentConfig) {
+      console.log(`🎯 [Calculator] Selected Configuration:`, {
+        planType,
+        selectedRam: `${selectedRam}GB`,
+        vcpu: currentConfig.vcpu,
+        ram: currentConfig.ram,
+        storage: currentConfig.storage,
+        basePrice: currentConfig.basePrice,
+        billingCycle,
+        extraStorage: `${extraStorage}GB`,
+        extraBandwidth: `${extraBandwidth}TB`
+      });
+    }
+  }, [planType, selectedRam, billingCycle, extraStorage, extraBandwidth, plans.length, currentConfig]);
+  
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+        <div className="text-white text-xl">Loading pricing data...</div>
+      </div>
+    );
+  }
+  
+  // Handle case where config doesn't exist
+  if (!currentConfig) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+        <div className="text-white text-xl">No plans available</div>
+      </div>
+    );
+  }
 
   const STORAGE_PRICE_PER_GB = 2;
   const BANDWIDTH_PRICE_PER_TB = 100;
