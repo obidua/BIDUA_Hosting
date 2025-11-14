@@ -217,9 +217,25 @@ class BillingSettings(Base):  # 🔹 YE CLASS ADD KAREIN
     # Auto-renewal settings
     auto_renewal = Column(Boolean, default=True)
     
-    # Tax information
-    tax_id = Column(String(100), nullable=True)
+    # Billing Address
+    street = Column(String(500), nullable=True)
+    city = Column(String(100), nullable=True)
+    state = Column(String(100), nullable=True)
+    country = Column(String(100), nullable=True)
+    postal_code = Column(String(20), nullable=True)
+    
+    # Company information
     company_name = Column(String(255), nullable=True)
+    tax_id = Column(String(100), nullable=True)
+    
+    # Billing Contact
+    billing_email = Column(String(255), nullable=True)
+    billing_phone = Column(String(50), nullable=True)
+    
+    # Delivery preferences
+    invoice_delivery = Column(String(20), default='email')  # email, dashboard
+    
+    # Legacy fields (keeping for backward compatibility)
     billing_address = Column(JSON, nullable=True)
     
     # Timestamps

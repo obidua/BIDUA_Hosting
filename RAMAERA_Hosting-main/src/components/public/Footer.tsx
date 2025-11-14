@@ -12,7 +12,8 @@ export function Footer() {
               <span className="text-xl font-bold text-white">BIDUA Hosting</span>
             </div>
             <p className="text-sm mb-4">
-              Enterprise-grade cloud hosting solutions for businesses of all sizes. Fast, secure, and reliable.
+              BIDUA Hosting is operated by <span className="font-semibold text-white">BIDUA Industries Pvt Ltd</span>, headquartered in Noida, India. We deliver
+              enterprise-grade cloud, VPS, and bare-metal solutions for businesses of all sizes.
             </p>
             <div className="flex space-x-4">
               <a href="#" className="hover:text-cyan-400 transition">
@@ -79,6 +80,11 @@ export function Footer() {
                   Privacy Policy
                 </Link>
               </li>
+              <li>
+                <Link to="/sla" className="hover:text-cyan-400 transition">
+                  Service Level Agreement
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -95,14 +101,14 @@ export function Footer() {
               </li>
               <li className="flex items-start space-x-2">
                 <MapPin className="h-5 w-5 text-cyan-400 flex-shrink-0 mt-0.5" />
-                <span>123 Cloud Street, Tech City, TC 12345</span>
+                <span>BIDUA Industries Pvt Ltd, Noida, Uttar Pradesh, India</span>
               </li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-cyan-500/20 mt-12 pt-8 text-sm text-center">
-          <p>&copy; {new Date().getFullYear()} BIDUA Hosting. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} BIDUA Industries Pvt Ltd. All rights reserved.</p>
         </div>
       </div>
     </footer>

@@ -16,6 +16,9 @@ import { Calculator } from './pages/Calculator';
 import { Checkout } from './pages/Checkout';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
+import { Terms } from './pages/Terms';
+import { Privacy } from './pages/Privacy';
+import { ServiceLevelAgreement } from './pages/ServiceLevelAgreement';
 
 import { Overview } from './pages/dashboard/Overview';
 import { MyServers } from './pages/dashboard/MyServers';
@@ -52,6 +55,9 @@ function App() {
             <Route path="/contact" element={<Contact />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/sla" element={<ServiceLevelAgreement />} />
           </Route>
 
           <Route

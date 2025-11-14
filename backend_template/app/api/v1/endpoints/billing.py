@@ -267,7 +267,7 @@ from typing import List
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.services.billing_service import BillingService
-from app.schemas.billing import PaymentMethod, PaymentMethodCreate, BillingSettings
+from app.schemas.billing import PaymentMethod, PaymentMethodCreate, BillingSettings, BillingSettingsUpdate
 from app.schemas.users import User
 
 router = APIRouter()
@@ -341,7 +341,7 @@ async def get_billing_settings(
 
 @router.put("/settings", response_model=BillingSettings)
 async def update_billing_settings(
-    settings_update: BillingSettings,
+    settings_update: BillingSettingsUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     billing_service: BillingService = Depends()

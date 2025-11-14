@@ -45,20 +45,62 @@ class BillingSettingsBase(BaseModel):
     maintenance_alerts: bool = True
     marketing_emails: bool = False
     auto_renewal: bool = True
+    
+    # Billing Address
+    street: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+    postal_code: Optional[str] = None
+    
+    # Company information
+    company_name: Optional[str] = None
+    tax_id: Optional[str] = None
+    
+    # Billing Contact
+    billing_email: Optional[str] = None
+    billing_phone: Optional[str] = None
+    
+    # Delivery preferences
+    invoice_delivery: str = 'email'  # email, dashboard
 
 class BillingSettingsCreate(BillingSettingsBase):
-    tax_id: Optional[str] = None
+    pass
+
+class BillingSettingsUpdate(BaseModel):
+    email_notifications: Optional[bool] = None
+    server_alerts: Optional[bool] = None
+    billing_alerts: Optional[bool] = None
+    maintenance_alerts: Optional[bool] = None
+    marketing_emails: Optional[bool] = None
+    auto_renewal: Optional[bool] = None
+    
+    # Billing Address
+    street: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+    postal_code: Optional[str] = None
+    
+    # Company information
     company_name: Optional[str] = None
-    billing_address: Optional[Dict[str, Any]] = None
+    tax_id: Optional[str] = None
+    
+    # Billing Contact
+    billing_email: Optional[str] = None
+    billing_phone: Optional[str] = None
+    
+    # Delivery preferences
+    invoice_delivery: Optional[str] = None
 
 class BillingSettings(BillingSettingsBase):
     id: int
     user_id: int
-    tax_id: Optional[str] = None
-    company_name: Optional[str] = None
-    billing_address: Optional[Dict[str, Any]] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+    
+    # Legacy field for backward compatibility
+    billing_address: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True

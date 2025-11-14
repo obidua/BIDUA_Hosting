@@ -5,7 +5,7 @@ from app.api.v1.endpoints import (
     dashboard, referrals, payments
 )
 from app.api.v1.endpoints import support_enhanced as support
-from app.api.v1 import pricing
+from app.api.v1 import pricing, countries
 
 api_router = APIRouter()
 
@@ -15,6 +15,7 @@ api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboar
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(plans.router, prefix="/plans", tags=["plans"])
 api_router.include_router(pricing.router, tags=["Pricing"])
+api_router.include_router(countries.router, tags=["Countries"])
 api_router.include_router(orders.router, prefix="/orders", tags=["orders"])
 api_router.include_router(payments.router, prefix="/payments", tags=["payments"])
 

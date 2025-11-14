@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../lib/api';
+import { BillingSettings } from '../types/billing';
+import CountriesAPI, { CountrySimple } from '../services/countriesAPI';
 import {
   Server, Check, CreditCard, FileText, ChevronRight, ChevronLeft,
   Cpu, MemoryStick, HardDrive, Network, Clock, Shield, 
   User, Mail, Phone, MapPin, Building, Globe, Tag, Percent,
-  Lock, Plus, Minus, Zap, Database, ShieldCheck
+  Lock, Plus, Minus, Zap, Database, ShieldCheck, FileDown
 } from 'lucide-react';
 
 interface ServerConfig {
@@ -51,6 +54,66 @@ interface BillingInfo {
   promotional?: boolean;
 }
 
+// Utility functions
+const formatDate = (date: Date) => {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+};
+
+const capitalizeWords = (value: string) =>
+  value
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+
+const numberToWords = (num: number): string => {
+  if (num === 0) return 'zero';
+  const belowTwenty = ['','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+  const tens = ['','ten','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+  const thousands = ['','thousand','million','billion'];
+
+  const helper = (n: number): string => {
+    if (n === 0) return '';
+    if (n < 20) return belowTwenty[n];
+    if (n < 100) {
+      const tenWord = tens[Math.floor(n / 10)];
+      const rest = helper(n % 10);
+      return rest ? `${tenWord} ${rest}` : tenWord;
+    }
+    const hundredWord = `${belowTwenty[Math.floor(n / 100)]} hundred`;
+    const remainder = helper(n % 100);
+    return remainder ? `${hundredWord} ${remainder}` : hundredWord;
+  };
+
+  let i = 0;
+  let words = '';
+  let value = num;
+  while (value > 0) {
+    const chunk = value % 1000;
+    if (chunk) {
+      const chunkWords = `${helper(chunk)}${thousands[i] ? ` ${thousands[i]}` : ''}`.trim();
+      words = words ? `${chunkWords} ${words}` : chunkWords;
+    }
+    value = Math.floor(value / 1000);
+    i++;
+  }
+  return words.trim();
+};
+
+const amountInWords = (amount: number) => {
+  const rupees = Math.floor(amount);
+  const paise = Math.round((amount - rupees) * 100);
+  const rupeeWords = numberToWords(rupees);
+  const paiseWords = paise ? `${numberToWords(paise)} Paise` : '';
+  const prefix = rupees > 0 ? `Rupees ${rupeeWords}` : '';
+  const connector = rupees > 0 && paise > 0 ? ' and ' : '';
+  const suffix = paiseWords ? paiseWords : '';
+  const full = `${prefix}${connector}${suffix}`.trim();
+  return full ? `${full} only` : 'Rupees zero only';
+};
+
 export function Checkout() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -78,6 +141,10 @@ export function Checkout() {
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [processing, setProcessing] = useState(false);
   
+  // Countries state
+  const [countries, setCountries] = useState<CountrySimple[]>([]);
+  const [loadingCountries, setLoadingCountries] = useState(true);
+  
   // Configuration options state
   const [operatingSystem, setOperatingSystem] = useState('almalinux-8.4');
   const [datacenter, setDatacenter] = useState('noida-india');
@@ -97,6 +164,22 @@ export function Checkout() {
   const [backupStorage, setBackupStorage] = useState(''); // '', '100gb', '200gb', '300gb', '500gb', '1000gb'
   const [sslCertificate, setSslCertificate] = useState(''); // '', 'essential', 'essential-wildcard', 'comodo', 'comodo-wildcard', 'rapid', 'rapid-wildcard'
   const [supportPackage, setSupportPackage] = useState(''); // '', 'basic', 'premium'
+  const [invoiceDate] = useState(() => new Date());
+  const [invoiceNumber] = useState(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}_${month}_${day}${hours}${minutes}`;
+  });
+  const servicePeriodEnd = useMemo(() => {
+    const end = new Date(invoiceDate);
+    end.setMonth(end.getMonth() + 1);
+    end.setDate(end.getDate() - 1);
+    return end;
+  }, [invoiceDate]);
 
   useEffect(() => {
     // Redirect if not authenticated
@@ -116,6 +199,22 @@ export function Checkout() {
     setServerConfig(config);
   }, [user, location.state, navigate]);
 
+  // Load countries on component mount
+  useEffect(() => {
+    const loadCountries = async () => {
+      try {
+        const countriesData = await CountriesAPI.getCountriesSimple();
+        setCountries(countriesData);
+      } catch (error) {
+        console.error('Failed to load countries:', error);
+      } finally {
+        setLoadingCountries(false);
+      }
+    };
+
+    loadCountries();
+  }, []);
+
   useEffect(() => {
     // Update billing info when profile loads
     if (profile) {
@@ -127,11 +226,59 @@ export function Checkout() {
     }
   }, [profile]);
 
+  // Load and autofill billing settings
+  useEffect(() => {
+    const loadBillingSettings = async () => {
+      try {
+        const settings = await api.getBillingSettings() as BillingSettings;
+        if (settings) {
+          setBillingInfo(prev => ({
+            ...prev,
+            // Only autofill if user hasn't manually entered data
+            company: settings.company_name || prev.company,
+            address: settings.street || prev.address,
+            city: settings.city || prev.city,
+            state: settings.state || prev.state,
+            postalCode: settings.postal_code || prev.postalCode,
+            country: settings.country || prev.country,
+            taxId: settings.tax_id || prev.taxId,
+            phone: settings.billing_phone || prev.phone,
+            // Use billing email only if it exists and user's email is empty
+            email: settings.billing_email || prev.email,
+          }));
+        }
+      } catch (error) {
+        console.warn('Could not load billing settings:', error);
+        // Don't throw error as billing autofill is optional
+      }
+    };
+
+    if (user && currentStep === 2) { // Only load when user reaches billing step
+      loadBillingSettings();
+    }
+  }, [user, currentStep]);
+
   const steps = [
     { number: 1, title: 'Review Configuration', icon: Server },
     { number: 2, title: 'Billing & Payment', icon: CreditCard },
     { number: 3, title: 'Confirmation', icon: Check }
   ];
+  const invoicePrintStyles = `
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #invoice-print-area, #invoice-print-area * {
+        visibility: visible;
+      }
+      #invoice-print-area {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        padding: 32px;
+      }
+    }
+  `;
 
   // Calculate add-ons cost
   const calculateAddOnsCost = () => {
@@ -216,11 +363,30 @@ export function Checkout() {
     return perServerCost * serverQuantity;
   };
 
+  const getTaxBreakdown = () => {
+    const subtotal = calculateSubtotal();
+    const taxableAmount = Math.max(subtotal - promoDiscount, 0);
+    if (billingInfo.country !== 'India' || taxableAmount === 0) {
+      return { cgst: 0, sgst: 0, igst: 0 };
+    }
+
+    const normalizedState = (billingInfo.state || '').toLowerCase();
+    const isWithinUP = normalizedState.includes('uttar pradesh') || normalizedState === 'up' || normalizedState === 'u.p';
+    const totalTax = Math.round(taxableAmount * 0.18);
+
+    if (isWithinUP) {
+      const cgst = Math.floor(totalTax / 2);
+      const sgst = totalTax - cgst;
+      return { cgst, sgst, igst: 0 };
+    }
+
+    return { cgst: 0, sgst: 0, igst: totalTax };
+  };
+
   // Calculate tax (18% GST for India)
   const calculateTax = () => {
-    const subtotal = calculateSubtotal();
-    const discountedAmount = subtotal - promoDiscount;
-    return billingInfo.country === 'India' ? Math.round(discountedAmount * 0.18) : 0;
+    const { cgst, sgst, igst } = getTaxBreakdown();
+    return cgst + sgst + igst;
   };
 
   // Calculate final total
@@ -284,6 +450,10 @@ export function Checkout() {
     }
   };
 
+  const handleDownloadInvoice = () => {
+    window.print();
+  };
+
   if (!serverConfig) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -294,6 +464,46 @@ export function Checkout() {
       </div>
     );
   }
+
+  const subtotal = calculateSubtotal();
+  const taxableAmount = Math.max(subtotal - promoDiscount, 0);
+  const taxBreakdown = getTaxBreakdown();
+  const totalAmount = calculateTotal();
+  const invoiceAmountInWords = amountInWords(totalAmount);
+  const invoiceDateDisplay = formatDate(invoiceDate);
+  const dueDateDisplay = formatDate(invoiceDate);
+  const servicePeriodRange = `${formatDate(invoiceDate)} - ${formatDate(servicePeriodEnd)}`;
+  const datacenterLabel = datacenter ? capitalizeWords(datacenter.replace(/-/g, ' ')) : 'Preferred Datacenter';
+  const osLabel = operatingSystem ? capitalizeWords(operatingSystem.replace(/-/g, ' ')) : 'Preferred Operating System';
+  const managedServiceLabel = managedService === 'premium'
+    ? 'Managed by BIDUA (Premium)'
+    : managedService === 'basic'
+    ? 'Managed by BIDUA (Basic)'
+    : 'I will manage the server myself';
+  const invoiceItemDescription = `${serverConfig.planName} - ${(hostname || serverConfig.planType || 'Server').trim()} (${servicePeriodRange})`;
+  const billingLines = [
+    billingInfo.fullName || 'Valued Customer',
+    billingInfo.company,
+    billingInfo.address,
+    billingInfo.addressLine2,
+    [billingInfo.city, billingInfo.state, billingInfo.postalCode].filter(Boolean).join(', '),
+    billingInfo.country
+  ].filter((line): line is string => Boolean(line && line.trim()));
+  const payToLines = [
+    'BIDUA Industries Pvt Ltd',
+    'Office 201, B 158, Sector 63',
+    'Noida, Uttar Pradesh 201301',
+    'India'
+  ];
+  const payToFinancials = {
+    pan: 'BIDUA0000B',
+    accountName: 'BIDUA Industries Pvt Ltd',
+    accountNumber: '12345678901234',
+    ifsc: 'HDFC0001648',
+    gstin: '09BIDUA0000B1Z5'
+  };
+  const fundsApplied = 0;
+  const balanceAmount = totalAmount - fundsApplied;
 
   return (
     <div className="min-h-screen bg-slate-950 py-12">
@@ -751,10 +961,39 @@ export function Checkout() {
               {/* Step 2: Billing & Payment */}
               {currentStep === 2 && (
                 <div>
-                  <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
-                    <CreditCard className="h-6 w-6 text-cyan-400 mr-3" />
-                    Billing & Payment Information
-                  </h2>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-bold text-white flex items-center">
+                      <CreditCard className="h-6 w-6 text-cyan-400 mr-3" />
+                      Billing & Payment Information
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          const settings = await api.getBillingSettings() as BillingSettings;
+                          if (settings) {
+                            setBillingInfo(prev => ({
+                              ...prev,
+                              company: settings.company_name || prev.company,
+                              address: settings.street || prev.address,
+                              city: settings.city || prev.city,
+                              state: settings.state || prev.state,
+                              postalCode: settings.postal_code || prev.postalCode,
+                              country: settings.country || prev.country,
+                              taxId: settings.tax_id || prev.taxId,
+                              phone: settings.billing_phone || prev.phone,
+                            }));
+                          }
+                        } catch (error) {
+                          console.warn('Could not load billing settings:', error);
+                        }
+                      }}
+                      className="px-4 py-2 bg-cyan-500/20 text-cyan-400 rounded-lg text-sm font-medium hover:bg-cyan-500/30 transition-all border border-cyan-500/30 flex items-center space-x-2"
+                    >
+                      <User className="h-4 w-4" />
+                      <span>Auto-fill from Settings</span>
+                    </button>
+                  </div>
 
                   {/* Server Quantity Selector */}
                   <div className="mb-6 bg-slate-950 rounded-xl p-6 border border-cyan-500/30">
@@ -940,13 +1179,17 @@ export function Checkout() {
                               onChange={(e) => handleInputChange('country', e.target.value)}
                               className="w-full px-4 py-3 bg-slate-950 border border-cyan-500/30 rounded-lg text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
                               required
+                              disabled={loadingCountries}
                             >
-                              <option value="India">India</option>
-                              <option value="United States">United States</option>
-                              <option value="United Kingdom">United Kingdom</option>
-                              <option value="Canada">Canada</option>
-                              <option value="Australia">Australia</option>
-                              <option value="Singapore">Singapore</option>
+                              {loadingCountries ? (
+                                <option value="">Loading countries...</option>
+                              ) : (
+                                countries.map((country) => (
+                                  <option key={country.value} value={country.value}>
+                                    {country.label}
+                                  </option>
+                                ))
+                              )}
                             </select>
                           </div>
 
@@ -1146,30 +1389,208 @@ export function Checkout() {
 
               {/* Step 3: Confirmation */}
               {currentStep === 3 && (
-                <div className="text-center py-12">
-                  <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Check className="h-10 w-10 text-white" />
-                  </div>
-                  <h2 className="text-3xl font-bold text-white mb-4">Order Confirmed!</h2>
-                  <p className="text-lg text-slate-300 mb-8">
-                    Your server is being provisioned. You'll receive an email shortly with access details.
-                  </p>
-                  
-                  <div className="bg-slate-950 rounded-xl p-6 border border-cyan-500/30 max-w-md mx-auto mb-8">
-                    <p className="text-sm text-slate-400 mb-2">Order Number</p>
-                    <p className="text-2xl font-bold text-cyan-400">#ORD-{Date.now().toString().slice(-8)}</p>
+                <div className="space-y-8">
+                  <style>{invoicePrintStyles}</style>
+                  <div id="invoice-print-area" className="bg-slate-950 rounded-2xl border border-cyan-500/40 p-6 md:p-10 text-left">
+                    <div className="flex flex-col md:flex-row justify-between gap-6 border-b border-slate-800 pb-6">
+                      <div>
+                        <p className="text-xs tracking-[0.4em] uppercase text-cyan-400">Order Confirmed</p>
+                        <h2 className="text-3xl font-bold text-white mt-3 flex flex-wrap items-center gap-2">
+                          <Check className="h-8 w-8 text-green-400" />
+                          Proforma Invoice #{invoiceNumber}
+                        </h2>
+                        <p className="text-sm text-slate-400 mt-2">
+                          Save or download this invoice for your records. Complete the payment to activate your BIDUA cloud resources.
+                        </p>
+                      </div>
+                      <div className="space-y-3 text-right">
+                        <div>
+                          <p className="text-xs uppercase text-slate-400">Invoice Date</p>
+                          <p className="text-lg font-semibold text-white">{invoiceDateDisplay}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase text-slate-400">Due Date</p>
+                          <p className="text-lg font-semibold text-white">{dueDateDisplay}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase text-slate-400">Status</p>
+                          <span className="inline-flex items-center px-3 py-1 rounded-full bg-amber-500/20 text-amber-200 text-sm font-semibold">
+                            Pending Payment
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                      <div className="bg-slate-900/50 rounded-xl p-5 border border-slate-800">
+                        <p className="text-xs uppercase tracking-[0.3em] text-slate-400 mb-2">Pay To</p>
+                        <p className="text-lg font-semibold text-white mb-1">BIDUA Industries Pvt Ltd</p>
+                        {payToLines.map((line, idx) => (
+                          <p key={`${line}-${idx}`} className="text-sm text-slate-300">{line}</p>
+                        ))}
+                        <div className="mt-4 space-y-1 text-sm text-slate-300">
+                          <p><span className="text-slate-500">PAN:</span> {payToFinancials.pan}</p>
+                          <p><span className="text-slate-500">A/C Name:</span> {payToFinancials.accountName}</p>
+                          <p><span className="text-slate-500">A/C Number:</span> {payToFinancials.accountNumber}</p>
+                          <p><span className="text-slate-500">IFSC:</span> {payToFinancials.ifsc}</p>
+                          <p><span className="text-slate-500">GSTIN:</span> {payToFinancials.gstin}</p>
+                        </div>
+                      </div>
+                      <div className="bg-slate-900/50 rounded-xl p-5 border border-slate-800">
+                        <p className="text-xs uppercase tracking-[0.3em] text-slate-400 mb-2">Invoiced To</p>
+                        {billingLines.map((line, idx) => (
+                          <p key={`${line}-${idx}`} className="text-sm text-slate-300">{line}</p>
+                        ))}
+                        <div className="mt-4 text-sm text-slate-300 space-y-1">
+                          <p><span className="text-slate-500">GSTIN:</span> {billingInfo.taxId || 'Not Available'}</p>
+                          {billingInfo.email && (
+                            <p><span className="text-slate-500">Email:</span> {billingInfo.email}</p>
+                          )}
+                          {billingInfo.phone && (
+                            <p><span className="text-slate-500">Phone:</span> {billingInfo.phone}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-10">
+                      <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+                        <FileText className="h-5 w-5 text-cyan-400" /> Invoice Items
+                      </h3>
+                      <div className="overflow-x-auto rounded-xl border border-slate-800">
+                        <table className="min-w-full divide-y divide-slate-800 text-sm">
+                          <thead className="bg-slate-900/60 text-xs uppercase tracking-wide text-slate-400">
+                            <tr>
+                              <th className="px-4 py-3 text-left">Description</th>
+                              <th className="px-4 py-3 text-left">Item Type</th>
+                              <th className="px-4 py-3 text-left">SAC Code</th>
+                              <th className="px-4 py-3 text-right">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800">
+                            <tr className="bg-slate-900/40">
+                              <td className="px-4 py-4 text-white">
+                                <p className="font-semibold">{invoiceItemDescription}</p>
+                                <div className="text-xs text-slate-400 mt-2 space-y-1">
+                                  <p>Datacenter: {datacenterLabel}</p>
+                                  <p>Operating System: {osLabel}</p>
+                                  <p>Managed Server: {managedServiceLabel}</p>
+                                  <p>Specs: {serverConfig.vcpu} vCPU · {serverConfig.ram} GB RAM · {serverConfig.storage} GB Storage · {serverConfig.bandwidth} TB Bandwidth</p>
+                                  <p>Quantity: {serverQuantity}</p>
+                                </div>
+                              </td>
+                              <td className="px-4 py-4 text-slate-300">Hosting</td>
+                              <td className="px-4 py-4 text-slate-300">998315</td>
+                              <td className="px-4 py-4 text-right text-white font-semibold">₹{taxableAmount.toLocaleString()}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <div className="mt-8 space-y-2 text-sm">
+                      <div className="flex items-center justify-between text-slate-300">
+                        <span>Sub Total</span>
+                        <span className="text-white font-semibold">₹{subtotal.toLocaleString()}</span>
+                      </div>
+                      {promoDiscount > 0 && (
+                        <div className="flex items-center justify-between text-slate-300">
+                          <span>Promotional Discount</span>
+                          <span className="text-emerald-400 font-semibold">-₹{promoDiscount.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between text-slate-300">
+                        <span>Taxable Amount</span>
+                        <span className="text-white font-semibold">₹{taxableAmount.toLocaleString()}</span>
+                      </div>
+                    </div>
+
+                    {billingInfo.country === 'India' && (
+                      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-slate-900/40 rounded-xl border border-slate-800 p-4">
+                          <p className="text-xs uppercase text-slate-400">CGST (9%)</p>
+                          <p className="text-lg font-semibold text-white mt-1">₹{taxBreakdown.cgst.toLocaleString()}</p>
+                        </div>
+                        <div className="bg-slate-900/40 rounded-xl border border-slate-800 p-4">
+                          <p className="text-xs uppercase text-slate-400">SGST (9%)</p>
+                          <p className="text-lg font-semibold text-white mt-1">₹{taxBreakdown.sgst.toLocaleString()}</p>
+                        </div>
+                        <div className="bg-slate-900/40 rounded-xl border border-slate-800 p-4">
+                          <p className="text-xs uppercase text-slate-400">IGST (18%)</p>
+                          <p className="text-lg font-semibold text-white mt-1">₹{taxBreakdown.igst.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-8 bg-slate-900/50 rounded-xl border border-cyan-500/20 p-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="text-xs uppercase text-slate-400">Total Amount Incl. GST</p>
+                        <p className="text-3xl font-bold text-cyan-400 mt-2">₹{totalAmount.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase text-slate-400">Amount in Words</p>
+                        <p className="text-sm text-white mt-2">{invoiceAmountInWords}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-5">
+                        <p className="text-xs uppercase text-slate-400 mb-1">Funds Applied</p>
+                        <p className="text-lg font-semibold text-white">₹{fundsApplied.toLocaleString()}</p>
+                        <p className="text-xs text-slate-500 mt-1">No credits applied to this invoice.</p>
+                      </div>
+                      <div className="bg-slate-900/60 border border-cyan-500/30 rounded-xl p-5">
+                        <p className="text-xs uppercase text-slate-400 mb-1">Balance</p>
+                        <p className="text-2xl font-bold text-white">₹{balanceAmount.toLocaleString()}</p>
+                        <p className="text-xs text-slate-500 mt-1">Please pay the balance to activate your services.</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-8">
+                      <h4 className="text-sm font-semibold text-white mb-3">Transaction History</h4>
+                      <div className="overflow-x-auto rounded-xl border border-slate-800">
+                        <table className="min-w-full divide-y divide-slate-800 text-sm">
+                          <thead className="bg-slate-900/60 text-xs uppercase tracking-wide text-slate-400">
+                            <tr>
+                              <th className="px-4 py-3 text-left">Transaction Date</th>
+                              <th className="px-4 py-3 text-left">Gateway</th>
+                              <th className="px-4 py-3 text-left">Transaction ID</th>
+                              <th className="px-4 py-3 text-right">Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td className="px-4 py-4 text-slate-400" colSpan={4}>
+                                No Related Transactions Found
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <div className="mt-8 text-xs text-slate-500 space-y-2">
+                      <p>Make payments via NEFT/RTGS or UPI to the account mentioned above. Once payment is received, your server is provisioned instantly.</p>
+                      <p>This invoice is generated digitally by BIDUA Industries Pvt Ltd, Noida, India.</p>
+                    </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <div className="flex flex-col lg:flex-row gap-4">
+                    <button
+                      onClick={handleDownloadInvoice}
+                      className="flex-1 flex items-center justify-center gap-2 border border-cyan-500/40 text-cyan-200 px-6 py-4 rounded-lg font-semibold hover:bg-cyan-500/10 transition-all"
+                    >
+                      <FileDown className="h-5 w-5" /> Download Invoice (PDF)
+                    </button>
                     <button
                       onClick={() => navigate('/dashboard')}
-                      className="px-8 py-4 bg-gradient-to-r from-cyan-600 to-teal-600 text-white rounded-lg font-bold hover:from-cyan-500 hover:to-teal-500 transition-all"
+                      className="flex-1 bg-gradient-to-r from-cyan-600 to-teal-600 text-white px-6 py-4 rounded-lg font-bold hover:from-cyan-500 hover:to-teal-500 transition-all"
                     >
                       Go to Dashboard
                     </button>
                     <button
                       onClick={() => navigate('/dashboard/servers')}
-                      className="px-8 py-4 bg-slate-800 text-white rounded-lg font-bold hover:bg-slate-700 transition-all"
+                      className="flex-1 bg-slate-800 text-white px-6 py-4 rounded-lg font-bold hover:bg-slate-700 transition-all"
                     >
                       View My Servers
                     </button>

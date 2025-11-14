@@ -318,6 +318,57 @@ class ApiClient {
       method: 'GET',
     });
   }
+
+  // Billing endpoints
+  async getBillingSettings() {
+    return this.request('/api/v1/billing/settings', {
+      method: 'GET',
+    });
+  }
+
+  async updateBillingSettings(data: any) {
+    return this.request('/api/v1/billing/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getPaymentMethods() {
+    return this.request('/api/v1/billing/payment-methods', {
+      method: 'GET',
+    });
+  }
+
+  async createPaymentMethod(data: any) {
+    return this.request('/api/v1/billing/payment-methods', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deletePaymentMethod(methodId: string) {
+    return this.request(`/api/v1/billing/payment-methods/${methodId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async setDefaultPaymentMethod(methodId: string) {
+    return this.request(`/api/v1/billing/payment-methods/${methodId}/default`, {
+      method: 'PUT',
+    });
+  }
+
+  async getCurrentBalance() {
+    return this.request('/api/v1/billing/current-balance', {
+      method: 'GET',
+    });
+  }
+
+  async toggleAutoRenewal() {
+    return this.request('/api/v1/billing/auto-renewal/toggle', {
+      method: 'POST',
+    });
+  }
 }
 
 export const api = new ApiClient(API_BASE_URL);

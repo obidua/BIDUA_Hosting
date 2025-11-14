@@ -121,7 +121,11 @@ from sqlalchemy import select
 from typing import List, Optional
 
 from app.models.billing import PaymentMethod, BillingSettings
-from app.schemas.billing import PaymentMethodCreate, BillingSettings as BillingSettingsSchema
+from app.schemas.billing import (
+    PaymentMethodCreate, 
+    BillingSettings as BillingSettingsResponse, 
+    BillingSettingsUpdate
+)
 
 
 class BillingService:
@@ -232,7 +236,7 @@ class BillingService:
         return settings
 
     async def update_billing_settings(
-        self, db: AsyncSession, user_id: int, settings_update: BillingSettingsSchema
+        self, db: AsyncSession, user_id: int, settings_update: BillingSettingsUpdate
     ) -> BillingSettings:
         settings = await self.get_user_billing_settings(db, user_id)
         if not settings:

@@ -8,6 +8,8 @@ from app.models.referrals import ReferralPayout, ReferralEarning
 from app.models.billing import PaymentMethod, BillingSettings
 from app.models.settings import UserSettings
 from app.models.support import SupportTicket
+from app.models.ticket_message import TicketMessage
+from app.models.countries import Country
 from app.models.payment import PaymentTransaction, ReferralCommissionRate, PaymentType, ActivationType, PaymentStatus
 
 __all__ = [
@@ -22,6 +24,8 @@ __all__ = [
     "BillingSettings",
     "UserSettings",
     "SupportTicket",
+    "TicketMessage",
+    "Country",
     "PaymentTransaction",
     "ReferralCommissionRate",
     "PaymentType",

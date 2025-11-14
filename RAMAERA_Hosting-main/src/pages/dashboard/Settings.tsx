@@ -1,10 +1,12 @@
-import { useState } from 'react';
-import { User, Lock, Bell, Shield, Mail } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { User, Lock, Bell, Shield, Mail, CreditCard, MapPin, Building2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import api from '../../lib/api';
+import { BillingSettings, BillingFormData } from '../../types/billing';
 
 export function Settings() {
   const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'billing'>('profile');
   const [isSaving, setIsSaving] = useState(false);
 
   const [profileData, setProfileData] = useState({
@@ -27,6 +29,56 @@ export function Settings() {
     maintenanceAlerts: true,
     marketingEmails: false,
   });
+
+  const [billingData, setBillingData] = useState({
+    // Billing Address
+    street: '',
+    city: '',
+    state: '',
+    country: '',
+    postalCode: '',
+    // Company Info
+    companyName: '',
+    taxId: '',
+    // Contact
+    billingEmail: '',
+    billingPhone: '',
+    // Preferences
+    autoRenewal: true,
+    billingAlerts: true,
+    invoiceDelivery: 'email',
+  });
+
+  // Load billing settings on component mount
+  useEffect(() => {
+    const loadBillingSettings = async () => {
+      try {
+        const settings = await api.getBillingSettings() as BillingSettings;
+        if (settings) {
+          setBillingData({
+            street: settings.street || '',
+            city: settings.city || '',
+            state: settings.state || '',
+            country: settings.country || '',
+            postalCode: settings.postal_code || '',
+            companyName: settings.company_name || '',
+            taxId: settings.tax_id || '',
+            billingEmail: settings.billing_email || '',
+            billingPhone: settings.billing_phone || '',
+            autoRenewal: settings.auto_renewal ?? true,
+            billingAlerts: settings.billing_alerts ?? true,
+            invoiceDelivery: settings.invoice_delivery || 'email',
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load billing settings:', error);
+      }
+    };
+
+    if (activeTab === 'billing') {
+      loadBillingSettings();
+    }
+  }, [activeTab]);
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,6 +104,38 @@ export function Settings() {
     setIsSaving(true);
     await new Promise((resolve) => setTimeout(resolve, 1000));
     setIsSaving(false);
+  };
+
+  const handleBillingSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    
+    try {
+      // Transform frontend data to backend format
+      const apiData = {
+        street: billingData.street,
+        city: billingData.city,
+        state: billingData.state,
+        country: billingData.country,
+        postal_code: billingData.postalCode,
+        company_name: billingData.companyName,
+        tax_id: billingData.taxId,
+        billing_email: billingData.billingEmail,
+        billing_phone: billingData.billingPhone,
+        auto_renewal: billingData.autoRenewal,
+        billing_alerts: billingData.billingAlerts,
+        invoice_delivery: billingData.invoiceDelivery,
+      };
+      
+      await api.updateBillingSettings(apiData);
+      // You could add a success toast here
+      console.log('Billing settings updated successfully');
+    } catch (error) {
+      console.error('Failed to update billing settings:', error);
+      // You could add an error toast here
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -96,6 +180,17 @@ export function Settings() {
             >
               <Bell className="h-4 w-4" />
               <span>Notifications</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('billing')}
+              className={`flex items-center space-x-2 px-6 py-4 text-sm font-semibold whitespace-nowrap transition ${
+                activeTab === 'billing'
+                  ? 'text-cyan-400 bg-cyan-500/10 border-b-2 border-cyan-500'
+                  : 'text-slate-400 hover:text-slate-300 hover:bg-slate-950'
+              }`}
+            >
+              <CreditCard className="h-4 w-4" />
+              <span>Billing</span>
             </button>
           </div>
         </div>
@@ -351,6 +446,241 @@ export function Settings() {
                   className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg font-semibold hover:from-cyan-400 hover:to-teal-400 transition shadow-lg shadow-cyan-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSaving ? 'Saving...' : 'Save Preferences'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {activeTab === 'billing' && (
+            <form onSubmit={handleBillingSubmit} className="space-y-6">
+              {/* Billing Address Section */}
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+                  <MapPin className="h-5 w-5 text-cyan-400" />
+                  <span>Billing Address</span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold text-slate-200 mb-2">
+                      Street Address
+                    </label>
+                    <input
+                      type="text"
+                      value={billingData.street}
+                      onChange={(e) => setBillingData({ ...billingData, street: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-950 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-slate-400"
+                      placeholder="123 Main Street, Apt 4B"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-200 mb-2">
+                      City
+                    </label>
+                    <input
+                      type="text"
+                      value={billingData.city}
+                      onChange={(e) => setBillingData({ ...billingData, city: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-950 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-slate-400"
+                      placeholder="Mumbai"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-200 mb-2">
+                      State/Province
+                    </label>
+                    <input
+                      type="text"
+                      value={billingData.state}
+                      onChange={(e) => setBillingData({ ...billingData, state: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-950 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-slate-400"
+                      placeholder="Maharashtra"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-200 mb-2">
+                      Country
+                    </label>
+                    <select
+                      value={billingData.country}
+                      onChange={(e) => setBillingData({ ...billingData, country: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-950 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white"
+                    >
+                      <option value="">Select Country</option>
+                      <option value="IN">India</option>
+                      <option value="US">United States</option>
+                      <option value="GB">United Kingdom</option>
+                      <option value="CA">Canada</option>
+                      <option value="AU">Australia</option>
+                      <option value="DE">Germany</option>
+                      <option value="FR">France</option>
+                      <option value="JP">Japan</option>
+                      <option value="SG">Singapore</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-200 mb-2">
+                      Postal Code
+                    </label>
+                    <input
+                      type="text"
+                      value={billingData.postalCode}
+                      onChange={(e) => setBillingData({ ...billingData, postalCode: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-950 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-slate-400"
+                      placeholder="400001"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Company Information Section */}
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+                  <Building2 className="h-5 w-5 text-cyan-400" />
+                  <span>Company Information</span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-200 mb-2">
+                      Company Name (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={billingData.companyName}
+                      onChange={(e) => setBillingData({ ...billingData, companyName: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-950 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-slate-400"
+                      placeholder="ACME Corporation"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-200 mb-2">
+                      Tax ID/GST Number (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={billingData.taxId}
+                      onChange={(e) => setBillingData({ ...billingData, taxId: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-950 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-slate-400"
+                      placeholder="22AAAAA0000A1Z5"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Information Section */}
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+                  <Mail className="h-5 w-5 text-cyan-400" />
+                  <span>Billing Contact</span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-200 mb-2">
+                      Billing Email
+                    </label>
+                    <input
+                      type="email"
+                      value={billingData.billingEmail}
+                      onChange={(e) => setBillingData({ ...billingData, billingEmail: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-950 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-slate-400"
+                      placeholder="billing@example.com"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-200 mb-2">
+                      Billing Phone
+                    </label>
+                    <input
+                      type="tel"
+                      value={billingData.billingPhone}
+                      onChange={(e) => setBillingData({ ...billingData, billingPhone: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-950 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-slate-400"
+                      placeholder="+91 98765 43210"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Billing Preferences */}
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-4">Billing Preferences</h3>
+                <div className="space-y-4">
+                  <label className="flex items-center justify-between p-4 bg-slate-950 rounded-lg border border-cyan-500/30 cursor-pointer hover:border-cyan-500/50 transition">
+                    <div className="flex items-center space-x-3">
+                      <CreditCard className="h-5 w-5 text-cyan-400" />
+                      <div>
+                        <p className="text-sm font-semibold text-white">Auto-renewal</p>
+                        <p className="text-xs text-slate-400">Automatically renew subscriptions</p>
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={billingData.autoRenewal}
+                      onChange={(e) => setBillingData({ ...billingData, autoRenewal: e.target.checked })}
+                      className="w-5 h-5 text-cyan-500 border-cyan-500/30 rounded focus:ring-cyan-500 bg-slate-800"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between p-4 bg-slate-950 rounded-lg border border-cyan-500/30 cursor-pointer hover:border-cyan-500/50 transition">
+                    <div className="flex items-center space-x-3">
+                      <Bell className="h-5 w-5 text-cyan-400" />
+                      <div>
+                        <p className="text-sm font-semibold text-white">Billing Alerts</p>
+                        <p className="text-xs text-slate-400">Receive billing and payment notifications</p>
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={billingData.billingAlerts}
+                      onChange={(e) => setBillingData({ ...billingData, billingAlerts: e.target.checked })}
+                      className="w-5 h-5 text-cyan-500 border-cyan-500/30 rounded focus:ring-cyan-500 bg-slate-800"
+                    />
+                  </label>
+
+                  <div className="p-4 bg-slate-950 rounded-lg border border-cyan-500/30">
+                    <label className="block text-sm font-semibold text-slate-200 mb-3">
+                      Invoice Delivery Method
+                    </label>
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-3">
+                        <input
+                          type="radio"
+                          name="invoiceDelivery"
+                          value="email"
+                          checked={billingData.invoiceDelivery === 'email'}
+                          onChange={(e) => setBillingData({ ...billingData, invoiceDelivery: e.target.value })}
+                          className="w-4 h-4 text-cyan-500 border-cyan-500/30 focus:ring-cyan-500 bg-slate-800"
+                        />
+                        <span className="text-sm text-slate-300">Email (Recommended)</span>
+                      </label>
+                      <label className="flex items-center space-x-3">
+                        <input
+                          type="radio"
+                          name="invoiceDelivery"
+                          value="dashboard"
+                          checked={billingData.invoiceDelivery === 'dashboard'}
+                          onChange={(e) => setBillingData({ ...billingData, invoiceDelivery: e.target.value })}
+                          className="w-4 h-4 text-cyan-500 border-cyan-500/30 focus:ring-cyan-500 bg-slate-800"
+                        />
+                        <span className="text-sm text-slate-300">Dashboard Only</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-6 border-t border-cyan-500/30">
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg font-semibold hover:from-cyan-400 hover:to-teal-400 transition shadow-lg shadow-cyan-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSaving ? 'Saving...' : 'Save Billing Information'}
                 </button>
               </div>
             </form>
