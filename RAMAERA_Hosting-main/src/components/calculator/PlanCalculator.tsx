@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Server, Zap, Database, Cpu, MemoryStick, HardDrive, Network, Calculator, RefreshCw, ChevronDown } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { MobileDropdown } from './MobileDropdown';
 import { pricingService, type HostingPlan, type BillingCycle as ApiBillingCycle } from '../../lib/pricingService';
 
@@ -39,6 +40,8 @@ const storageOptions = [0, 50, 100, 200, 300, 500];
 const bandwidthOptions = [0, 1, 2, 3, 5, 10];
 
 export function PlanCalculator() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [planType, setPlanType] = useState<PlanType>('general_purpose');
   const [selectedRam, setSelectedRam] = useState<number>(8);
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
@@ -148,6 +151,34 @@ export function PlanCalculator() {
     }
   }, [planType, selectedRam, billingCycle, extraStorage, extraBandwidth, plans.length, currentConfig]);
   
+  const handleDeploy = () => {
+    const selectedPlan = plans.find(p => p.ram_gb === selectedRam);
+    if (!selectedPlan) return;
+
+    const serverConfig = {
+      planName: selectedPlan.name,
+      planType,
+      vcpu: selectedPlan.cpu_cores,
+      ram: selectedRam,
+      storage: selectedPlan.storage_gb + extraStorage,
+      bandwidth: selectedPlan.bandwidth_gb / 1000 + extraBandwidth,
+      billingCycle,
+      monthlyPrice: Math.round(pricing.effectiveMonthly),
+      totalPrice: Math.round(pricing.totalAfterDiscount),
+      discount: pricing.discount,
+      extraStorage,
+      extraBandwidth
+    };
+
+    if (user) {
+      navigate('/checkout', { state: { serverConfig } });
+    } else {
+      navigate(`/login?redirect=${encodeURIComponent('/checkout')}`, { 
+        state: { serverConfig } 
+      });
+    }
+  };
+
   // Show loading state
   if (loading) {
     return (
@@ -556,12 +587,12 @@ export function PlanCalculator() {
                 </div>
               </div>
 
-              <Link
-                to="/signup"
+              <button
+                onClick={handleDeploy}
                 className="block w-full text-center px-6 py-4 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg font-bold hover:from-cyan-400 hover:to-teal-400 active:from-cyan-600 active:to-teal-600 transition-all shadow-lg shadow-cyan-500/50 hover:shadow-cyan-500/70"
               >
                 Deploy This Configuration
-              </Link>
+              </button>
             </div>
 
             <div className="bg-slate-900 rounded-xl p-6 border-2 border-cyan-500/30">
@@ -644,12 +675,12 @@ export function PlanCalculator() {
               </div>
             </div>
 
-            <Link
-              to="/signup"
+            <button
+              onClick={handleDeploy}
               className="block w-full text-center px-6 py-3.5 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg font-bold hover:from-cyan-400 hover:to-teal-400 active:from-cyan-600 active:to-teal-600 transition-all shadow-lg touch-manipulation"
             >
               Deploy This Configuration
-            </Link>
+            </button>
           </div>
         )}
       </div>

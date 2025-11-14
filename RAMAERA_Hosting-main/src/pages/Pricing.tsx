@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, Server, Zap, Database, MapPin, Clock, Shield, Award, HardDrive, Cpu, MemoryStick, Network } from 'lucide-react';
 import { MobileFilters } from '../components/pricing/MobileFilters';
 import { pricingService, type HostingPlan } from '../lib/pricingService';
+import { useAuth } from '../contexts/AuthContext';
 
 type BillingCycle = 'monthly' | 'quarterly' | 'semiannually' | 'annually' | 'biennially' | 'triennially';
 
@@ -26,6 +27,8 @@ interface Plan {
 
 export function Pricing() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const typeParam = searchParams.get('type');
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const [selectedType, setSelectedType] = useState(typeParam || 'general_purpose');
@@ -166,6 +169,31 @@ export function Pricing() {
     const basePrice = plan.prices[billingCycle];
     const discount = getDiscountPercent();
     return Math.round(basePrice * (1 - discount / 100));
+  };
+
+  const handleDeploy = (plan: Plan) => {
+    const serverConfig = {
+      planName: plan.name,
+      planType: selectedType,
+      vcpu: plan.vcpu,
+      ram: plan.ram,
+      storage: plan.storage,
+      bandwidth: plan.bandwidth,
+      billingCycle,
+      monthlyPrice: calculateDisplayPrice(plan),
+      totalPrice: getTotalPrice(plan),
+      discount: getDiscountPercent()
+    };
+
+    if (user) {
+      // User is logged in, go to checkout
+      navigate('/checkout', { state: { serverConfig } });
+    } else {
+      // User not logged in, go to login with return URL
+      navigate(`/login?redirect=${encodeURIComponent('/checkout')}`, { 
+        state: { serverConfig } 
+      });
+    }
   };
 
   // Show loading state while fetching data
@@ -379,8 +407,8 @@ export function Pricing() {
                             ))}
                           </ul>
 
-                          <Link
-                            to="/signup"
+                          <button
+                            onClick={() => handleDeploy(plan)}
                             className={`block w-full text-center px-4 py-2.5 rounded-lg font-bold text-sm transition-all ${
                               plan.popular
                                 ? 'bg-gradient-to-r from-cyan-600 to-teal-600 text-white hover:from-cyan-500 hover:to-teal-500 shadow-md'
@@ -388,7 +416,7 @@ export function Pricing() {
                             }`}
                           >
                             Deploy Now
-                          </Link>
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -482,8 +510,8 @@ export function Pricing() {
                     ))}
                   </ul>
 
-                  <Link
-                    to="/signup"
+                  <button
+                    onClick={() => handleDeploy(plan)}
                     className={`block w-full text-center px-6 py-3.5 rounded-lg font-bold transition-all ${
                       plan.popular
                         ? 'bg-gradient-to-r from-cyan-600 to-teal-600 text-white hover:from-cyan-500 hover:to-teal-500 shadow-md'
@@ -491,7 +519,7 @@ export function Pricing() {
                     }`}
                   >
                     Deploy Now
-                  </Link>
+                  </button>
                 </div>
               </div>
             ))}

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Server } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -8,8 +8,23 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const redirectUrl = searchParams.get('redirect') || '/dashboard';
+  const serverConfig = location.state?.serverConfig;
+
+  useEffect(() => {
+    // If already logged in, redirect
+    if (user) {
+      if (serverConfig) {
+        navigate(redirectUrl, { state: { serverConfig }, replace: true });
+      } else {
+        navigate(redirectUrl, { replace: true });
+      }
+    }
+  }, [user, navigate, redirectUrl, serverConfig]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,7 +33,12 @@ export function Login() {
 
     try {
       await signIn(username, password);
-      navigate('/dashboard');
+      // Navigation will be handled by useEffect when user state updates
+      if (serverConfig) {
+        navigate(redirectUrl, { state: { serverConfig } });
+      } else {
+        navigate(redirectUrl);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to sign in');
     } finally {

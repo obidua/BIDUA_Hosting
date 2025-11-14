@@ -13,6 +13,7 @@ import { DedicatedServers } from './pages/DedicatedServers';
 import { Solutions } from './pages/Solutions';
 import { Contact } from './pages/Contact';
 import { Calculator } from './pages/Calculator';
+import { Checkout } from './pages/Checkout';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
 
@@ -45,6 +46,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/calculator" element={<Calculator />} />
+            <Route path="/checkout" element={<Checkout />} />
             <Route path="/dedicated-servers" element={<DedicatedServers />} />
             <Route path="/solutions" element={<Solutions />} />
             <Route path="/contact" element={<Contact />} />
