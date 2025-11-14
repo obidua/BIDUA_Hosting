@@ -77,10 +77,11 @@ RAZORPAY_KEY_ID=your_razorpay_key_id
 RAZORPAY_KEY_SECRET=your_razorpay_key_secret
 
 # Email Configuration (Optional - for notifications)
-SMTP_HOST=smtp.gmail.com
+# Replace with your actual SMTP server details
+SMTP_HOST=smtp.example.com
 SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
+SMTP_USER=noreply@yourdomain.com
+SMTP_PASSWORD=your_smtp_app_password_here
 
 # Environment
 ENVIRONMENT=development
@@ -427,6 +428,23 @@ The platform uses 14 main tables:
 - SQL injection prevention via SQLAlchemy ORM
 - XSS protection
 - HTTPS enforced in production
+
+### 🔒 Security Best Practices
+
+**IMPORTANT**: Never commit sensitive credentials to Git repositories!
+
+1. **Environment Variables**: Always use `.env` files for sensitive data
+2. **Add to .gitignore**: Ensure `.env` files are in `.gitignore`
+3. **Use .env.example**: Provide example files with placeholder values
+4. **Rotate Secrets**: Regularly update passwords, API keys, and tokens
+5. **Strong Passwords**: Use complex passwords (min 16 characters)
+6. **Secret Generation**: Use tools like `openssl rand -hex 32` for secure keys
+
+If you accidentally commit secrets:
+- Immediately revoke/rotate the exposed credentials
+- Use `git filter-branch` or BFG Repo-Cleaner to remove from history
+- Force push the cleaned repository
+- Update all instances using the old credentials
 
 ## 🧪 Testing
 

@@ -53,7 +53,7 @@ export function MobileFilters({
       </button>
 
       {isExpanded && (
-        <div className="px-4 pb-4 space-y-4 border-t border-cyan-500/20">
+        <div className="px-4 pb-4 space-y-4 border-t border-cyan-500/20 max-h-[70vh] overflow-y-auto">
           <div>
             <label className="block text-sm font-semibold text-white mb-2 mt-4">
               Server Type
@@ -64,7 +64,6 @@ export function MobileFilters({
                   key={type.id}
                   onClick={() => {
                     setSelectedType(type.id);
-                    setIsExpanded(false);
                   }}
                   className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg font-medium transition-all ${
                     selectedType === type.id
@@ -89,7 +88,6 @@ export function MobileFilters({
                   key={cycle.id}
                   onClick={() => {
                     setBillingCycle(cycle.id);
-                    setIsExpanded(false);
                   }}
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-lg font-medium transition-all ${
                     billingCycle === cycle.id
@@ -109,6 +107,13 @@ export function MobileFilters({
               ))}
             </div>
           </div>
+
+          <button
+            onClick={() => setIsExpanded(false)}
+            className="w-full bg-gradient-to-r from-cyan-600 to-teal-600 text-white py-3 rounded-lg font-bold shadow-lg hover:from-cyan-500 hover:to-teal-500 transition-all mt-4"
+          >
+            Show Plans
+          </button>
         </div>
       )}
     </div>
