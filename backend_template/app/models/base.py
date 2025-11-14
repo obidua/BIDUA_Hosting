@@ -15,6 +15,11 @@ from app.models.billing import PaymentMethod, BillingSettings
 from app.models.referrals import  ReferralEarning, ReferralPayout
 from app.models.support import SupportTicket
 from app.models.settings import UserSettings
+from app.models.countries import Country
+from app.models.roles import Department, Role, Permission, UserDepartment, role_permissions, user_roles
+from app.models.affiliate import (
+    AffiliateSubscription, Referral, CommissionRule, Commission, Payout, AffiliateStats
+)
 # from app.models.payment import PaymentModel, PlanModel, SubscriptionModel
 
 __all__ = [
@@ -29,6 +34,9 @@ __all__ = [
     "ReferralEarning", "ReferralPayout",
     "SupportTicket",
     "UserSettings",
+    "Country",
+    "Department", "Role", "Permission", "UserDepartment",
+    "AffiliateSubscription", "Referral", "CommissionRule", "Commission", "Payout", "AffiliateStats",
 ]
 
 # Optional debug info
