@@ -92,6 +92,7 @@ async def register(
             )
         
         # Validate referral code if provided
+        referrer_code = None
         if user_data.referral_code:
             referral_user = await user_service.get_user_by_referral_code(db, user_data.referral_code)
             if not referral_user:
@@ -99,9 +100,22 @@ async def register(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Invalid referral code"
                 )
+            referrer_code = user_data.referral_code
         
         # Create new user
         user = await user_service.create_user(db, user_data)
+        
+        # 🆕 Track affiliate referral if code was provided
+        if referrer_code:
+            try:
+                from app.services.affiliate_service import AffiliateService
+                affiliate_service = AffiliateService()
+                await affiliate_service.track_referral(
+                    db, referrer_code, user.id, signup_ip=None
+                )
+            except Exception as aff_error:
+                # Log error but don't fail registration
+                print(f"⚠️ Affiliate referral tracking error: {str(aff_error)}")
         
         # Generate access token
         access_token = create_access_token(

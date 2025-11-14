@@ -1,44 +1,60 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CreditCard, Download, Clock, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+import { api } from '../../lib/api';
+
+interface Invoice {
+  id: string;
+  date: string;
+  amount: number;
+  status: string;
+  description: string;
+}
+
+interface PaymentMethod {
+  id: number;
+  type: string;
+  brand: string;
+  last4: string;
+  expiryMonth: number;
+  expiryYear: number;
+  isDefault: boolean;
+}
 
 export function Billing() {
   const [activeTab, setActiveTab] = useState<'invoices' | 'payment-methods'>('invoices');
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const invoices = [
-    {
-      id: 'INV-2024-001',
-      date: '2024-10-01',
-      amount: 1299.00,
-      status: 'paid',
-      description: 'G.4GB - Monthly Subscription',
-    },
-    {
-      id: 'INV-2024-002',
-      date: '2024-09-01',
-      amount: 1299.00,
-      status: 'paid',
-      description: 'G.4GB - Monthly Subscription',
-    },
-    {
-      id: 'INV-2024-003',
-      date: '2024-08-01',
-      amount: 1299.00,
-      status: 'paid',
-      description: 'G.4GB - Monthly Subscription',
-    },
-  ];
+  useEffect(() => {
+    loadBillingData();
+  }, []);
 
-  const paymentMethods = [
-    {
-      id: 1,
-      type: 'card',
-      brand: 'Visa',
-      last4: '4242',
-      expiryMonth: 12,
-      expiryYear: 2025,
-      isDefault: true,
-    },
-  ];
+  const loadBillingData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load invoices
+      try {
+        const invoiceResponse = await api.get('/billing/invoices');
+        const invoicesArray = Array.isArray(invoiceResponse) ? invoiceResponse : invoiceResponse?.invoices || [];
+        setInvoices(invoicesArray);
+      } catch (error) {
+        console.error('Failed to load invoices:', error);
+      }
+
+      // Load payment methods
+      try {
+        const paymentResponse = await api.get('/billing/payment-methods');
+        const methodsArray = Array.isArray(paymentResponse) ? paymentResponse : paymentResponse?.payment_methods || [];
+        setPaymentMethods(methodsArray);
+      } catch (error) {
+        console.error('Failed to load payment methods:', error);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -67,31 +83,31 @@ export function Billing() {
   };
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Billing</h1>
-        <p className="text-slate-400">Manage your invoices and payment methods</p>
+    <div className="space-y-4 sm:space-y-6 w-full h-full overflow-y-auto pb-6 px-2 sm:px-0">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2">Billing</h1>
+        <p className="text-sm sm:text-base text-slate-400">Manage your invoices and payment methods</p>
       </div>
 
       <div className="bg-slate-900/60 backdrop-blur-xl rounded-xl border border-cyan-500/30 p-4 sm:p-6 w-full">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
           <div>
-            <h3 className="text-lg font-semibold text-white">Current Balance</h3>
-            <p className="text-sm text-slate-400">Your account balance</p>
+            <h3 className="text-base sm:text-lg font-semibold text-white">Current Balance</h3>
+            <p className="text-xs sm:text-sm text-slate-400">Your account balance</p>
           </div>
           <div className="text-left sm:text-right">
             <p className="text-2xl sm:text-3xl font-bold text-cyan-400">₹0.00</p>
-            <p className="text-sm text-slate-400">No outstanding balance</p>
+            <p className="text-xs sm:text-sm text-slate-400">No outstanding balance</p>
           </div>
         </div>
       </div>
 
       <div className="bg-slate-900/60 backdrop-blur-xl rounded-xl border border-cyan-500/30 overflow-hidden w-full">
-        <div className="border-b border-cyan-500/30">
-          <div className="flex w-full">
+        <div className="border-b border-cyan-500/30 overflow-x-auto">
+          <div className="flex w-full min-w-max">
             <button
               onClick={() => setActiveTab('invoices')}
-              className={`flex-1 px-6 py-4 text-sm font-semibold transition ${
+              className={`flex-1 px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
                 activeTab === 'invoices'
                   ? 'text-cyan-400 bg-cyan-500/10 border-b-2 border-cyan-500'
                   : 'text-slate-400 hover:text-slate-300 hover:bg-slate-950'
@@ -101,7 +117,7 @@ export function Billing() {
             </button>
             <button
               onClick={() => setActiveTab('payment-methods')}
-              className={`flex-1 px-6 py-4 text-sm font-semibold transition ${
+              className={`flex-1 px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
                 activeTab === 'payment-methods'
                   ? 'text-cyan-400 bg-cyan-500/10 border-b-2 border-cyan-500'
                   : 'text-slate-400 hover:text-slate-300 hover:bg-slate-950'
@@ -112,8 +128,12 @@ export function Billing() {
           </div>
         </div>
 
-        <div className="p-4 sm:p-6">
-          {activeTab === 'invoices' && (
+        <div className="p-3 sm:p-4 lg:p-6">
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-sm sm:text-base text-slate-400">Loading...</p>
+            </div>
+          ) : activeTab === 'invoices' ? (
             <div className="space-y-4">
               {invoices.length === 0 ? (
                 <div className="text-center py-12">
@@ -173,15 +193,13 @@ export function Billing() {
                 </div>
               )}
             </div>
-          )}
-
-          {activeTab === 'payment-methods' && (
+          ) : (
             <div className="space-y-4">
               {paymentMethods.length === 0 ? (
                 <div className="text-center py-12">
-                  <CreditCard className="h-12 w-12 text-slate-600 mx-auto mb-4" />
-                  <p className="text-slate-400 mb-4">No payment methods added</p>
-                  <button className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg font-semibold hover:from-cyan-400 hover:to-teal-400 transition shadow-lg shadow-cyan-500/50">
+                  <CreditCard className="h-10 w-10 sm:h-12 sm:w-12 text-slate-600 mx-auto mb-4" />
+                  <p className="text-sm sm:text-base text-slate-400 mb-4">No payment methods added</p>
+                  <button className="px-4 sm:px-6 py-2 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg font-semibold hover:from-cyan-400 hover:to-teal-400 transition shadow-lg shadow-cyan-500/50 text-sm sm:text-base">
                     Add Payment Method
                   </button>
                 </div>

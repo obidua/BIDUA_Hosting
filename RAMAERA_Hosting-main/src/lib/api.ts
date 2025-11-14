@@ -27,20 +27,47 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    const headers: HeadersInit = {
+    
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
     };
 
-    const token = this.getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    // Add existing headers
+    if (options.headers) {
+      Object.entries(options.headers).forEach(([key, value]) => {
+        headers[key] = String(value);
+      });
+    }
+
+    // Only add authorization for endpoints that need it (not login/signup)
+    const isPublicEndpoint = endpoint === '/api/v1/auth/login' || endpoint === '/api/v1/auth/signup';
+    
+    if (!isPublicEndpoint) {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        // Don't log error for /auth/me checks - this is expected on app load
+        if (!endpoint.includes('/auth/me')) {
+          console.error('No authentication token found. Please log in.');
+        }
+        throw new Error('You are not logged in. Please log in to continue.');
+      }
     }
 
     const config: RequestInit = {
       ...options,
       headers,
     };
+
+    // Debug logging for POST requests
+    if (options.method === 'POST') {
+      console.log('=== API POST REQUEST ===');
+      console.log('URL:', url);
+      console.log('Headers:', headers);
+      console.log('Has Authorization:', !!headers['Authorization']);
+      console.log('Body:', options.body);
+    }
 
     try {
       const response = await fetch(url, config);
@@ -49,6 +76,19 @@ class ApiClient {
         const error = await response.json().catch(() => ({
           detail: response.statusText
         }));
+        
+        // Extra logging for errors
+        console.error('=== API REQUEST FAILED ===');
+        console.error('Status:', response.status);
+        console.error('URL:', url);
+        console.error('Method:', options.method || 'GET');
+        console.error('Error:', error);
+        
+        // Special handling for 401 errors
+        if (response.status === 401) {
+          throw new Error('Your session has expired. Please log in again.');
+        }
+        
         throw new Error(error.detail || `HTTP error! status: ${response.status}`);
       }
 
@@ -76,7 +116,11 @@ class ApiClient {
       body: JSON.stringify({ email, password }),
     });
     this.setToken(response.access_token);
-    return response;
+    
+    // Fetch user profile immediately after login
+    const user = await this.getCurrentUser();
+    
+    return { ...response, user };
   }
 
   async signOut() {
@@ -312,6 +356,22 @@ class ApiClient {
     });
   }
 
+  async addTicketMessage(ticketId: string, message: string) {
+    return this.request(`/api/v1/support/tickets/${ticketId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ 
+        message,
+        is_internal_note: false 
+      }),
+    });
+  }
+
+  async updateTicketStatus(ticketId: string, status: string) {
+    return this.request(`/api/v1/support/tickets/${ticketId}/status?new_status=${status}`, {
+      method: 'PUT',
+    });
+  }
+
   // Admin endpoints
   async getAdminStats() {
     return this.request('/api/v1/admin/stats', {
@@ -367,6 +427,33 @@ class ApiClient {
   async toggleAutoRenewal() {
     return this.request('/api/v1/billing/auto-renewal/toggle', {
       method: 'POST',
+    });
+  }
+
+  // Generic HTTP methods for affiliate and other endpoints
+  async get<T = any>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'GET',
+    });
+  }
+
+  async post<T = any>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async put<T = any>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async delete<T = any>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'DELETE',
     });
   }
 }

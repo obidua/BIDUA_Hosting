@@ -55,13 +55,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data, error } = await authSignIn(email, password);
     if (error) throw error;
     
-    if (data) {
-      const currentUser = await getCurrentUser();
-      if (currentUser) {
-        setUser(currentUser);
-        // Use the current user data as profile since /auth/me returns full user info
-        setProfile(currentUser as any);
-      }
+    if (data && data.user) {
+      setUser(data.user as User);
+      setProfile(data.user as any);
     }
   };
 

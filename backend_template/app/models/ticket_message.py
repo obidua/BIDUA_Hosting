@@ -20,6 +20,11 @@ class TicketMessage(Base):
     # Relationships
     ticket = relationship("SupportTicket", back_populates="messages")
     author = relationship("UserProfile", foreign_keys=[user_id])
+    attachments = relationship(
+        "TicketAttachment",
+        back_populates="message",
+        cascade="all, delete-orphan"
+    )
     
     def __repr__(self):
         return f"<TicketMessage(id={self.id}, ticket_id={self.ticket_id}, staff={self.is_staff_reply})>"

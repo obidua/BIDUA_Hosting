@@ -6,16 +6,24 @@ export interface CountryOption {
   value: string;
   label: string;
   currency?: string;
+  code?: string;
 }
 
-const fallbackOptions: CountryOption[] = FALLBACK_COUNTRY_OPTIONS;
+const fallbackOptions: CountryOption[] = FALLBACK_COUNTRY_OPTIONS.map(option => ({
+  ...option,
+  code: option.value
+}));
 
 const normalizeCountries = (countries: CountrySimple[] = []): CountryOption[] =>
-  countries.map(country => ({
-    value: country.label || country.value,
-    label: country.label || country.value,
-    currency: country.currency
-  }));
+  countries.map(country => {
+    const label = country.label || country.value;
+    return {
+      value: label || country.value,
+      label: label || country.value,
+      currency: country.currency,
+      code: country.value
+    };
+  });
 
 export function useCountryOptions() {
   const [countries, setCountries] = useState<CountryOption[]>(fallbackOptions);

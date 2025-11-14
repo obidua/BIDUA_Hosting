@@ -77,7 +77,7 @@ export function SupportManagementEnhanced() {
       if (assignedFilter) params.append('assigned_to', assignedFilter.toString());
 
       const response = await fetch(`http://localhost:8000/api/v1/support/admin/tickets?${params}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
       });
       const data = await response.json();
       setTickets(data);
@@ -91,7 +91,7 @@ export function SupportManagementEnhanced() {
   const loadEmployees = async () => {
     try {
       const response = await fetch('http://localhost:8000/api/v1/support/admin/employees', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
       });
       const data = await response.json();
       setEmployees(data);
@@ -104,7 +104,7 @@ export function SupportManagementEnhanced() {
     try {
       setLoading(true);
       const response = await fetch(`http://localhost:8000/api/v1/support/tickets/${ticketId}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
       });
       const data = await response.json();
       setSelectedTicket(data);
@@ -120,7 +120,7 @@ export function SupportManagementEnhanced() {
     try {
       await fetch(`http://localhost:8000/api/v1/support/admin/tickets/${ticketId}/assign?employee_id=${employeeId}`, {
         method: 'PUT',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
       });
       alert('Ticket assigned successfully');
       await loadTickets();
@@ -137,7 +137,7 @@ export function SupportManagementEnhanced() {
     try {
       await fetch(`http://localhost:8000/api/v1/support/tickets/${ticketId}/status?new_status=${newStatus}`, {
         method: 'PUT',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
       });
       alert('Status updated successfully');
       await loadTickets();
@@ -158,7 +158,7 @@ export function SupportManagementEnhanced() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
         },
         body: JSON.stringify({
           message: replyMessage,

@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { User, Lock, Bell, Shield, Mail, CreditCard, MapPin, Building2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../lib/api';
 import { BillingSettings, BillingFormData } from '../../types/billing';
+import { useCountryOptions } from '../../hooks/useCountryOptions';
 
 export function Settings() {
   const { profile } = useAuth();
@@ -48,6 +49,23 @@ export function Settings() {
     billingAlerts: true,
     invoiceDelivery: 'email',
   });
+  const { countries, loading: loadingCountries } = useCountryOptions();
+  const billingCountryLabel = useMemo(() => {
+    const normalized = (billingData.country || '').toLowerCase();
+    const countryMatch = countries.find(country => {
+      const code = country.code?.toLowerCase();
+      return (
+        country.value.toLowerCase() === normalized ||
+        country.label.toLowerCase() === normalized ||
+        (code && code === normalized)
+      );
+    });
+    return countryMatch?.value || billingData.country;
+  }, [countries, billingData.country]);
+  const billingCurrencyCode = useMemo(() => {
+    if (!billingCountryLabel) return 'INR';
+    return countries.find(country => country.value === billingCountryLabel)?.currency || 'INR';
+  }, [countries, billingCountryLabel]);
 
   // Load billing settings on component mount
   useEffect(() => {
@@ -472,20 +490,30 @@ export function Settings() {
                       placeholder="123 Main Street, Apt 4B"
                     />
                   </div>
-                  
-                  <div>
+
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-semibold text-slate-200 mb-2">
-                      City
+                      Country
                     </label>
-                    <input
-                      type="text"
-                      value={billingData.city}
-                      onChange={(e) => setBillingData({ ...billingData, city: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-950 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-slate-400"
-                      placeholder="Mumbai"
-                    />
+                    <select
+                      value={billingCountryLabel || billingData.country}
+                      onChange={(e) => setBillingData({ ...billingData, country: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-950 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white"
+                      disabled={loadingCountries}
+                    >
+                      {loadingCountries ? (
+                        <option value="">Loading countries...</option>
+                      ) : (
+                        countries.map((country) => (
+                          <option key={country.value} value={country.value}>
+                            {country.label}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                    <p className="text-xs text-slate-500 mt-1">Preferred currency: {billingCurrencyCode}</p>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-semibold text-slate-200 mb-2">
                       State/Province
@@ -498,29 +526,20 @@ export function Settings() {
                       placeholder="Maharashtra"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-semibold text-slate-200 mb-2">
-                      Country
+                      City
                     </label>
-                    <select
-                      value={billingData.country}
-                      onChange={(e) => setBillingData({ ...billingData, country: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-950 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white"
-                    >
-                      <option value="">Select Country</option>
-                      <option value="IN">India</option>
-                      <option value="US">United States</option>
-                      <option value="GB">United Kingdom</option>
-                      <option value="CA">Canada</option>
-                      <option value="AU">Australia</option>
-                      <option value="DE">Germany</option>
-                      <option value="FR">France</option>
-                      <option value="JP">Japan</option>
-                      <option value="SG">Singapore</option>
-                    </select>
+                    <input
+                      type="text"
+                      value={billingData.city}
+                      onChange={(e) => setBillingData({ ...billingData, city: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-950 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-slate-400"
+                      placeholder="Mumbai"
+                    />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-semibold text-slate-200 mb-2">
                       Postal Code

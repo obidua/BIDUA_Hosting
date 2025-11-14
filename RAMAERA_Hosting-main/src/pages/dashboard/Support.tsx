@@ -1,15 +1,19 @@
-import { useState, useEffect } from 'react';
-import { MessageSquare, Plus, Search, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { MessageSquare, Plus, Search, Clock, CheckCircle, AlertCircle, Send, ArrowLeft, X } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext'; // Keep this line for context
 
 export function Support() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'tickets' | 'new'>('tickets');
+  const [activeTab, setActiveTab] = useState<'tickets' | 'new' | 'detail'>('tickets');
   const [searchQuery, setSearchQuery] = useState('');
   const [tickets, setTickets] = useState<SupportTicketData[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [newMessage, setNewMessage] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   interface SupportTicketData {
     id: string;
@@ -27,6 +31,13 @@ export function Support() {
   useEffect(() => {
     loadTickets();
   }, []);
+
+  // Scroll to bottom when messages update
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [selectedTicket?.messages]);
 
   const loadTickets = async () => {
     try {
@@ -51,6 +62,74 @@ export function Support() {
       console.error('Failed to load tickets:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTicketDetail = async (ticketId: string) => {
+    try {
+      setLoading(true);
+      const ticketDetail = await api.getSupportTicket(ticketId);
+      setSelectedTicket(ticketDetail);
+      setActiveTab('detail');
+    } catch (error) {
+      console.error('Failed to load ticket details:', error);
+      alert('Failed to load ticket details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim() || !selectedTicket) return;
+
+    try {
+      setSendingMessage(true);
+      
+      // Debug logging
+      const token = localStorage.getItem('access_token');
+      console.log('=== SEND MESSAGE DEBUG ===');
+      console.log('Token exists:', !!token);
+      console.log('Token length:', token?.length);
+      console.log('Token preview:', token?.substring(0, 20) + '...');
+      console.log('Ticket ID:', selectedTicket.ticket_number);
+      console.log('Message:', newMessage);
+      console.log('API Base URL:', import.meta.env.VITE_API_URL || 'http://localhost:8000');
+      
+      const result = await api.addTicketMessage(selectedTicket.ticket_number, newMessage);
+      console.log('Message sent successfully:', result);
+      
+      setNewMessage('');
+      // Reload ticket to get updated messages
+      await loadTicketDetail(selectedTicket.ticket_number);
+    } catch (error) {
+      console.error('=== SEND MESSAGE ERROR ===');
+      console.error('Error details:', error);
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        alert(`Failed to send message: ${error.message}`);
+      } else {
+        alert('Failed to send message. Please try again.');
+      }
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  const handleCloseTicket = async () => {
+    if (!selectedTicket) return;
+    
+    if (!confirm('Are you sure you want to close this ticket?')) return;
+
+    try {
+      await api.updateTicketStatus(selectedTicket.ticket_number, 'closed');
+      alert('Ticket closed successfully');
+      setActiveTab('tickets');
+      setSelectedTicket(null);
+      await loadTickets();
+    } catch (error) {
+      console.error('Failed to close ticket:', error);
+      alert('Failed to close ticket');
     }
   };
   const [formData, setFormData] = useState({
@@ -211,6 +290,7 @@ export function Support() {
                   {filteredTickets.map((ticket) => (
                     <div
                       key={ticket.id}
+                      onClick={() => loadTicketDetail(ticket.id)}
                       className="p-4 bg-slate-950 rounded-lg border border-cyan-500/30 hover:border-cyan-500/50 transition cursor-pointer"
                     >
                       <div className="flex items-start justify-between mb-3">
@@ -335,6 +415,151 @@ export function Support() {
                 </button>
               </div>
             </form>
+          )}
+
+          {activeTab === 'detail' && selectedTicket && (
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <button
+                      onClick={() => {
+                        setActiveTab('tickets');
+                        setSelectedTicket(null);
+                      }}
+                      className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition"
+                    >
+                      <ArrowLeft className="h-5 w-5" />
+                    </button>
+                    <span className="text-sm font-mono text-slate-400">{selectedTicket.ticket_number}</span>
+                    <span
+                      className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusColor(
+                        selectedTicket.status
+                      )}`}
+                    >
+                      {getStatusIcon(selectedTicket.status)}
+                      <span className="capitalize">{selectedTicket.status}</span>
+                    </span>
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${getPriorityColor(
+                        selectedTicket.priority
+                      )}`}
+                    >
+                      <span className="capitalize">{selectedTicket.priority}</span>
+                    </span>
+                  </div>
+                  <h2 className="text-2xl font-bold text-white mb-1">{selectedTicket.subject}</h2>
+                  <p className="text-sm text-slate-400">
+                    Created: {new Date(selectedTicket.created_at).toLocaleString()} • 
+                    Department: <span className="capitalize">{selectedTicket.department}</span>
+                  </p>
+                </div>
+                {selectedTicket.status !== 'closed' && (
+                  <button
+                    onClick={handleCloseTicket}
+                    className="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition"
+                  >
+                    Close Ticket
+                  </button>
+                )}
+              </div>
+
+              {/* Messages */}
+              <div className="bg-slate-950 rounded-lg border border-cyan-500/30 p-6 max-h-[500px] overflow-y-auto">
+                <div className="space-y-4">
+                  {/* Initial message */}
+                  <div className="flex space-x-3">
+                    <div className="flex-shrink-0">
+                      <div className="h-10 w-10 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                        <span className="text-cyan-400 font-semibold">
+                          {user?.full_name?.[0] || user?.email?.[0] || 'U'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="bg-slate-900 rounded-lg p-4 border border-cyan-500/20">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-semibold text-white">
+                            {user?.full_name || user?.email || 'You'}
+                          </span>
+                          <span className="text-xs text-slate-400">
+                            {new Date(selectedTicket.created_at).toLocaleString()}
+                          </span>
+                        </div>
+                        <p className="text-slate-300 whitespace-pre-wrap">{selectedTicket.description}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Subsequent messages */}
+                  {selectedTicket.messages && selectedTicket.messages.length > 0 && selectedTicket.messages.map((msg: any, index: number) => (
+                    <div key={index} className={`flex space-x-3 ${msg.is_staff_reply ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                      <div className="flex-shrink-0">
+                        <div className={`h-10 w-10 rounded-full ${msg.is_staff_reply ? 'bg-green-500/20' : 'bg-cyan-500/20'} flex items-center justify-center`}>
+                          <span className={`${msg.is_staff_reply ? 'text-green-400' : 'text-cyan-400'} font-semibold`}>
+                            {msg.author_name?.[0] || 'S'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className={`${msg.is_staff_reply ? 'bg-green-900/20 border-green-500/20' : 'bg-slate-900 border-cyan-500/20'} rounded-lg p-4 border`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-semibold text-white">
+                              {msg.author_name || (msg.is_staff_reply ? 'Support Team' : 'You')}
+                              {msg.is_staff_reply && <span className="ml-2 text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded">Staff</span>}
+                            </span>
+                            <span className="text-xs text-slate-400">
+                              {new Date(msg.created_at).toLocaleString()}
+                            </span>
+                          </div>
+                          <p className="text-slate-300 whitespace-pre-wrap">{msg.message}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={messagesEndRef} />
+                </div>
+              </div>
+
+              {/* Message input */}
+              {selectedTicket.status !== 'closed' && (
+                <form onSubmit={handleSendMessage} className="bg-slate-950 rounded-lg border border-cyan-500/30 p-4">
+                  <div className="space-y-3">
+                    <label className="block text-sm font-semibold text-slate-200">
+                      Add Reply
+                    </label>
+                    <textarea
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      placeholder="Type your message here..."
+                      rows={4}
+                      className="w-full px-4 py-3 bg-slate-900 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-slate-400 resize-none"
+                      disabled={sendingMessage}
+                    />
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={sendingMessage || !newMessage.trim()}
+                        className="inline-flex items-center space-x-2 px-6 py-2 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg font-semibold hover:from-cyan-400 hover:to-teal-400 transition shadow-lg shadow-cyan-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Send className="h-4 w-4" />
+                        <span>{sendingMessage ? 'Sending...' : 'Send Reply'}</span>
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              )}
+
+              {selectedTicket.status === 'closed' && (
+                <div className="bg-slate-900/50 rounded-lg border border-slate-700 p-4 text-center">
+                  <p className="text-slate-400">
+                    <X className="h-5 w-5 inline mr-2" />
+                    This ticket is closed. No further replies can be added.
+                  </p>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

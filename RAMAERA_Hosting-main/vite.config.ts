@@ -5,8 +5,17 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 4333,
+    hmr: true, // Hot Module Replacement
+    watch: {
+      usePolling: true, // Better file watching
+    },
   },
   optimizeDeps: {
     exclude: ['lucide-react'],
+  },
+  // Disable caching during development
+  cacheDir: '.vite',
+  build: {
+    sourcemap: true,
   },
 });

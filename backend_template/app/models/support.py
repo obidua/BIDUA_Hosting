@@ -118,3 +118,8 @@ class SupportTicket(Base):
         back_populates="ticket",
         cascade="all, delete-orphan"
     )
+    attachments = relationship(
+        "TicketAttachment",
+        back_populates="ticket",
+        cascade="all, delete-orphan"
+    )

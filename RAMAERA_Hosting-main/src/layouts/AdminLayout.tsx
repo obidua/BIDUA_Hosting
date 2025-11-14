@@ -75,14 +75,6 @@ export function AdminLayout() {
                   </Link>
                 );
               })}
-
-              <Link
-                to="/dashboard"
-                className="flex items-center space-x-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-950 transition border-t border-red-500/20 mt-4 pt-4"
-              >
-                <LayoutDashboard className="h-5 w-5" />
-                <span className="font-medium">Switch to User Panel</span>
-              </Link>
             </nav>
 
             <div className="border-t border-red-500/20 p-4">

@@ -75,6 +75,11 @@ async def add_ticket_message(
     support_service: SupportService = Depends()
 ):
     """Add a message/reply to a ticket"""
+    print(f"=== ADD TICKET MESSAGE ===")
+    print(f"Ticket ID: {ticket_id}")
+    print(f"Current User: {current_user}")
+    print(f"Message Data: {message_data}")
+    
     # Verify user has access to this ticket
     if current_user.role in ["admin", "super_admin", "support"]:
         ticket = await support_service.get_ticket_by_id(db, ticket_id)

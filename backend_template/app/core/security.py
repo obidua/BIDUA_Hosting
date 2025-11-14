@@ -138,7 +138,7 @@ from datetime import datetime, timedelta
 from typing import Any, Union, Optional
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -169,12 +169,21 @@ def verify_token(token: str) -> Optional[dict]:
 
 async def get_current_user(
     db: AsyncSession = Depends(get_db),
-    token: str = Depends(security)
+    token: HTTPAuthorizationCredentials = Depends(security)
 ) -> UserProfile:
     from app.services.user_service import UserService  # moved inside to prevent circular import
 
+    print(f"=== GET_CURRENT_USER ===")
+    print(f"Token object: {token}")
+    print(f"Token type: {type(token)}")
+    if hasattr(token, 'credentials'):
+        print(f"Token credentials: {token.credentials[:50] if token.credentials else 'None'}...")
+    
     payload = verify_token(token.credentials)
+    print(f"Payload: {payload}")
+    
     if not payload or "sub" not in payload:
+        print("ERROR: Invalid payload or missing 'sub'")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
@@ -183,14 +192,17 @@ async def get_current_user(
     user_service = UserService()
     user = await user_service.get_user_by_id(db, int(payload["sub"]))
     if not user:
+        print(f"ERROR: User not found for id {payload['sub']}")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
     if user.account_status != "active":
+        print(f"ERROR: User account not active: {user.account_status}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is suspended or inactive",
         )
 
+    print(f"SUCCESS: User authenticated: {user.email}")
     return user
 
 

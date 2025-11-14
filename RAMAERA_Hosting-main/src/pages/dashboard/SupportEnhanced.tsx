@@ -9,9 +9,12 @@ import {
   X,
   Send,
   ArrowLeft,
-  User as UserIcon
+  User as UserIcon,
+  Paperclip
 } from 'lucide-react';
 import { api } from '../../lib/api';
+import { FileUpload } from '../../components/FileUpload';
+import { AttachmentList } from '../../components/AttachmentList';
 
 interface SupportTicketData {
   id: string;
@@ -41,6 +44,16 @@ interface TicketMessage {
   created_at: string;
   author_name: string;
   author_email: string;
+  attachments?: Attachment[];
+}
+
+interface Attachment {
+  id: number;
+  filename: string;
+  size: number;
+  mime_type: string;
+  status: string;
+  message_id?: number;
 }
 
 export function SupportEnhanced() {
@@ -52,6 +65,9 @@ export function SupportEnhanced() {
   const [submitting, setSubmitting] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [replyMessage, setReplyMessage] = useState('');
+  const [showFileUpload, setShowFileUpload] = useState(false);
+  const [attachmentRefreshKey, setAttachmentRefreshKey] = useState(0);
+  const [pendingAttachments, setPendingAttachments] = useState<number[]>([]);
 
   const [formData, setFormData] = useState({
     subject: '',
@@ -95,8 +111,44 @@ export function SupportEnhanced() {
   const loadTicketDetail = async (ticketId: string) => {
     try {
       setLoading(true);
-      const response: any = await api.getSupportTicket(ticketId);
+      const response = await api.getSupportTicket(ticketId);
+      
+      // Load attachments to group with messages
+      const token = localStorage.getItem('access_token');
+      const attachmentsResponse = await fetch(
+        `http://localhost:8000/api/v1/attachments/tickets/${ticketId}/attachments?include_pending=true`,
+        {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+      
+      const attachments = attachmentsResponse.ok ? await attachmentsResponse.json() : [];
+      
+      // Group attachments by message_id
+      const messageAttachments: Record<number, Attachment[]> = {};
+      const pendingAttachmentsTemp: number[] = [];
+      
+      attachments.forEach((att: Attachment) => {
+        if (att.status === 'pending') {
+          pendingAttachmentsTemp.push(att.id);
+        } else if (att.message_id) {
+          if (!messageAttachments[att.message_id]) {
+            messageAttachments[att.message_id] = [];
+          }
+          messageAttachments[att.message_id].push(att);
+        }
+      });
+      
+      // Add attachments to messages
+      if (response.messages) {
+        response.messages = response.messages.map((msg: TicketMessage) => ({
+          ...msg,
+          attachments: messageAttachments[msg.id] || []
+        }));
+      }
+      
       setSelectedTicket(response);
+      setPendingAttachments(pendingAttachmentsTemp);
       setActiveTab('detail');
     } catch (error) {
       console.error('Failed to load ticket details:', error);
@@ -142,11 +194,14 @@ export function SupportEnhanced() {
     if (!replyMessage.trim() || !selectedTicket) return;
 
     try {
-      await fetch(`http://localhost:8000/api/v1/support/tickets/${selectedTicket.id}/messages`, {
+      const token = localStorage.getItem('access_token');
+      
+      // Step 1: Send the message
+      const response = await fetch(`http://localhost:8000/api/v1/support/tickets/${selectedTicket.id}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           message: replyMessage,
@@ -154,12 +209,46 @@ export function SupportEnhanced() {
         })
       });
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to send message');
+      }
+
+      const messageData = await response.json();
+      console.log('Message sent successfully:', messageData);
+
+      // Step 2: Link pending attachments to this message
+      if (pendingAttachments.length > 0) {
+        try {
+          await fetch(`http://localhost:8000/api/v1/attachments/attachments/link-to-message`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              attachment_ids: pendingAttachments,
+              message_id: messageData.id
+            })
+          });
+          console.log('Attachments linked to message');
+        } catch (linkError) {
+          console.error('Failed to link attachments:', linkError);
+          // Continue anyway - message was sent
+        }
+      }
+
+      // Clear state
       setReplyMessage('');
-      // Reload ticket details
+      setPendingAttachments([]);
+      setShowFileUpload(false);
+      setAttachmentRefreshKey(prev => prev + 1);
+      
+      // Reload ticket details to show new message with attachments
       await loadTicketDetail(selectedTicket.id);
     } catch (error) {
       console.error('Failed to send reply:', error);
-      alert('Failed to send reply');
+      alert(`Failed to send reply: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -167,10 +256,11 @@ export function SupportEnhanced() {
     if (!confirm('Are you sure you want to close this ticket?')) return;
 
     try {
+      const token = localStorage.getItem('access_token');
       await fetch(`http://localhost:8000/api/v1/support/tickets/${ticketId}/status?new_status=closed`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
 
@@ -324,6 +414,19 @@ export function SupportEnhanced() {
                       msg.is_staff_reply ? 'bg-purple-500/10 border border-purple-500/30' : 'bg-slate-950'
                     }`}>
                       <p className="text-slate-300 whitespace-pre-wrap">{msg.message}</p>
+                      
+                      {/* Show attachments for this message */}
+                      {msg.attachments && msg.attachments.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-cyan-500/20 space-y-2">
+                          {msg.attachments.map((att) => (
+                            <div key={att.id} className="flex items-center gap-2 text-sm">
+                              <Paperclip className="h-4 w-4 text-cyan-400" />
+                              <span className="text-cyan-300">{att.filename}</span>
+                              <span className="text-slate-500">({(att.size / 1024).toFixed(1)} KB)</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -331,6 +434,43 @@ export function SupportEnhanced() {
             ) : (
               <p className="text-center text-slate-400 py-8">No replies yet</p>
             )}
+          </div>
+
+          {/* Attachments Section */}
+          <div className="p-6 border-t border-cyan-500/30 bg-slate-950/50">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Paperclip className="h-5 w-5" />
+                Attachments
+              </h3>
+              {selectedTicket.status !== 'closed' && (
+                <button
+                  onClick={() => setShowFileUpload(!showFileUpload)}
+                  className="text-sm text-cyan-400 hover:text-cyan-300 transition"
+                >
+                  {showFileUpload ? 'Hide Upload' : 'Upload Files'}
+                </button>
+              )}
+            </div>
+
+            {showFileUpload && selectedTicket.status !== 'closed' && (
+              <div className="mb-4">
+                <FileUpload
+                  ticketId={parseInt(selectedTicket.id)}
+                  onUploadComplete={(file) => {
+                    // Add to pending attachments
+                    setPendingAttachments(prev => [...prev, file.id]);
+                    setAttachmentRefreshKey(prev => prev + 1);
+                  }}
+                />
+              </div>
+            )}
+
+            <AttachmentList 
+              key={attachmentRefreshKey}
+              ticketId={parseInt(selectedTicket.id)}
+              onDelete={() => setAttachmentRefreshKey(prev => prev + 1)}
+            />
           </div>
 
           {/* Reply Box */}

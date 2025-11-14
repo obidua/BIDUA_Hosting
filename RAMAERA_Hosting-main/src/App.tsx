@@ -22,7 +22,7 @@ import { ServiceLevelAgreement } from './pages/ServiceLevelAgreement';
 
 import { Overview } from './pages/dashboard/Overview';
 import { MyServers } from './pages/dashboard/MyServers';
-import { Referrals } from './pages/dashboard/Referrals';
+import { ReferralsEnhanced as Referrals } from './pages/dashboard/ReferralsEnhanced';
 import { Billing } from './pages/dashboard/Billing';
 import { SupportEnhanced as Support } from './pages/dashboard/SupportEnhanced';
 import { Settings } from './pages/dashboard/Settings';

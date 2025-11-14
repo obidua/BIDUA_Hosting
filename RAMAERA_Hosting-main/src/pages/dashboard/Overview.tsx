@@ -1,79 +1,98 @@
 import { Server, CreditCard, AlertCircle, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import api from '../../lib/api';
+
+interface Server {
+  id: number;
+  name: string;
+  hostname: string;
+  status: string;
+  ip_address?: string;
+  plan_name?: string;
+  monthly_cost?: number;
+}
 
 export function Overview() {
-  const stats = [
+  const [stats, setStats] = useState({
+    activeServers: 0,
+    monthlyCost: 0,
+    openTickets: 0,
+    bandwidthUsed: '0GB'
+  });
+  const [recentServers, setRecentServers] = useState<Server[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch servers
+      const serversResponse = await api.getServers();
+      const serversArray = Array.isArray(serversResponse) ? serversResponse : [];
+      setRecentServers(serversArray.slice(0, 3));
+      
+      // Calculate stats
+      const activeServersCount = serversArray.filter((s: Server) => s.status === 'active').length;
+      const totalMonthlyCost = serversArray.reduce((sum: number, s: Server) => sum + (s.monthly_cost || 0), 0);
+      
+      // Fetch tickets
+      try {
+        const ticketsResponse = await api.getSupportTickets({ status: 'open' });
+        const ticketsArray = Array.isArray(ticketsResponse) ? ticketsResponse : [];
+        setStats({
+          activeServers: activeServersCount,
+          monthlyCost: totalMonthlyCost,
+          openTickets: ticketsArray.length,
+          bandwidthUsed: '0GB' // TODO: Implement bandwidth tracking
+        });
+      } catch {
+        setStats({
+          activeServers: activeServersCount,
+          monthlyCost: totalMonthlyCost,
+          openTickets: 0,
+          bandwidthUsed: '0GB'
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const statCards = [
     {
       label: 'Active Servers',
-      value: '3',
+      value: loading ? '...' : stats.activeServers.toString(),
       icon: Server,
       color: 'blue',
       link: '/dashboard/servers',
     },
     {
       label: 'Monthly Cost',
-      value: '₹5,600',
+      value: loading ? '...' : `₹${stats.monthlyCost.toLocaleString()}`,
       icon: CreditCard,
       color: 'green',
       link: '/dashboard/billing',
     },
     {
       label: 'Open Tickets',
-      value: '1',
+      value: loading ? '...' : stats.openTickets.toString(),
       icon: AlertCircle,
       color: 'orange',
       link: '/dashboard/support',
     },
     {
       label: 'Bandwidth Used',
-      value: '2.4TB',
+      value: loading ? '...' : stats.bandwidthUsed,
       icon: TrendingUp,
       color: 'purple',
       link: '/dashboard/servers',
-    },
-  ];
-
-  const recentServers = [
-    {
-      id: 1,
-      name: 'Production Web Server',
-      hostname: 'web-prod-01.bidua.cloud',
-      status: 'active',
-      ip: '192.168.1.100',
-      plan: 'Professional',
-    },
-    {
-      id: 2,
-      name: 'Database Server',
-      hostname: 'db-prod-01.bidua.cloud',
-      status: 'active',
-      ip: '192.168.1.101',
-      plan: 'Memory Plus',
-    },
-    {
-      id: 3,
-      name: 'Development Server',
-      hostname: 'dev-01.bidua.cloud',
-      status: 'stopped',
-      ip: '192.168.1.102',
-      plan: 'Starter',
-    },
-  ];
-
-  const recentInvoices = [
-    {
-      id: 1,
-      number: 'INV-2024-001',
-      date: '2024-10-01',
-      amount: 5600,
-      status: 'paid',
-    },
-    {
-      id: 2,
-      number: 'INV-2024-002',
-      date: '2024-11-01',
-      amount: 5600,
-      status: 'paid',
     },
   ];
 
@@ -85,38 +104,38 @@ export function Overview() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-white">Welcome Back!</h2>
-        <p className="text-slate-400">Here's what's happening with your servers</p>
+    <div className="space-y-6 w-full h-full overflow-y-auto pb-6">
+      <div className="px-2 sm:px-0">
+        <h2 className="text-xl sm:text-2xl font-bold text-white">Welcome Back!</h2>
+        <p className="text-sm sm:text-base text-slate-400">Here's what's happening with your servers</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => {
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 px-2 sm:px-0">
+        {statCards.map((stat, index) => {
           const colors = colorClasses[stat.color];
           return (
             <Link
               key={index}
               to={stat.link}
-              className={`bg-slate-900 p-6 rounded-xl shadow-sm border-2 border-cyan-500 ${colors.hover} transition hover:shadow-lg hover:shadow-cyan-500/30`}
+              className={`bg-slate-900 p-4 sm:p-6 rounded-xl shadow-sm border-2 border-cyan-500 ${colors.hover} transition hover:shadow-lg hover:shadow-cyan-500/30`}
             >
               <div className="flex items-center justify-between mb-4">
-                <div className={`w-12 h-12 ${colors.bg} rounded-lg flex items-center justify-center`}>
-                  <stat.icon className={`h-6 w-6 ${colors.text}`} />
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 ${colors.bg} rounded-lg flex items-center justify-center`}>
+                  <stat.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${colors.text}`} />
                 </div>
               </div>
-              <p className="text-sm text-slate-400 mb-1">{stat.label}</p>
-              <p className="text-2xl font-bold text-white">{stat.value}</p>
+              <p className="text-xs sm:text-sm text-slate-400 mb-1">{stat.label}</p>
+              <p className="text-xl sm:text-2xl font-bold text-white">{stat.value}</p>
             </Link>
           );
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 px-2 sm:px-0">
         <div className="bg-slate-900 rounded-xl shadow-sm border-2 border-cyan-500">
-          <div className="p-6 border-b border-cyan-500">
+          <div className="p-4 sm:p-6 border-b border-cyan-500">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white">Your Servers</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-white">Your Servers</h3>
               <Link
                 to="/dashboard/servers"
                 className="text-sm text-cyan-400 hover:text-cyan-300 font-semibold"
@@ -125,69 +144,59 @@ export function Overview() {
               </Link>
             </div>
           </div>
-          <div className="divide-y divide-gray-200">
-            {recentServers.map((server) => (
-              <div key={server.id} className="p-6 hover:bg-slate-800 transition">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-white mb-1">{server.name}</h4>
-                    <p className="text-sm text-slate-400 mb-2">{server.hostname}</p>
-                    <div className="flex items-center space-x-4 text-sm text-slate-500">
-                      <span>{server.ip}</span>
-                      <span>•</span>
-                      <span>{server.plan}</span>
+          <div>
+            {loading ? (
+              <div className="p-4 sm:p-6 text-center text-slate-400">Loading servers...</div>
+            ) : recentServers.length === 0 ? (
+              <div className="p-4 sm:p-6 text-center text-slate-400">No servers yet</div>
+            ) : (
+              recentServers.map((server) => (
+                <div key={server.id} className="p-4 sm:p-6 hover:bg-slate-800 transition border-b border-cyan-500/30 last:border-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-white mb-1 truncate">{server.name}</h4>
+                      <p className="text-xs sm:text-sm text-slate-400 mb-2 truncate">{server.hostname}</p>
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-slate-400">
+                        <span className="truncate">{server.ip_address || 'N/A'}</span>
+                        <span className="hidden sm:inline">•</span>
+                        <span className="px-2 py-0.5 bg-slate-800 rounded text-xs">
+                          {server.plan_name || 'N/A'}
+                        </span>
+                      </div>
                     </div>
+                    <span
+                      className={`self-start sm:self-center px-3 py-1 rounded-full text-xs font-semibold ${
+                        server.status === 'active'
+                          ? 'bg-green-500/20 text-green-400'
+                          : 'bg-slate-700 text-slate-400'
+                      }`}
+                    >
+                      {server.status}
+                    </span>
                   </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      server.status === 'active'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-100 text-gray-700'
-                    }`}
-                  >
-                    {server.status}
-                  </span>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
         <div className="bg-slate-900 rounded-xl shadow-sm border-2 border-cyan-500">
-          <div className="p-6 border-b border-cyan-500">
+          <div className="p-4 sm:p-6 border-b border-cyan-500">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white">Recent Invoices</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-white">Recent Activity</h3>
               <Link
                 to="/dashboard/billing"
-                className="text-sm text-cyan-400 hover:text-cyan-300 font-semibold"
+                className="text-xs sm:text-sm text-cyan-400 hover:text-cyan-300 font-semibold"
               >
                 View All
               </Link>
             </div>
           </div>
-          <div className="divide-y divide-gray-200">
-            {recentInvoices.map((invoice) => (
-              <div key={invoice.id} className="p-6 hover:bg-slate-800 transition">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold text-white mb-1">{invoice.number}</h4>
-                    <p className="text-sm text-slate-400">
-                      {new Date(invoice.date).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-white">₹{invoice.amount.toLocaleString()}</p>
-                    <span className="inline-block mt-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
-                      Paid
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="p-4 sm:p-6">
+            <div className="text-center text-slate-400 py-8">
+              <p className="text-sm sm:text-base">No recent activity</p>
+              <p className="text-xs sm:text-sm mt-2">Your billing and payment history will appear here</p>
+            </div>
           </div>
         </div>
       </div>

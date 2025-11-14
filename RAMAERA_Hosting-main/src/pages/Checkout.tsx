@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
 import { BillingSettings } from '../types/billing';
-import CountriesAPI, { CountrySimple } from '../services/countriesAPI';
+import { useCountryOptions, type CountryOption } from '../hooks/useCountryOptions';
 import {
   Server, Check, CreditCard, FileText, ChevronRight, ChevronLeft,
   Cpu, MemoryStick, HardDrive, Network, Clock, Shield, 
@@ -102,16 +102,92 @@ const numberToWords = (num: number): string => {
   return words.trim();
 };
 
-const amountInWords = (amount: number) => {
-  const rupees = Math.floor(amount);
-  const paise = Math.round((amount - rupees) * 100);
-  const rupeeWords = numberToWords(rupees);
-  const paiseWords = paise ? `${numberToWords(paise)} Paise` : '';
-  const prefix = rupees > 0 ? `Rupees ${rupeeWords}` : '';
-  const connector = rupees > 0 && paise > 0 ? ' and ' : '';
-  const suffix = paiseWords ? paiseWords : '';
-  const full = `${prefix}${connector}${suffix}`.trim();
-  return full ? `${full} only` : 'Rupees zero only';
+const currencyLocaleMap: Record<string, string> = {
+  INR: 'en-IN',
+  USD: 'en-US',
+  EUR: 'de-DE',
+  GBP: 'en-GB',
+  AUD: 'en-AU',
+  CAD: 'en-CA',
+  SGD: 'en-SG',
+  AED: 'en-AE',
+  JPY: 'ja-JP',
+  NZD: 'en-NZ'
+};
+
+const currencyWordMap: Record<string, { major: string; minor: string }> = {
+  INR: { major: 'Rupees', minor: 'Paise' },
+  USD: { major: 'US Dollars', minor: 'Cents' },
+  EUR: { major: 'Euros', minor: 'Cents' },
+  GBP: { major: 'Pounds', minor: 'Pence' },
+  AUD: { major: 'Australian Dollars', minor: 'Cents' },
+  CAD: { major: 'Canadian Dollars', minor: 'Cents' },
+  SGD: { major: 'Singapore Dollars', minor: 'Cents' },
+  AED: { major: 'UAE Dirhams', minor: 'Fils' },
+  JPY: { major: 'Yen', minor: 'Sen' },
+  NZD: { major: 'New Zealand Dollars', minor: 'Cents' }
+};
+
+interface CurrencyInfo {
+  code: string;
+  symbol: string;
+  format: (value: number) => string;
+}
+
+const matchesCountry = (option: CountryOption, normalizedValue: string) => {
+  const target = normalizedValue.toLowerCase();
+  return (
+    option.value.toLowerCase() === target ||
+    option.label.toLowerCase() === target ||
+    option.code?.toLowerCase() === target
+  );
+};
+
+const createCurrencyInfo = (currencyCode: string): CurrencyInfo => {
+  const locale = currencyLocaleMap[currencyCode] || 'en-US';
+  const formatter = new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: currencyCode,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+  const symbol = formatter.formatToParts(0).find(part => part.type === 'currency')?.value || currencyCode;
+  return {
+    code: currencyCode,
+    symbol,
+    format: (value: number) => formatter.format(Number.isFinite(value) ? value : 0)
+  };
+};
+
+const defaultCurrencyInfo = createCurrencyInfo('INR');
+
+const getCurrencyInfo = (countryValue: string, countryOptions: CountryOption[]): CurrencyInfo => {
+  const normalized = (countryValue || '').toLowerCase();
+  const match = countryOptions.find(option => matchesCountry(option, normalized));
+  const currencyCode = match?.currency || defaultCurrencyInfo.code;
+  return createCurrencyInfo(currencyCode);
+};
+
+const amountInWords = (amount: number, currencyCode: string) => {
+  const majorAmount = Math.floor(amount);
+  const minorAmount = Math.round((amount - majorAmount) * 100);
+  const currencyLabels = currencyWordMap[currencyCode] || { major: `${currencyCode} Units`, minor: 'Cents' };
+  const majorWords = majorAmount > 0 ? `${currencyLabels.major} ${numberToWords(majorAmount)}` : '';
+  const minorWords = minorAmount > 0 ? `${currencyLabels.minor} ${numberToWords(minorAmount)}` : '';
+  const combined = [majorWords.trim(), minorWords.trim()].filter(Boolean).join(' and ');
+  return combined ? `${combined} only` : `${currencyLabels.major} zero only`;
+};
+
+const getCountryLabel = (countryValue: string, countryOptions: CountryOption[]) => {
+  const normalized = (countryValue || '').toLowerCase();
+  return countryOptions.find(option => matchesCountry(option, normalized))?.label || countryValue;
+};
+
+const isCountryIndia = (countryValue: string, countryOptions: CountryOption[]) => {
+  const normalized = (countryValue || '').toLowerCase();
+  if (normalized === 'india' || normalized === 'in') return true;
+  const match = countryOptions.find(option => matchesCountry(option, normalized));
+  return match?.label.toLowerCase() === 'india';
 };
 
 export function Checkout() {
@@ -142,8 +218,11 @@ export function Checkout() {
   const [processing, setProcessing] = useState(false);
   
   // Countries state
-  const [countries, setCountries] = useState<CountrySimple[]>([]);
-  const [loadingCountries, setLoadingCountries] = useState(true);
+  const { countries, loading: loadingCountries } = useCountryOptions();
+  const currencyInfo = useMemo(() => getCurrencyInfo(billingInfo.country, countries), [billingInfo.country, countries]);
+  const formatCurrency = (value: number) => currencyInfo.format(Number.isFinite(value) ? value : 0);
+  const billingCountryLabel = useMemo(() => getCountryLabel(billingInfo.country, countries), [billingInfo.country, countries]);
+  const isBillingCountryIndia = useMemo(() => isCountryIndia(billingInfo.country, countries), [billingInfo.country, countries]);
   
   // Configuration options state
   const [operatingSystem, setOperatingSystem] = useState('almalinux-8.4');
@@ -198,22 +277,6 @@ export function Checkout() {
 
     setServerConfig(config);
   }, [user, location.state, navigate]);
-
-  // Load countries on component mount
-  useEffect(() => {
-    const loadCountries = async () => {
-      try {
-        const countriesData = await CountriesAPI.getCountriesSimple();
-        setCountries(countriesData);
-      } catch (error) {
-        console.error('Failed to load countries:', error);
-      } finally {
-        setLoadingCountries(false);
-      }
-    };
-
-    loadCountries();
-  }, []);
 
   useEffect(() => {
     // Update billing info when profile loads
@@ -366,7 +429,7 @@ export function Checkout() {
   const getTaxBreakdown = () => {
     const subtotal = calculateSubtotal();
     const taxableAmount = Math.max(subtotal - promoDiscount, 0);
-    if (billingInfo.country !== 'India' || taxableAmount === 0) {
+    if (!isBillingCountryIndia || taxableAmount === 0) {
       return { cgst: 0, sgst: 0, igst: 0 };
     }
 
@@ -469,7 +532,7 @@ export function Checkout() {
   const taxableAmount = Math.max(subtotal - promoDiscount, 0);
   const taxBreakdown = getTaxBreakdown();
   const totalAmount = calculateTotal();
-  const invoiceAmountInWords = amountInWords(totalAmount);
+  const invoiceAmountInWords = amountInWords(totalAmount, currencyInfo.code);
   const invoiceDateDisplay = formatDate(invoiceDate);
   const dueDateDisplay = formatDate(invoiceDate);
   const servicePeriodRange = `${formatDate(invoiceDate)} - ${formatDate(servicePeriodEnd)}`;
@@ -486,8 +549,8 @@ export function Checkout() {
     billingInfo.company,
     billingInfo.address,
     billingInfo.addressLine2,
-    [billingInfo.city, billingInfo.state, billingInfo.postalCode].filter(Boolean).join(', '),
-    billingInfo.country
+    [billingInfo.state, billingInfo.city, billingInfo.postalCode].filter(Boolean).join(', '),
+    billingCountryLabel
   ].filter((line): line is string => Boolean(line && line.trim()));
   const payToLines = [
     'BIDUA Industries Pvt Ltd',
@@ -692,7 +755,7 @@ export function Checkout() {
                         <div className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-700">
                           <div className="flex-1">
                             <p className="font-medium text-white">Additional IPv4 Addresses</p>
-                            <p className="text-sm text-slate-400">₹200/month per IP</p>
+                            <p className="text-sm text-slate-400">{formatCurrency(200)}/month per IP</p>
                           </div>
                           <div className="flex items-center space-x-3">
                             <button
@@ -725,7 +788,7 @@ export function Checkout() {
                             >
                               <p className="text-sm font-bold text-white">Plesk Web Admin</p>
                               <p className="text-xs text-slate-400">10 Domains</p>
-                              <p className="text-sm text-cyan-400 mt-1">₹950/mo</p>
+                              <p className="text-sm text-cyan-400 mt-1">{formatCurrency(950)}/mo</p>
                             </button>
                             <button
                               onClick={() => setPleskAddon(pleskAddon === 'pro' ? '' : 'pro')}
@@ -737,7 +800,7 @@ export function Checkout() {
                             >
                               <p className="text-sm font-bold text-white">Plesk Web Pro</p>
                               <p className="text-xs text-slate-400">30 Domains</p>
-                              <p className="text-sm text-cyan-400 mt-1">₹1,750/mo</p>
+                              <p className="text-sm text-cyan-400 mt-1">{formatCurrency(1750)}/mo</p>
                             </button>
                             <button
                               onClick={() => setPleskAddon(pleskAddon === 'host' ? '' : 'host')}
@@ -749,7 +812,7 @@ export function Checkout() {
                             >
                               <p className="text-sm font-bold text-white">Plesk Web Host</p>
                               <p className="text-xs text-slate-400">Unlimited</p>
-                              <p className="text-sm text-cyan-400 mt-1">₹2,650/mo</p>
+                              <p className="text-sm text-cyan-400 mt-1">{formatCurrency(2650)}/mo</p>
                             </button>
                           </div>
                         </div>
@@ -778,7 +841,7 @@ export function Checkout() {
                                 }`}
                               >
                                 <p className="text-xs font-bold text-white">{backup.label}</p>
-                                <p className="text-xs text-cyan-400">₹{backup.price.toLocaleString()}/mo</p>
+                                <p className="text-xs text-cyan-400">{formatCurrency(backup.price)}/mo</p>
                               </button>
                             ))}
                           </div>
@@ -810,7 +873,7 @@ export function Checkout() {
                               >
                                 <p className="text-sm font-bold text-white">{ssl.name}</p>
                                 <p className="text-xs text-slate-400">{ssl.desc}</p>
-                                <p className="text-sm text-cyan-400 mt-1">₹{ssl.price.toLocaleString()}/year</p>
+                                <p className="text-sm text-cyan-400 mt-1">{formatCurrency(ssl.price)}/year</p>
                               </button>
                             ))}
                           </div>
@@ -830,7 +893,7 @@ export function Checkout() {
                             >
                               <p className="text-sm font-bold text-white">BIDUA Hosting-Basic</p>
                               <p className="text-xs text-slate-400">Essential support</p>
-                              <p className="text-sm text-cyan-400 mt-1">₹2,500/mo</p>
+                              <p className="text-sm text-cyan-400 mt-1">{formatCurrency(2500)}/mo</p>
                             </button>
                             <button
                               onClick={() => setSupportPackage(supportPackage === 'premium' ? '' : 'premium')}
@@ -842,7 +905,7 @@ export function Checkout() {
                             >
                               <p className="text-sm font-bold text-white">BIDUA Hosting Premium</p>
                               <p className="text-xs text-slate-400">Priority support</p>
-                              <p className="text-sm text-cyan-400 mt-1">₹7,500/mo</p>
+                              <p className="text-sm text-cyan-400 mt-1">{formatCurrency(7500)}/mo</p>
                             </button>
                           </div>
                         </div>
@@ -856,8 +919,8 @@ export function Checkout() {
                             className="w-full px-4 py-3 bg-slate-950 border border-cyan-500/30 rounded-lg text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
                           >
                             <option value="self">I will manage the server myself</option>
-                            <option value="basic">Basic Management (₹2,000/mo)</option>
-                            <option value="premium">Premium Management (₹5,000/mo)</option>
+                            <option value="basic">Basic Management ({formatCurrency(2000)}/mo)</option>
+                            <option value="premium">Premium Management ({formatCurrency(5000)}/mo)</option>
                           </select>
                         </div>
 
@@ -888,7 +951,7 @@ export function Checkout() {
                                 onChange={(e) => setDdosProtection(e.target.value)}
                                 className="w-4 h-4 text-cyan-600 bg-slate-900 border-slate-700"
                               />
-                              <span className="ml-3 text-white text-sm">Advanced (+₹1,000/mo) - Up to 100 Gbps protection</span>
+                              <span className="ml-3 text-white text-sm">Advanced (+{formatCurrency(1000)}/mo) - Up to 100 Gbps protection</span>
                             </label>
                             <label className="flex items-center p-3 bg-slate-950 rounded cursor-pointer hover:bg-slate-800">
                               <input
@@ -899,7 +962,7 @@ export function Checkout() {
                                 onChange={(e) => setDdosProtection(e.target.value)}
                                 className="w-4 h-4 text-cyan-600 bg-slate-900 border-slate-700"
                               />
-                              <span className="ml-3 text-white text-sm">Enterprise (+₹3,000/mo) - Unlimited with real-time mitigation</span>
+                              <span className="ml-3 text-white text-sm">Enterprise (+{formatCurrency(3000)}/mo) - Unlimited with real-time mitigation</span>
                             </label>
                           </div>
                         </div>
@@ -916,7 +979,7 @@ export function Checkout() {
                       {serverConfig.discount > 0 && (
                         <p className="text-sm text-green-400 mt-2">
                           <Percent className="h-4 w-4 inline mr-1" />
-                          Saving ₹{serverConfig.discount.toLocaleString()} with {serverConfig.billingCycle} billing
+                          Saving {formatCurrency(serverConfig.discount)} with {serverConfig.billingCycle} billing
                         </p>
                       )}
                     </div>
@@ -1025,7 +1088,7 @@ export function Checkout() {
                       </div>
                     </div>
                     <p className="text-xs text-slate-400 mt-3">
-                      Total: {serverQuantity} × ₹{(serverConfig.monthlyPrice + calculateAddOnsCost()).toLocaleString()}/mo = ₹{calculateSubtotal().toLocaleString()}/mo
+                      Total: {serverQuantity} × {formatCurrency(serverConfig.monthlyPrice + calculateAddOnsCost())}/mo = {formatCurrency(calculateSubtotal())}/mo
                     </p>
                   </div>
 
@@ -1124,19 +1187,29 @@ export function Checkout() {
                           />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-slate-300 mb-2">
-                              City <span className="text-red-400">*</span>
+                              <Globe className="h-4 w-4 inline mr-1" />
+                              Country <span className="text-red-400">*</span>
                             </label>
-                            <input
-                              type="text"
-                              value={billingInfo.city}
-                              onChange={(e) => handleInputChange('city', e.target.value)}
-                              placeholder="New Delhi"
+                            <select
+                              value={billingCountryLabel || billingInfo.country}
+                              onChange={(e) => handleInputChange('country', e.target.value)}
                               className="w-full px-4 py-3 bg-slate-950 border border-cyan-500/30 rounded-lg text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
                               required
-                            />
+                              disabled={loadingCountries}
+                            >
+                              {loadingCountries ? (
+                                <option value="">Loading countries...</option>
+                              ) : (
+                                countries.map((country) => (
+                                  <option key={country.value} value={country.value}>
+                                    {country.label}
+                                  </option>
+                                ))
+                              )}
+                            </select>
                           </div>
 
                           <div>
@@ -1148,6 +1221,20 @@ export function Checkout() {
                               value={billingInfo.state}
                               onChange={(e) => handleInputChange('state', e.target.value)}
                               placeholder="Delhi"
+                              className="w-full px-4 py-3 bg-slate-950 border border-cyan-500/30 rounded-lg text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+                              required
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">
+                              City <span className="text-red-400">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={billingInfo.city}
+                              onChange={(e) => handleInputChange('city', e.target.value)}
+                              placeholder="New Delhi"
                               className="w-full px-4 py-3 bg-slate-950 border border-cyan-500/30 rounded-lg text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
                               required
                             />
@@ -1169,30 +1256,6 @@ export function Checkout() {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">
-                              <Globe className="h-4 w-4 inline mr-1" />
-                              Country <span className="text-red-400">*</span>
-                            </label>
-                            <select
-                              value={billingInfo.country}
-                              onChange={(e) => handleInputChange('country', e.target.value)}
-                              className="w-full px-4 py-3 bg-slate-950 border border-cyan-500/30 rounded-lg text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-                              required
-                              disabled={loadingCountries}
-                            >
-                              {loadingCountries ? (
-                                <option value="">Loading countries...</option>
-                              ) : (
-                                countries.map((country) => (
-                                  <option key={country.value} value={country.value}>
-                                    {country.label}
-                                  </option>
-                                ))
-                              )}
-                            </select>
-                          </div>
-
                           <div>
                             <label className="block text-sm font-medium text-slate-300 mb-2">
                               <FileText className="h-4 w-4 inline mr-1" />
@@ -1378,7 +1441,7 @@ export function Checkout() {
                         </>
                       ) : (
                         <>
-                          Complete Order - ₹{calculateTotal().toLocaleString()}
+                          Complete Order - {formatCurrency(calculateTotal())}
                           <ChevronRight className="h-5 w-5 ml-2" />
                         </>
                       )}
@@ -1481,7 +1544,7 @@ export function Checkout() {
                               </td>
                               <td className="px-4 py-4 text-slate-300">Hosting</td>
                               <td className="px-4 py-4 text-slate-300">998315</td>
-                              <td className="px-4 py-4 text-right text-white font-semibold">₹{taxableAmount.toLocaleString()}</td>
+                              <td className="px-4 py-4 text-right text-white font-semibold">{formatCurrency(taxableAmount)}</td>
                             </tr>
                           </tbody>
                         </table>
@@ -1491,33 +1554,33 @@ export function Checkout() {
                     <div className="mt-8 space-y-2 text-sm">
                       <div className="flex items-center justify-between text-slate-300">
                         <span>Sub Total</span>
-                        <span className="text-white font-semibold">₹{subtotal.toLocaleString()}</span>
+                        <span className="text-white font-semibold">{formatCurrency(subtotal)}</span>
                       </div>
                       {promoDiscount > 0 && (
                         <div className="flex items-center justify-between text-slate-300">
                           <span>Promotional Discount</span>
-                          <span className="text-emerald-400 font-semibold">-₹{promoDiscount.toLocaleString()}</span>
+                          <span className="text-emerald-400 font-semibold">-{formatCurrency(promoDiscount)}</span>
                         </div>
                       )}
                       <div className="flex items-center justify-between text-slate-300">
                         <span>Taxable Amount</span>
-                        <span className="text-white font-semibold">₹{taxableAmount.toLocaleString()}</span>
+                        <span className="text-white font-semibold">{formatCurrency(taxableAmount)}</span>
                       </div>
                     </div>
 
-                    {billingInfo.country === 'India' && (
+                    {isBillingCountryIndia && (
                       <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="bg-slate-900/40 rounded-xl border border-slate-800 p-4">
                           <p className="text-xs uppercase text-slate-400">CGST (9%)</p>
-                          <p className="text-lg font-semibold text-white mt-1">₹{taxBreakdown.cgst.toLocaleString()}</p>
+                          <p className="text-lg font-semibold text-white mt-1">{formatCurrency(taxBreakdown.cgst)}</p>
                         </div>
                         <div className="bg-slate-900/40 rounded-xl border border-slate-800 p-4">
                           <p className="text-xs uppercase text-slate-400">SGST (9%)</p>
-                          <p className="text-lg font-semibold text-white mt-1">₹{taxBreakdown.sgst.toLocaleString()}</p>
+                          <p className="text-lg font-semibold text-white mt-1">{formatCurrency(taxBreakdown.sgst)}</p>
                         </div>
                         <div className="bg-slate-900/40 rounded-xl border border-slate-800 p-4">
                           <p className="text-xs uppercase text-slate-400">IGST (18%)</p>
-                          <p className="text-lg font-semibold text-white mt-1">₹{taxBreakdown.igst.toLocaleString()}</p>
+                          <p className="text-lg font-semibold text-white mt-1">{formatCurrency(taxBreakdown.igst)}</p>
                         </div>
                       </div>
                     )}
@@ -1525,10 +1588,10 @@ export function Checkout() {
                     <div className="mt-8 bg-slate-900/50 rounded-xl border border-cyan-500/20 p-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                       <div>
                         <p className="text-xs uppercase text-slate-400">Total Amount Incl. GST</p>
-                        <p className="text-3xl font-bold text-cyan-400 mt-2">₹{totalAmount.toLocaleString()}</p>
+                        <p className="text-3xl font-bold text-cyan-400 mt-2">{formatCurrency(totalAmount)}</p>
                       </div>
                       <div>
-                        <p className="text-xs uppercase text-slate-400">Amount in Words</p>
+                        <p className="text-xs uppercase text-slate-400">Amount in Words ({currencyInfo.code})</p>
                         <p className="text-sm text-white mt-2">{invoiceAmountInWords}</p>
                       </div>
                     </div>
@@ -1536,12 +1599,12 @@ export function Checkout() {
                     <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
                       <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-5">
                         <p className="text-xs uppercase text-slate-400 mb-1">Funds Applied</p>
-                        <p className="text-lg font-semibold text-white">₹{fundsApplied.toLocaleString()}</p>
+                        <p className="text-lg font-semibold text-white">{formatCurrency(fundsApplied)}</p>
                         <p className="text-xs text-slate-500 mt-1">No credits applied to this invoice.</p>
                       </div>
                       <div className="bg-slate-900/60 border border-cyan-500/30 rounded-xl p-5">
                         <p className="text-xs uppercase text-slate-400 mb-1">Balance</p>
-                        <p className="text-2xl font-bold text-white">₹{balanceAmount.toLocaleString()}</p>
+                        <p className="text-2xl font-bold text-white">{formatCurrency(balanceAmount)}</p>
                         <p className="text-xs text-slate-500 mt-1">Please pay the balance to activate your services.</p>
                       </div>
                     </div>
@@ -1642,56 +1705,56 @@ export function Checkout() {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-400">Base Plan:</span>
-                  <span className="text-white">₹{(serverConfig.monthlyPrice * (currentStep >= 2 ? serverQuantity : 1)).toLocaleString()}</span>
+                  <span className="text-white">{formatCurrency(serverConfig.monthlyPrice * (currentStep >= 2 ? serverQuantity : 1))}</span>
                 </div>
 
                 {/* Add-ons */}
                 {additionalIPv4 > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">» Additional IPv4 ({additionalIPv4}x):</span>
-                    <span className="text-white">₹{((additionalIPv4 * 200) * (currentStep >= 2 ? serverQuantity : 1)).toLocaleString()}</span>
+                    <span className="text-white">{formatCurrency((additionalIPv4 * 200) * (currentStep >= 2 ? serverQuantity : 1))}</span>
                   </div>
                 )}
 
                 {pleskAddon && (
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">» Plesk {pleskAddon === 'admin' ? 'Admin' : pleskAddon === 'pro' ? 'Pro' : 'Host'}:</span>
-                    <span className="text-white">₹{((pleskAddon === 'admin' ? 950 : pleskAddon === 'pro' ? 1750 : 2650) * (currentStep >= 2 ? serverQuantity : 1)).toLocaleString()}</span>
+                    <span className="text-white">{formatCurrency((pleskAddon === 'admin' ? 950 : pleskAddon === 'pro' ? 1750 : 2650) * (currentStep >= 2 ? serverQuantity : 1))}</span>
                   </div>
                 )}
 
                 {backupStorage && (
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">» Backup {backupStorage.toUpperCase()}:</span>
-                    <span className="text-white">₹{((backupStorage === '100gb' ? 750 : backupStorage === '200gb' ? 1500 : backupStorage === '300gb' ? 2250 : backupStorage === '500gb' ? 3750 : 7500) * (currentStep >= 2 ? serverQuantity : 1)).toLocaleString()}</span>
+                    <span className="text-white">{formatCurrency((backupStorage === '100gb' ? 750 : backupStorage === '200gb' ? 1500 : backupStorage === '300gb' ? 2250 : backupStorage === '500gb' ? 3750 : 7500) * (currentStep >= 2 ? serverQuantity : 1))}</span>
                   </div>
                 )}
 
                 {sslCertificate && (
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">» SSL Certificate:</span>
-                    <span className="text-white">₹{((sslCertificate === 'essential' ? 225 : sslCertificate === 'essential-wildcard' ? 1162 : sslCertificate === 'comodo' ? 208 : sslCertificate === 'comodo-wildcard' ? 1084 : sslCertificate === 'rapid' ? 250 : 1371) * (currentStep >= 2 ? serverQuantity : 1)).toLocaleString()}/mo</span>
+                    <span className="text-white">{formatCurrency((sslCertificate === 'essential' ? 225 : sslCertificate === 'essential-wildcard' ? 1162 : sslCertificate === 'comodo' ? 208 : sslCertificate === 'comodo-wildcard' ? 1084 : sslCertificate === 'rapid' ? 250 : 1371) * (currentStep >= 2 ? serverQuantity : 1))}/mo</span>
                   </div>
                 )}
 
                 {supportPackage && (
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">» Support {supportPackage === 'basic' ? 'Basic' : 'Premium'}:</span>
-                    <span className="text-white">₹{((supportPackage === 'basic' ? 2500 : 7500) * (currentStep >= 2 ? serverQuantity : 1)).toLocaleString()}</span>
+                    <span className="text-white">{formatCurrency((supportPackage === 'basic' ? 2500 : 7500) * (currentStep >= 2 ? serverQuantity : 1))}</span>
                   </div>
                 )}
 
                 {managedService !== 'self' && (
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">» {managedService === 'basic' ? 'Basic' : 'Premium'} Management:</span>
-                    <span className="text-white">₹{((managedService === 'basic' ? 2000 : 5000) * (currentStep >= 2 ? serverQuantity : 1)).toLocaleString()}</span>
+                    <span className="text-white">{formatCurrency((managedService === 'basic' ? 2000 : 5000) * (currentStep >= 2 ? serverQuantity : 1))}</span>
                   </div>
                 )}
 
                 {ddosProtection !== 'basic' && (
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">» DDoS {ddosProtection === 'advanced' ? 'Advanced' : 'Enterprise'}:</span>
-                    <span className="text-white">₹{((ddosProtection === 'advanced' ? 1000 : 3000) * (currentStep >= 2 ? serverQuantity : 1)).toLocaleString()}</span>
+                    <span className="text-white">{formatCurrency((ddosProtection === 'advanced' ? 1000 : 3000) * (currentStep >= 2 ? serverQuantity : 1))}</span>
                   </div>
                 )}
 
@@ -1727,25 +1790,25 @@ export function Checkout() {
               <div className="border-t border-slate-700 pt-4 mb-4">
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-slate-400">Setup Fees:</span>
-                  <span className="text-white">₹0.00</span>
+                <span className="text-white">{formatCurrency(0)}</span>
                 </div>
                 
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-slate-400">Monthly:</span>
-                  <span className="text-white font-semibold">₹{calculateSubtotal().toLocaleString()}</span>
+                <span className="text-white font-semibold">{formatCurrency(calculateSubtotal())}</span>
                 </div>
 
                 {promoDiscount > 0 && (
                   <div className="flex justify-between text-sm text-green-400 mb-2">
                     <span>Promo Discount:</span>
-                    <span>-₹{promoDiscount.toLocaleString()}</span>
+                  <span>-{formatCurrency(promoDiscount)}</span>
                   </div>
                 )}
 
-                {billingInfo.country === 'India' && (
+                {isBillingCountryIndia && (
                   <div className="flex justify-between text-sm text-slate-400 mb-2">
                     <span>IGST @ 18.00%:</span>
-                    <span className="text-white">₹{calculateTax().toLocaleString()}</span>
+                  <span className="text-white">{formatCurrency(calculateTax())}</span>
                   </div>
                 )}
               </div>
@@ -1755,7 +1818,7 @@ export function Checkout() {
                 <div className="flex justify-between items-baseline">
                   <span className="text-lg text-slate-300 font-bold">Total:</span>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-cyan-400">₹{calculateTotal().toLocaleString()}</div>
+                <div className="text-2xl font-bold text-cyan-400">{formatCurrency(calculateTotal())}</div>
                   </div>
                 </div>
               </div>

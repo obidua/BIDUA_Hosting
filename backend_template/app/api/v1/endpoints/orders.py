@@ -1355,6 +1355,37 @@ async def complete_order(
                 detail="Order not found"
             )
 
+        # 🆕 Track affiliate commissions and activate subscription
+        try:
+            from app.services.affiliate_service import AffiliateService
+            from app.models.order import Order
+            from sqlalchemy import select
+            
+            # Get order details
+            result = await db.execute(select(Order).where(Order.id == order_id))
+            order = result.scalar_one_or_none()
+            
+            if order:
+                affiliate_service = AffiliateService()
+                
+                # Auto-activate affiliate subscription (free with server purchase)
+                await affiliate_service.check_and_activate_from_server_purchase(db, order.user_id)
+                
+                # Calculate and record commissions
+                await affiliate_service.calculate_and_record_commissions(
+                    db, order.id, order.user_id, order.total_amount, 'server'
+                )
+                
+                # Mark referral as converted (first purchase)
+                await affiliate_service.mark_referral_converted(
+                    db, order.user_id, order.id, order.total_amount
+                )
+        except Exception as aff_error:
+            # Log error but don't fail the order completion
+            import traceback
+            print(f"⚠️ Affiliate tracking error: {str(aff_error)}")
+            traceback.print_exc()
+
         return {"message": "Order completed successfully"}
 
     except HTTPException:

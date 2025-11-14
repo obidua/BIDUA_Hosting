@@ -8,7 +8,7 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, user } = useAuth();
+  const { signIn, user, profile } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -16,15 +16,18 @@ export function Login() {
   const serverConfig = location.state?.serverConfig;
 
   useEffect(() => {
-    // If already logged in, redirect
-    if (user) {
+    // If already logged in, redirect based on role
+    if (user && profile) {
+      const isAdmin = profile.role === 'admin' || profile.role === 'super_admin';
+      const destination = isAdmin ? '/admin' : redirectUrl;
+      
       if (serverConfig) {
-        navigate(redirectUrl, { state: { serverConfig }, replace: true });
+        navigate(destination, { state: { serverConfig }, replace: true });
       } else {
-        navigate(redirectUrl, { replace: true });
+        navigate(destination, { replace: true });
       }
     }
-  }, [user, navigate, redirectUrl, serverConfig]);
+  }, [user, profile, navigate, redirectUrl, serverConfig]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,15 +36,9 @@ export function Login() {
 
     try {
       await signIn(username, password);
-      // Navigation will be handled by useEffect when user state updates
-      if (serverConfig) {
-        navigate(redirectUrl, { state: { serverConfig } });
-      } else {
-        navigate(redirectUrl);
-      }
+      // The useEffect will handle navigation based on user role
     } catch (err: any) {
       setError(err.message || 'Failed to sign in');
-    } finally {
       setLoading(false);
     }
   };
