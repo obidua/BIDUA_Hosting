@@ -13,7 +13,7 @@ from app.schemas.affiliate import (
     AffiliateSubscriptionCreate, AffiliateSubscriptionResponse,
     AffiliateStatsResponse, PayoutRequest, PayoutResponse,
     PayoutActionRequest, CommissionDetail, TeamMember,
-    AffiliateDashboard
+    AffiliateDashboard, CommissionRuleResponse
 )
 from app.models.users import UserProfile
 
@@ -410,3 +410,29 @@ async def track_referral_signup(
         "referral_id": referral.id,
         "level": referral.level
     }
+
+
+# ==================== Commission Rules (Config) ====================
+
+@router.get("/commission-rules", response_model=List[CommissionRuleResponse])
+async def get_commission_rules(
+    product_type: Optional[str] = Query(None, description="Filter by product type, e.g. 'server'"),
+    level: Optional[int] = Query(None, ge=1, le=3, description="Filter by level (1-3)"),
+    db: AsyncSession = Depends(get_db),
+    current_user: UserProfile = Depends(get_current_user)
+):
+    """Get active commission rule configurations (for dynamic frontend display)"""
+    from app.models.affiliate import CommissionRule
+    from sqlalchemy import select, and_
+
+    conditions = [CommissionRule.is_active == True]
+    if product_type:
+        conditions.append(CommissionRule.product_type == product_type)
+    if level:
+        conditions.append(CommissionRule.level == level)
+
+    result = await db.execute(
+        select(CommissionRule).where(and_(*conditions)).order_by(CommissionRule.level, CommissionRule.priority.desc())
+    )
+    rules = result.scalars().all()
+    return [CommissionRuleResponse.from_orm(r) for r in rules]

@@ -1,4 +1,11 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Prefer explicit 127.0.0.1 to avoid rare IPv6/mDNS localhost resolution issues
+// Allow override via VITE_API_URL; if localhost fails we'll retry with 127.0.0.1 once.
+const PRIMARY_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const FALLBACK_BASE = PRIMARY_BASE.includes('localhost')
+  ? PRIMARY_BASE.replace('localhost', '127.0.0.1')
+  : PRIMARY_BASE;
+
+const API_BASE_URL = PRIMARY_BASE;
 
 class ApiClient {
   private baseUrl: string;
@@ -22,11 +29,9 @@ class ApiClient {
     return this.token || localStorage.getItem('access_token');
   }
 
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const attempt = async (base: string): Promise<T> => {
+      const url = `${base}${endpoint}`;
     
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -69,7 +74,6 @@ class ApiClient {
       console.log('Body:', options.body);
     }
 
-    try {
       const response = await fetch(url, config);
       
       if (!response.ok) {
@@ -100,24 +104,37 @@ class ApiClient {
       }
 
       return await response.json();
-    } catch (error) {
-      // Check if backend is offline (connection refused)
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        // Only warn about backend offline in development mode
+    };
+
+    try {
+      return await attempt(this.baseUrl);
+    } catch (err) {
+      // Network layer fetch failure → try localhost fallback substitution once
+      if (err instanceof TypeError && (err.message === 'Failed to fetch' || err.message.includes('NetworkError')) && FALLBACK_BASE !== this.baseUrl) {
         if (import.meta.env.DEV) {
-          console.info('ℹ️ Backend connection failed. Make sure the backend server is running on port 8000.');
+          console.warn(`Primary base ${this.baseUrl} failed, retrying with fallback ${FALLBACK_BASE}`);
         }
-        throw new Error('BACKEND_OFFLINE: Unable to connect to server. Please check if the backend is running.');
+        try {
+          return await attempt(FALLBACK_BASE);
+        } catch (fallbackErr) {
+          if (fallbackErr instanceof TypeError && (fallbackErr.message === 'Failed to fetch' || fallbackErr.message.includes('NetworkError'))) {
+            if (import.meta.env.DEV) {
+              console.info('ℹ️ Backend connection failed on both primary and fallback hosts.');
+            }
+            throw new Error('BACKEND_OFFLINE: Unable to connect after fallback. Confirm backend on port 8000.');
+          }
+          throw fallbackErr;
+        }
       }
-      
-      // Only log errors that aren't authentication or subscription related
-      if (error instanceof Error && 
-          !error.message.includes('Not authenticated') && 
-          !error.message.includes('401') &&
-          !error.message.includes('No affiliate subscription')) {
-        console.error('API request failed:', error);
+      // Non-network or already retried error: propagate with enhanced context for 5xx
+      if (err instanceof Error) {
+        if (/HTTP error!/i.test(err.message)) {
+          console.error('[API] HTTP failure:', err.message);
+        } else if (!err.message.startsWith('BACKEND_OFFLINE')) {
+          console.error('[API] Request error:', err.message);
+        }
       }
-      throw error;
+      throw err;
     }
   }
 
@@ -158,7 +175,7 @@ class ApiClient {
       return await this.request('/api/v1/auth/me', {
         method: 'GET',
       });
-    } catch (error) {
+    } catch {
       // Return null if not authenticated instead of throwing
       return null;
     }
@@ -187,7 +204,7 @@ class ApiClient {
     });
   }
 
-  async updateUserProfile(userId: string, data: any) {
+  async updateUserProfile(userId: string, data: unknown) {
     return this.request(`/api/v1/users/${userId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -213,14 +230,14 @@ class ApiClient {
     });
   }
 
-  async createPlan(data: any) {
+  async createPlan(data: unknown) {
     return this.request('/api/v1/plans', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  async updatePlan(planId: string, data: any) {
+  async updatePlan(planId: string, data: unknown) {
     return this.request(`/api/v1/plans/${planId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -250,14 +267,21 @@ class ApiClient {
     });
   }
 
-  async createServer(data: any) {
+  async performServerAction(serverId: string | number, action: 'start' | 'stop' | 'restart' | 'terminate') {
+    return this.request(`/api/v1/servers/${serverId}/action`, {
+      method: 'POST',
+      body: JSON.stringify({ action }),
+    });
+  }
+
+  async createServer(data: unknown) {
     return this.request('/api/v1/servers', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  async updateServer(serverId: string, data: any) {
+  async updateServer(serverId: string, data: unknown) {
     return this.request(`/api/v1/servers/${serverId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -287,7 +311,7 @@ class ApiClient {
     });
   }
 
-  async createOrder(data: any) {
+  async createOrder(data: unknown) {
     return this.request('/api/v1/orders', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -295,14 +319,14 @@ class ApiClient {
   }
 
   // Payments endpoints
-  async createPayment(data: any) {
+  async createPayment(data: unknown) {
     return this.request('/api/v1/payments', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  async verifyPayment(paymentId: string, data: any) {
+  async verifyPayment(paymentId: string, data: unknown) {
     return this.request(`/api/v1/payments/${paymentId}/verify`, {
       method: 'POST',
       body: JSON.stringify(data),
@@ -367,14 +391,14 @@ class ApiClient {
     });
   }
 
-  async createSupportTicket(data: any) {
+  async createSupportTicket(data: unknown) {
       return this.request('/api/v1/support/tickets', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  async updateSupportTicket(ticketId: string, data: any) {
+  async updateSupportTicket(ticketId: string, data: unknown) {
       return this.request(`/api/v1/support/tickets/${ticketId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -404,6 +428,19 @@ class ApiClient {
     });
   }
 
+  // Dashboard endpoints
+  async getDashboardStats(): Promise<DashboardStats> {
+    return this.request<DashboardStats>('/api/v1/dashboard/stats', {
+      method: 'GET',
+    });
+  }
+
+  async getDashboardOverview() {
+    return this.request('/api/v1/dashboard/overview', {
+      method: 'GET',
+    });
+  }
+
   // Billing endpoints
   async getBillingSettings() {
     return this.request('/api/v1/billing/settings', {
@@ -411,7 +448,7 @@ class ApiClient {
     });
   }
 
-  async updateBillingSettings(data: any) {
+  async updateBillingSettings(data: unknown) {
     return this.request('/api/v1/billing/settings', {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -424,7 +461,7 @@ class ApiClient {
     });
   }
 
-  async createPaymentMethod(data: any) {
+  async createPaymentMethod(data: unknown) {
     return this.request('/api/v1/billing/payment-methods', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -456,35 +493,35 @@ class ApiClient {
   }
 
   // Generic HTTP methods for affiliate and other endpoints
-  async get<T = any>(endpoint: string): Promise<T> {
+  async get<T = unknown>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'GET',
     });
   }
 
   // Pricing quote (server plan + addons) computed on backend
-  async getPricingQuote(data: any) {
+  async getPricingQuote(data: unknown) {
     return this.request('/api/v1/pricing/quote', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  async post<T = any>(endpoint: string, data?: any): Promise<T> {
+  async post<T = unknown>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
     });
   }
 
-  async put<T = any>(endpoint: string, data?: any): Promise<T> {
+  async put<T = unknown>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
     });
   }
 
-  async delete<T = any>(endpoint: string): Promise<T> {
+  async delete<T = unknown>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'DELETE',
     });
@@ -493,3 +530,16 @@ class ApiClient {
 
 export const api = new ApiClient(API_BASE_URL);
 export default api;
+
+// Types
+export interface DashboardStats {
+  // Aggregated counts
+  active_servers: number; // number of active servers
+  open_tickets: number;   // number of open support tickets
+
+  // Financials
+  monthly_cost: number;   // total monthly cost in INR
+
+  // Usage
+  bandwidth_used: number; // bandwidth used in TB (terabytes)
+}

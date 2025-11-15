@@ -1,13 +1,13 @@
 import { Server, CreditCard, AlertCircle, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import api from '../../lib/api';
+import { useState, useEffect, useCallback } from 'react';
+import api, { DashboardStats } from '../../lib/api';
 
 interface Server {
   id: number;
-  name: string;
+  server_name: string;
   hostname: string;
-  status: string;
+  server_status: string;
   ip_address?: string;
   plan_name?: string;
   monthly_cost?: number;
@@ -22,48 +22,54 @@ export function Overview() {
   });
   const [recentServers, setRecentServers] = useState<Server[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Helpers for readable formatting
+  const formatINR = (amount: number) =>
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 }).format(amount || 0);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
+  const formatBandwidth = (tb: number) => {
+    if (!tb || tb <= 0) return '0 GB';
+    // Backend returns TB; display with one decimal and unit
+    if (tb < 0.1) {
+      // very small TB values -> show GB
+      const gb = tb * 1024;
+      return `${gb.toFixed(0)} GB`;
+    }
+    return `${tb.toFixed(1)} TB`;
+  };
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       
-      // Fetch servers
+      // Fetch servers for recent list
       const serversResponse = await api.getServers();
       const serversArray = Array.isArray(serversResponse) ? serversResponse : [];
       setRecentServers(serversArray.slice(0, 3));
-      
-      // Calculate stats
-      const activeServersCount = serversArray.filter((s: Server) => s.status === 'active').length;
-      const totalMonthlyCost = serversArray.reduce((sum: number, s: Server) => sum + (s.monthly_cost || 0), 0);
-      
-      // Fetch tickets
-      try {
-        const ticketsResponse = await api.getSupportTickets({ status: 'open' });
-        const ticketsArray = Array.isArray(ticketsResponse) ? ticketsResponse : [];
-        setStats({
-          activeServers: activeServersCount,
-          monthlyCost: totalMonthlyCost,
-          openTickets: ticketsArray.length,
-          bandwidthUsed: '0GB' // TODO: Implement bandwidth tracking
-        });
-      } catch {
-        setStats({
-          activeServers: activeServersCount,
-          monthlyCost: totalMonthlyCost,
-          openTickets: 0,
-          bandwidthUsed: '0GB'
-        });
-      }
+
+      // Fetch aggregated dashboard stats from backend (more accurate)
+  const dashStats: DashboardStats = await api.getDashboardStats();
+  const activeServersCount = Number(dashStats.active_servers ?? 0);
+  const monthlyCost = Number(dashStats.monthly_cost ?? 0);
+  const openTickets = Number(dashStats.open_tickets ?? 0);
+  const bandwidthTb = Number(dashStats.bandwidth_used ?? 0);
+
+      setStats({
+        activeServers: activeServersCount,
+        monthlyCost: monthlyCost,
+        openTickets: openTickets,
+        bandwidthUsed: formatBandwidth(bandwidthTb)
+      });
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
   const statCards = [
     {
@@ -75,7 +81,7 @@ export function Overview() {
     },
     {
       label: 'Monthly Cost',
-      value: loading ? '...' : `₹${stats.monthlyCost.toLocaleString()}`,
+  value: loading ? '...' : formatINR(stats.monthlyCost),
       icon: CreditCard,
       color: 'green',
       link: '/dashboard/billing',
@@ -89,7 +95,7 @@ export function Overview() {
     },
     {
       label: 'Bandwidth Used',
-      value: loading ? '...' : stats.bandwidthUsed,
+  value: loading ? '...' : stats.bandwidthUsed,
       icon: TrendingUp,
       color: 'purple',
       link: '/dashboard/servers',
@@ -154,7 +160,7 @@ export function Overview() {
                 <div key={server.id} className="p-4 sm:p-6 hover:bg-slate-800 transition border-b border-cyan-500/30 last:border-0">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-white mb-1 truncate">{server.name}</h4>
+                      <h4 className="font-semibold text-white mb-1 truncate">{server.server_name}</h4>
                       <p className="text-xs sm:text-sm text-slate-400 mb-2 truncate">{server.hostname}</p>
                       <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-slate-400">
                         <span className="truncate">{server.ip_address || 'N/A'}</span>
@@ -166,12 +172,12 @@ export function Overview() {
                     </div>
                     <span
                       className={`self-start sm:self-center px-3 py-1 rounded-full text-xs font-semibold ${
-                        server.status === 'active'
+                        server.server_status === 'active'
                           ? 'bg-green-500/20 text-green-400'
                           : 'bg-slate-700 text-slate-400'
                       }`}
                     >
-                      {server.status}
+                      {server.server_status}
                     </span>
                   </div>
                 </div>

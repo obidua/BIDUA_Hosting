@@ -662,6 +662,7 @@ class ServerService:
             billing_cycle=server_data.billing_cycle or "monthly",
             expiry_date=expiry_date,
             specs=specs_data,
+            server_status="active",  # Set to active immediately after provisioning
         )
 
         db.add(db_server)

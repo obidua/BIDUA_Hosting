@@ -39,6 +39,7 @@ import { ServerManagement as AdminServerManagement } from './pages/admin/ServerM
 import { PlansManagement } from './pages/admin/PlansManagement';
 import { OrdersManagement } from './pages/admin/OrdersManagement';
 import { SupportManagementEnhanced as SupportManagement } from './pages/admin/SupportManagementEnhanced';
+import { EmployeeManagement } from './pages/admin/EmployeeManagement';
 import SplashCursor from './components/SplashCurser';
 import { DocsLayout } from './components/docs/DocsLayout';
 
@@ -203,6 +204,7 @@ function App() {
             <Route path="orders" element={<OrdersManagement />} />
             <Route path="referrals" element={<ReferralManagement />} />
             <Route path="support" element={<SupportManagement />} />
+            <Route path="employees" element={<EmployeeManagement />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

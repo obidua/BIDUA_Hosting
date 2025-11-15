@@ -6,8 +6,8 @@ import {
   Database, FileText, RotateCcw,
   Cpu, MemoryStick, Gauge, Clock, AlertCircle, CheckCircle,
   XCircle, Edit2, Save, X, Key, Shield, Globe, Camera,
-  Copy, Download, Upload, Lock, Unlock, AlertTriangle,
-  Maximize2, Users, BarChart3, Zap, Package
+  Copy, AlertTriangle,
+  Maximize2, Zap
 } from 'lucide-react';
 import { api } from '../../lib/api';
 
@@ -25,7 +25,7 @@ interface ServerData {
   operating_system?: string;
   created_date?: string;
   expiry_date?: string;
-  monthly_cost?: number;
+  monthly_cost?: number | string;
   billing_cycle?: string;
   specs?: Record<string, unknown>;
   notes?: string;
@@ -56,12 +56,16 @@ export function ServerManagement() {
   const [rootPassword, setRootPassword] = useState('');
   const [copiedIP, setCopiedIP] = useState(false);
 
+  // Helpers
+  const formatINR = (amount: number) =>
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 }).format(amount || 0);
+
   const loadServerDetails = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/api/v1/servers/${serverId}`);
-      setServer(response);
-      setNewServerName(response.server_name);
+  const response = await api.get(`/api/v1/servers/${serverId}`) as ServerData;
+  setServer(response);
+  setNewServerName(response.server_name);
     } catch (error) {
       console.error('Failed to load server:', error);
     } finally {
@@ -77,7 +81,9 @@ export function ServerManagement() {
   const handleServerAction = async (action: 'start' | 'stop' | 'reboot') => {
     try {
       setActionLoading(true);
-      await api.post(`/api/v1/servers/${serverId}/action`, { action });
+      // Map 'reboot' to backend 'restart'
+      const backendAction = action === 'reboot' ? 'restart' : action;
+      await api.performServerAction(serverId || '', backendAction as 'start'|'stop'|'restart');
       await loadServerDetails();
       // Show success notification
     } catch (error) {
@@ -385,7 +391,7 @@ export function ServerManagement() {
                   </div>
                   <div className="flex justify-between border-t border-cyan-500/30 pt-3">
                     <span className="text-slate-400">Monthly Cost:</span>
-                    <span className="text-cyan-400 font-bold text-lg">₹{server.monthly_cost?.toFixed(2) || '0.00'}</span>
+                    <span className="text-cyan-400 font-bold text-lg">{formatINR(Number(server.monthly_cost || 0))}</span>
                   </div>
                 </div>
               </div>
@@ -690,7 +696,7 @@ export function ServerManagement() {
                     <h4 className="text-white font-semibold">Current Plan: {server.plan_name}</h4>
                     <p className="text-slate-400 text-sm">{server.vcpu} vCPU • {server.ram_gb}GB RAM • {server.storage_gb}GB Storage</p>
                   </div>
-                  <span className="text-cyan-400 font-semibold">₹{server.monthly_cost}/mo</span>
+                  <span className="text-cyan-400 font-semibold">{formatINR(Number(server.monthly_cost || 0))}/mo</span>
                 </div>
               </div>
               <div className="text-center text-slate-400">

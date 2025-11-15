@@ -107,24 +107,38 @@ class AffiliateService:
         user_id: int
     ) -> Optional[AffiliateSubscription]:
         """
-        Check if user bought a server and auto-activate affiliate subscription
+        Check if user qualifies for free affiliate subscription.
+        Qualification paths:
+        1. Any completed/active order (original logic)
+        2. Fallback: Any active/running server record (covers legacy/manual provisioning without order row)
         """
         # Check if user has any completed orders
         result = await db.execute(
             select(Order).where(
                 and_(
                     Order.user_id == user_id,
-                    Order.status.in_(['completed', 'active'])
+                    Order.order_status.in_(['completed', 'active'])
                 )
             ).limit(1)
         )
         has_order = result.scalar_one_or_none()
-
         if has_order:
-            # Auto-create free subscription
-            return await self.create_affiliate_subscription(
-                db, user_id, is_free_with_server=True
-            )
+            return await self.create_affiliate_subscription(db, user_id, is_free_with_server=True)
+
+        # Fallback: server existence with active/running status (legacy direct server provisioning)
+        server_result = await db.execute(
+            select(Server).where(
+                and_(
+                    Server.user_id == user_id,
+                    Server.server_status.in_(['active', 'running'])
+                )
+            ).limit(1)
+        )
+        has_active_server = server_result.scalar_one_or_none()
+
+        if has_active_server:
+            return await self.create_affiliate_subscription(db, user_id, is_free_with_server=True)
+
         return None
 
     # ==================== Referral Tracking ====================
@@ -486,7 +500,7 @@ class AffiliateService:
                 select(func.coalesce(func.sum(Order.total_amount), 0)).where(
                     and_(
                         Order.user_id == ref.referred_user_id,
-                        Order.status.in_(['completed', 'active'])
+                        Order.order_status.in_(['completed', 'active'])
                     )
                 )
             )
@@ -508,7 +522,7 @@ class AffiliateService:
                 select(func.count(Server.id)).where(
                     and_(
                         Server.user_id == ref.referred_user_id,
-                        Server.status.in_(['active', 'running'])
+                        Server.server_status.in_(['active', 'running'])
                     )
                 )
             )

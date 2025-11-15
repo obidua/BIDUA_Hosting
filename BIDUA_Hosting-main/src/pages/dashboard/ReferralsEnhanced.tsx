@@ -1,9 +1,19 @@
 import { useState, useEffect } from 'react';
 import { 
   Users, DollarSign, TrendingUp, Gift, Copy, Check, CreditCard, 
-  Award, Clock, CheckCircle, Download, ShoppingCart
+  Award, CheckCircle, Download, ShoppingCart
 } from 'lucide-react';
 import { api } from '../../lib/api';
+import { 
+  getCommissionRules,
+  getReferralStats,
+  getReferralEarnings,
+  getReferralPayouts,
+  formatCurrency,
+  getStatusColor
+} from '../../lib/referral';
+// Types from referral adapters
+import type { ReferralEarning as AdapterReferralEarning, ReferralPayout as AdapterReferralPayout } from '../../types';
 
 interface AffiliateSubscription {
   id: number;
@@ -60,16 +70,41 @@ interface Commission {
   order_description?: string;
 }
 
+// Adapter-based simplified legacy stats fallback
+interface LegacyReferralStats {
+  referral_code: string;
+  total_referrals: number;
+  l1_referrals: number;
+  l2_referrals: number;
+  l3_referrals: number;
+  total_earnings: number;
+  available_balance: number;
+  total_withdrawn: number;
+}
+
+// NOTE: Using adapter-provided types from ../../types (import removed for brevity) prevents ID mismatch issues
+
 export function ReferralsEnhanced() {
   const [subscription, setSubscription] = useState<AffiliateSubscription | null>(null);
   const [stats, setStats] = useState<AffiliateStats | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'commissions' | 'payouts'>('overview');
+  const [backendOffline, setBackendOffline] = useState(false);
+  const [offlineMessage, setOfflineMessage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'commissions' | 'earnings' | 'payouts'>('overview');
   const [copied, setCopied] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
+  const [commissionRules, setCommissionRules] = useState<Array<{id:number; level:number; value:number; type:string; product_type:string; name:string; description?:string}>>([]);
+  const [rulesLoading, setRulesLoading] = useState(false);
+  const [autoActivated, setAutoActivated] = useState(false);
+  const [legacyStats, setLegacyStats] = useState<LegacyReferralStats | null>(null);
+  // Use relaxed ID typing (string | number) due to backend returning string IDs
+  type UIReferralEarning = Omit<AdapterReferralEarning, 'id'> & { id: string | number };
+  type UIReferralPayout = Omit<AdapterReferralPayout, 'id'> & { id: string | number };
+  const [earnings, setEarnings] = useState<UIReferralEarning[]>([]);
+  const [payouts, setPayouts] = useState<UIReferralPayout[]>([]);
 
   useEffect(() => {
     loadData();
@@ -77,30 +112,124 @@ export function ReferralsEnhanced() {
 
   const loadData = async () => {
     setLoading(true);
-    
+    setBackendOffline(false);
+    setOfflineMessage(null);
+    let currentSubscription: AffiliateSubscription | null = null;
     try {
+      // First perform explicit health pre-check to avoid false offline from a single failing endpoint
+      try {
+        await api.get('/api/v1/health');
+      } catch (healthErr) {
+        if (healthErr instanceof Error && healthErr.message.startsWith('BACKEND_OFFLINE')) {
+          setBackendOffline(true);
+          setOfflineMessage('Backend health check failed. Please verify API on port 8000.');
+          setLoading(false);
+          return;
+        }
+      }
+
       // Load subscription status
-      const subResponse = await api.get('/api/v1/affiliate/subscription/status');
+      const subResponse = await api.get('/api/v1/affiliate/subscription/status') as AffiliateSubscription;
       setSubscription(subResponse);
+      currentSubscription = subResponse as AffiliateSubscription;
     } catch (error: unknown) {
-      // If no subscription found, show subscription modal
-      console.log('No subscription found, showing modal');
-      setShowSubscriptionModal(true);
+      // If no subscription found, attempt auto-activation from prior server purchase
+      try {
+        if (error instanceof Error && error.message.startsWith('BACKEND_OFFLINE')) {
+          setBackendOffline(true);
+          setOfflineMessage('Backend connection failed. Please ensure the API is running on port 8000.');
+          setLoading(false);
+          return;
+        }
+        const activateResp = await api.post('/api/v1/affiliate/subscription/activate-from-server');
+        const isSubObj = (x: unknown): x is { subscription: AffiliateSubscription } => {
+          return typeof x === 'object' && x !== null && 'subscription' in (x as Record<string, unknown>);
+        };
+        const activated: AffiliateSubscription = isSubObj(activateResp)
+          ? activateResp.subscription
+          : (activateResp as AffiliateSubscription);
+        if (activated && (activated.is_active || activated.status === 'active')) {
+          setSubscription(activated);
+          setShowSubscriptionModal(false);
+          currentSubscription = activated;
+          setAutoActivated(true);
+        } else {
+          // Fall back to subscription modal
+          console.log('No subscription found, showing modal');
+          setShowSubscriptionModal(true);
+        }
+      } catch (e: unknown) {
+        // Differentiate activation failure reasons
+        if (e instanceof Error) {
+          if (e.message.startsWith('BACKEND_OFFLINE')) {
+            setBackendOffline(true);
+            setOfflineMessage('Backend connection failed during activation.');
+            setLoading(false);
+            return;
+          }
+          // Activation endpoint responded but no server purchase met criteria
+          if (e.message.includes('No completed server purchase')) {
+            setShowSubscriptionModal(true);
+          } else {
+            setShowSubscriptionModal(true);
+          }
+        } else {
+          setShowSubscriptionModal(true);
+        }
+      }
     }
 
     try {
       // Load stats (only if subscribed)
-      const statsResponse = await api.get('/api/v1/affiliate/stats');
-      setStats(statsResponse);
+      if (currentSubscription) {
+        const statsResponse = await api.get('/api/v1/affiliate/stats') as AffiliateStats;
+        setStats(statsResponse);
 
-      // Load team members
-      const teamResponse = await api.get('/api/v1/affiliate/team/members');
-      setTeamMembers(teamResponse);
+        // Load team members
+        const teamResponse = await api.get('/api/v1/affiliate/team/members') as TeamMember[];
+        setTeamMembers(teamResponse);
 
-      // Load commissions
-      const commissionsResponse = await api.get('/api/v1/affiliate/commissions?limit=20');
-      setCommissions(commissionsResponse);
-    } catch (error: unknown) {
+  // Load commissions
+  const commissionsResponse = await api.get('/api/v1/affiliate/commissions?limit=50') as Commission[];
+  setCommissions(commissionsResponse);
+
+        // Load commission rules dynamically (server product_type)
+        setRulesLoading(true);
+        try {
+          const rules = await getCommissionRules('server');
+          setCommissionRules(rules);
+        } catch (e) {
+          console.warn('Failed to load commission rules', e);
+        } finally {
+          setRulesLoading(false);
+        }
+
+        // Adapter-based stats fallback + earnings + payouts
+        try {
+          const mapped = await getReferralStats();
+          if (mapped) {
+            setLegacyStats({
+              referral_code: mapped.referral_code || '',
+              total_referrals: mapped.total_referrals || 0,
+              l1_referrals: mapped.l1_referrals || 0,
+              l2_referrals: mapped.l2_referrals || 0,
+              l3_referrals: mapped.l3_referrals || 0,
+              total_earnings: mapped.total_earnings || 0,
+              available_balance: mapped.available_balance || 0,
+              total_withdrawn: mapped.total_withdrawn || 0
+            });
+          }
+  } catch (statsErr) { console.warn('Referral stats adapter failed', statsErr); }
+        try {
+          const earn = await getReferralEarnings();
+          setEarnings((earn as AdapterReferralEarning[]).map(e => ({ ...e, id: e.id as string | number })));
+        } catch (earnErr) { console.warn('Referral earnings fetch failed', earnErr); }
+        try {
+          const ph = await getReferralPayouts();
+          setPayouts((ph as AdapterReferralPayout[]).map(p => ({ ...p, id: p.id as string | number })));
+        } catch (payoutErr) { console.warn('Referral payouts fetch failed', payoutErr); }
+      }
+    } catch {
       console.log('Stats/Team/Commissions loading skipped - no subscription');
     } finally {
       setLoading(false);
@@ -113,7 +242,7 @@ export function ReferralsEnhanced() {
       const response = await api.post('/api/v1/affiliate/subscription/create', {
         payment_method: 'razorpay',
         payment_id: 'PAY_' + Date.now()
-      });
+      }) as AffiliateSubscription;
       setSubscription(response);
       setShowSubscriptionModal(false);
       loadData();
@@ -124,8 +253,9 @@ export function ReferralsEnhanced() {
   };
 
   const copyReferralLink = () => {
-    if (stats?.referral_code) {
-      const link = `${window.location.origin}/signup?ref=${stats.referral_code}`;
+    const code = stats?.referral_code || legacyStats?.referral_code;
+    if (code) {
+      const link = `${window.location.origin}/signup?ref=${code}`;
       navigator.clipboard.writeText(link);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -165,6 +295,26 @@ export function ReferralsEnhanced() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-slate-400">Loading affiliate dashboard...</div>
+      </div>
+    );
+  }
+
+  if (backendOffline) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-6 text-center space-y-3 max-w-md">
+          <div className="text-red-400 font-semibold text-lg">Backend Unreachable</div>
+          <div className="text-slate-300 text-sm">{offlineMessage || 'Health check + fallback host failed.'}</div>
+          <ul className="text-xs text-slate-400 space-y-1 text-left mx-auto list-disc list-inside">
+            <li>Confirm uvicorn running on port 8000</li>
+            <li>Check no firewall/VPN blocks localhost</li>
+            <li>Verify VITE_API_URL env var (currently defaulting to localhost)</li>
+          </ul>
+          <button
+            onClick={loadData}
+            className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold"
+          >Retry</button>
+        </div>
       </div>
     );
   }
@@ -273,6 +423,9 @@ export function ReferralsEnhanced() {
                 <p className="text-slate-300 text-xs sm:text-sm">
                   Activated on {new Date(subscription.activated_at).toLocaleDateString()}
                 </p>
+                {autoActivated && (
+                  <p className="text-green-400 text-xs mt-1">Automatically activated from your server purchase 🎉</p>
+                )}
               </div>
             </div>
             <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-400 flex-shrink-0" />
@@ -292,7 +445,7 @@ export function ReferralsEnhanced() {
 
         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 sm:p-4 mb-4">
           <div className="text-2xl sm:text-3xl font-bold text-white tracking-wider text-center">
-            {stats?.referral_code || 'Loading...'}
+            {stats?.referral_code || legacyStats?.referral_code || 'Loading...'}
           </div>
         </div>
 
@@ -300,7 +453,7 @@ export function ReferralsEnhanced() {
           <input
             type="text"
             readOnly
-            value={`${window.location.origin}/signup?ref=${stats?.referral_code || ''}`}
+            value={`${window.location.origin}/signup?ref=${stats?.referral_code || legacyStats?.referral_code || ''}`}
             className="flex-1 px-3 sm:px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-xs sm:text-sm truncate min-w-0"
           />
           <button
@@ -319,12 +472,12 @@ export function ReferralsEnhanced() {
           <div className="flex items-center justify-between mb-3">
             <Users className="h-6 w-6 sm:h-8 sm:w-8 text-cyan-400" />
           </div>
-          <div className="text-2xl sm:text-3xl font-bold text-white mb-1">{stats?.total_referrals || 0}</div>
+          <div className="text-2xl sm:text-3xl font-bold text-white mb-1">{stats?.total_referrals || legacyStats?.total_referrals || 0}</div>
           <div className="text-xs sm:text-sm text-slate-400 mb-3">Total Referrals</div>
           <div className="flex justify-between text-xs pt-3 border-t border-cyan-500/30">
-            <span className="text-slate-400">L1: {stats?.total_referrals_level1 || 0}</span>
-            <span className="text-slate-400">L2: {stats?.total_referrals_level2 || 0}</span>
-            <span className="text-slate-400">L3: {stats?.total_referrals_level3 || 0}</span>
+            <span className="text-slate-400">L1: {stats?.total_referrals_level1 || legacyStats?.l1_referrals || 0}</span>
+            <span className="text-slate-400">L2: {stats?.total_referrals_level2 || legacyStats?.l2_referrals || 0}</span>
+            <span className="text-slate-400">L3: {stats?.total_referrals_level3 || legacyStats?.l3_referrals || 0}</span>
           </div>
         </div>
 
@@ -333,7 +486,7 @@ export function ReferralsEnhanced() {
             <DollarSign className="h-6 w-6 sm:h-8 sm:w-8 text-green-400" />
           </div>
           <div className="text-2xl sm:text-3xl font-bold text-white mb-1">
-            ₹{stats?.total_commission_earned?.toLocaleString() || 0}
+            ₹{stats?.total_commission_earned?.toLocaleString() || legacyStats?.total_earnings?.toLocaleString() || 0}
           </div>
           <div className="text-xs sm:text-sm text-slate-400">Total Earned</div>
         </div>
@@ -343,7 +496,7 @@ export function ReferralsEnhanced() {
             <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-cyan-400" />
           </div>
           <div className="text-2xl sm:text-3xl font-bold text-white mb-1">
-            ₹{stats?.available_balance?.toLocaleString() || 0}
+            ₹{stats?.available_balance?.toLocaleString() || legacyStats?.available_balance?.toLocaleString() || 0}
           </div>
           <div className="text-xs sm:text-sm text-slate-400 mb-2">Available Balance</div>
           {stats?.can_request_payout && (
@@ -361,7 +514,7 @@ export function ReferralsEnhanced() {
             <Download className="h-6 w-6 sm:h-8 sm:w-8 text-blue-400" />
           </div>
           <div className="text-2xl sm:text-3xl font-bold text-white mb-1">
-            ₹{stats?.total_payout_amount?.toLocaleString() || 0}
+            ₹{stats?.total_payout_amount?.toLocaleString() || legacyStats?.total_withdrawn?.toLocaleString() || 0}
           </div>
           <div className="text-xs sm:text-sm text-slate-400">Total Withdrawn</div>
           <div className="text-xs text-slate-500 mt-2">{stats?.total_payouts || 0} payouts</div>
@@ -376,11 +529,12 @@ export function ReferralsEnhanced() {
               { id: 'overview', label: 'Overview', icon: TrendingUp },
               { id: 'team', label: 'My Team', icon: Users },
               { id: 'commissions', label: 'Commissions', icon: DollarSign },
+              { id: 'earnings', label: 'Earnings', icon: TrendingUp },
               { id: 'payouts', label: 'Payouts', icon: Download }
             ].map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as typeof activeTab)}
                 className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg font-semibold transition flex items-center gap-2 whitespace-nowrap text-sm sm:text-base ${
                   activeTab === tab.id
                     ? 'bg-cyan-600 text-white'
@@ -400,49 +554,35 @@ export function ReferralsEnhanced() {
           {activeTab === 'overview' && (
             <div className="space-y-4 sm:space-y-6">
               <div>
-                <h3 className="text-base sm:text-lg font-bold text-white mb-3 sm:mb-4">Commission Structure</h3>
+                <h3 className="text-base sm:text-lg font-bold text-white mb-3 sm:mb-4">Commission Structure (Dynamic)</h3>
+                {rulesLoading && (
+                  <div className="text-xs text-slate-400 mb-2">Loading commission rules...</div>
+                )}
+                {!rulesLoading && commissionRules.length === 0 && (
+                  <div className="text-xs text-slate-500 mb-4">No active commission rules found. Default percentages may apply.</div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                  <div className="bg-slate-800 rounded-lg p-3 sm:p-4 border border-cyan-500/30">
-                    <h4 className="font-semibold text-white mb-2 sm:mb-3 text-sm sm:text-base">Recurring Plans (Monthly/Quarterly/Semi-annual)</h4>
-                    <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Level 1 (Direct):</span>
-                        <span className="text-green-400 font-bold">5%</span>
+                  {[1,2,3].map(level => {
+                    const rulesForLevel = commissionRules.filter(r => r.level === level);
+                    return (
+                      <div key={level} className="bg-slate-800 rounded-lg p-3 sm:p-4 border border-cyan-500/30">
+                        <h4 className="font-semibold text-white mb-2 sm:mb-3 text-sm sm:text-base">Level {level}</h4>
+                        {rulesForLevel.length === 0 && (
+                          <div className="text-xs text-slate-500">No rule configured.</div>
+                        )}
+                        <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
+                          {rulesForLevel.map(rule => (
+                            <div key={rule.id} className="flex justify-between">
+                              <span className="text-slate-400 truncate" title={rule.description || rule.name}>{rule.name}</span>
+                              <span className="text-green-400 font-bold">
+                                {rule.type === 'percentage' ? `${rule.value}%` : `₹${rule.value}`}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Level 2:</span>
-                        <span className="text-green-400 font-bold">1%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Level 3:</span>
-                        <span className="text-green-400 font-bold">1%</span>
-                      </div>
-                      <div className="mt-3 pt-3 border-t border-cyan-500/30 text-xs text-slate-400">
-                        Earn on every renewal payment
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-800 rounded-lg p-4 border border-cyan-500/30">
-                    <h4 className="font-semibold text-white mb-3">Long-term Plans (Annual/Biennial/Triennial)</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Level 1 (Direct):</span>
-                        <span className="text-green-400 font-bold">15%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Level 2:</span>
-                        <span className="text-green-400 font-bold">3%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Level 3:</span>
-                        <span className="text-green-400 font-bold">2%</span>
-                      </div>
-                      <div className="mt-3 pt-3 border-t border-cyan-500/30 text-xs text-slate-400">
-                        One-time commission
-                      </div>
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -627,34 +767,117 @@ export function ReferralsEnhanced() {
             </div>
           )}
 
+          {/* Earnings Tab */}
+          {activeTab === 'earnings' && (
+            <div className="space-y-4">
+              {earnings.length === 0 && (
+                <div className="text-center py-12 text-slate-400">
+                  <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No earnings yet. When your referrals generate commissions, they will appear here.</p>
+                </div>
+              )}
+              {earnings.map(e => (
+                <div key={String(e.id)} className="bg-slate-800 rounded-lg p-4 border border-cyan-500/30">
+                  <div className="flex justify-between mb-2">
+                    <div>
+                      <div className="text-white font-semibold">Level {e.level} Commission</div>
+                      <div className="text-xs text-slate-400">{new Date(e.created_at).toLocaleString()}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-green-400 font-bold text-lg">+{formatCurrency(e.commission_amount)}</div>
+                      <div className="text-xs text-slate-500">Order: {formatCurrency(e.order_amount)}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-700 text-xs">
+                    <span className="text-slate-400">Rate: {e.commission_percentage}%</span>
+                    {e.is_recurring && (
+                      <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 rounded-full border border-cyan-500/30">Recurring</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Payouts Tab */}
           {activeTab === 'payouts' && (
-            <div className="space-y-4">
-              <div className="bg-slate-800 rounded-lg p-6 text-center">
-                <h3 className="text-white font-bold text-xl mb-2">Available for Withdrawal</h3>
-                <div className="text-4xl font-bold text-green-400 mb-4">
-                  ₹{stats?.available_balance?.toLocaleString() || 0}
+            <div className="space-y-6">
+              {stats?.can_request_payout && (
+                <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg p-6 border-2 border-green-400">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-white mb-2">Ready for Payout!</h3>
+                      <p className="text-green-100 mb-3">
+                        You have {formatCurrency((stats?.available_balance || legacyStats?.available_balance || 0))} available for withdrawal
+                      </p>
+                      <div className="grid grid-cols-3 gap-2 text-xs text-green-100">
+                        <div>TDS (10%): {formatCurrency((stats?.available_balance || legacyStats?.available_balance || 0) * 0.10)}</div>
+                        <div>GST (18%): {formatCurrency((stats?.available_balance || legacyStats?.available_balance || 0) * 0.18)}</div>
+                        <div className="font-semibold">Net: {formatCurrency((stats?.available_balance || legacyStats?.available_balance || 0) * 0.72)}</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={requestPayout}
+                      className="px-5 py-3 bg-white text-green-600 rounded-lg font-semibold hover:bg-green-50 transition"
+                    >
+                      Request Payout
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={requestPayout}
-                  disabled={!stats?.can_request_payout}
-                  className={`px-6 py-3 rounded-lg font-bold transition ${
-                    stats?.can_request_payout
-                      ? 'bg-green-600 hover:bg-green-700 text-white'
-                      : 'bg-slate-700 text-slate-500 cursor-not-allowed'
-                  }`}
-                >
-                  {stats?.can_request_payout ? 'Request Payout' : 'Minimum ₹500 Required'}
-                </button>
-                <p className="text-slate-400 text-sm mt-4">
-                  Minimum payout: ₹500 | Processing time: 7-10 business days
-                </p>
-              </div>
-
-              <div className="text-slate-400 text-center py-8">
-                <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Payout history will appear here</p>
-              </div>
+              )}
+              {payouts.length === 0 ? (
+                <div className="text-center py-12 text-slate-400">
+                  <Download className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No payout requests yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {payouts.map(p => (
+                    <div key={String(p.id)} className="bg-slate-800 rounded-lg p-5 border border-cyan-500/30">
+                      <div className="flex justify-between mb-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-semibold">Payout #{p.payout_number}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getStatusColor(p.status)}`}>{p.status.replace('_',' ')}</span>
+                          </div>
+                          <div className="text-xs text-slate-400 mt-1">Requested: {new Date(p.requested_at).toLocaleString()}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xl font-bold text-white">{formatCurrency(p.net_amount)}</div>
+                          <div className="text-xs text-slate-500">Net Amount</div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-4 gap-3 text-xs">
+                        <div className="bg-slate-900 rounded p-2">
+                          <div className="text-slate-400 mb-1">Gross</div>
+                          <div className="text-white font-semibold">{formatCurrency(p.gross_amount)}</div>
+                        </div>
+                        <div className="bg-slate-900 rounded p-2">
+                          <div className="text-slate-400 mb-1">TDS</div>
+                          <div className="text-white">{formatCurrency(p.tds_amount)}</div>
+                        </div>
+                        <div className="bg-slate-900 rounded p-2">
+                          <div className="text-slate-400 mb-1">GST</div>
+                          <div className="text-white">{formatCurrency(p.service_tax_amount)}</div>
+                        </div>
+                        <div className="bg-slate-900 rounded p-2">
+                          <div className="text-slate-400 mb-1">Method</div>
+                          <div className="text-white capitalize">{p.payment_method.replace('_',' ')}</div>
+                        </div>
+                      </div>
+                      <div className="flex justify-between text-xs mt-3">
+                        <span className="text-slate-400">Tax Period: {p.tax_year} Q{p.tax_quarter}</span>
+                        {p.payment_reference && (
+                          <span className="text-green-400 font-mono">Ref: {p.payment_reference}</span>
+                        )}
+                      </div>
+                      {p.rejected_reason && (
+                        <div className="mt-3 text-xs text-red-400">Rejected: {p.rejected_reason}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Search, UserPlus, Mail, Shield, Ban, Check } from 'lucide-react';
+import { Search, UserPlus, Mail, Shield, Ban } from 'lucide-react';
 import api from '../../lib/api';
+import { AdminPageHeader } from '../../components/admin/AdminPageHeader';
 
 interface User {
   id: number;
@@ -52,71 +53,93 @@ export function UserManagement() {
     switch (role) {
       case 'admin':
       case 'super_admin':
-        return 'bg-red-500/20 text-red-400 border-red-500/30';
+        return 'bg-indigo-50 text-indigo-600 border-indigo-100';
       case 'support':
-        return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+        return 'bg-sky-50 text-sky-600 border-sky-100';
       default:
-        return 'bg-slate-500/20 text-slate-400 border-slate-500/30';
+        return 'bg-slate-50 text-slate-600 border-slate-200';
     }
   };
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'active':
-        return 'bg-green-500/20 text-green-400 border-green-500/30';
+        return 'bg-emerald-50 text-emerald-600 border-emerald-100';
       case 'suspended':
-        return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
+        return 'bg-amber-50 text-amber-600 border-amber-100';
       case 'banned':
-        return 'bg-red-500/20 text-red-400 border-red-500/30';
+        return 'bg-rose-50 text-rose-600 border-rose-100';
       default:
-        return 'bg-slate-500/20 text-slate-400 border-slate-500/30';
+        return 'bg-slate-50 text-slate-600 border-slate-200';
     }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
       </div>
     );
   }
 
+  const activeUsers = users.filter(user => user.account_status === 'active').length;
+  const adminUsers = users.filter(user => user.role === 'admin' || user.role === 'super_admin').length;
+  const supportUsers = users.filter(user => user.role === 'support').length;
+  const referralUsers = users.filter(user => Boolean(user.referral_code)).length;
+  const flaggedUsers = users.filter(user => ['suspended', 'banned'].includes(user.account_status)).length;
+
+  const summaryCards = [
+    { label: 'Total Users', value: users.length, helper: `${activeUsers} active` },
+    { label: 'Admin & Support', value: adminUsers + supportUsers, helper: `${adminUsers} admin • ${supportUsers} support` },
+    { label: 'Referral Accounts', value: referralUsers, helper: 'With referral code' },
+    { label: 'Needs Attention', value: flaggedUsers, helper: 'Suspended or banned' },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">User Management</h1>
-          <p className="text-slate-400 mt-2">Manage all platform users</p>
-        </div>
-        <button className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition flex items-center gap-2">
-          <UserPlus className="w-5 h-5" />
-          Add User
-        </button>
+      <AdminPageHeader
+        title="User Management"
+        description="Search, filter, and moderate every customer or administrator tied to your hosting platform."
+        actions={
+          <button className="px-4 py-2 bg-cyan-600 text-white rounded-xl hover:bg-cyan-700 transition flex items-center gap-2">
+            <UserPlus className="w-4 h-4" />
+            Add User
+          </button>
+        }
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {summaryCards.map((card) => (
+          <div key={card.label} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+            <p className="text-sm text-slate-500">{card.label}</p>
+            <p className="text-3xl font-semibold text-slate-900 mt-1">{card.value}</p>
+            <p className="text-sm text-slate-500 mt-2">{card.helper}</p>
+          </div>
+        ))}
       </div>
 
-      {/* Filters */}
-      <div className="bg-slate-900 p-6 rounded-lg border border-red-500/20">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Search</label>
+            <label className="block text-sm font-medium text-slate-600 mb-2">Search</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search users..."
+                placeholder="Search by name, username, or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-slate-950 border border-red-500/30 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-white placeholder-slate-500"
+                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
               />
             </div>
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Role</label>
+            <label className="block text-sm font-medium text-slate-600 mb-2">Role</label>
             <select
               value={filterRole}
               onChange={(e) => setFilterRole(e.target.value)}
-              className="w-full px-4 py-2 bg-slate-950 border border-red-500/30 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-white"
+              className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
             >
               <option value="all">All Roles</option>
               <option value="customer">Customer</option>
@@ -127,11 +150,11 @@ export function UserManagement() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Status</label>
+            <label className="block text-sm font-medium text-slate-600 mb-2">Account Status</label>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full px-4 py-2 bg-slate-950 border border-red-500/30 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-white"
+              className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -142,36 +165,35 @@ export function UserManagement() {
         </div>
       </div>
 
-      {/* Users Table */}
-      <div className="bg-slate-900 rounded-lg border border-red-500/20 overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-slate-950 border-b border-red-500/20">
+            <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">User</th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Joined</th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">User</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Email</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Role</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Joined</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-red-500/10">
+            <tbody className="divide-y divide-slate-100">
               {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-slate-950/50 transition-colors">
+                <tr key={user.id} className="hover:bg-slate-50/70 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-orange-500 rounded-full flex items-center justify-center text-white font-semibold">
+                      <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
                         {user.full_name?.charAt(0) || user.username?.charAt(0) || 'U'}
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-white">{user.full_name || user.username}</div>
-                        <div className="text-sm text-slate-400">@{user.username}</div>
+                        <div className="text-sm font-semibold text-slate-900">{user.full_name || user.username}</div>
+                        <div className="text-sm text-slate-500">@{user.username}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2 text-slate-300">
+                    <div className="flex items-center gap-2 text-slate-600">
                       <Mail className="w-4 h-4 text-slate-400" />
                       {user.email}
                     </div>
@@ -186,15 +208,15 @@ export function UserManagement() {
                       {user.account_status?.toUpperCase()}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                     {new Date(user.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
-                      <button className="text-blue-400 hover:text-blue-300 transition">
+                      <button className="text-cyan-600 hover:text-cyan-700 transition">
                         <Shield className="w-5 h-5" />
                       </button>
-                      <button className="text-red-400 hover:text-red-300 transition">
+                      <button className="text-rose-500 hover:text-rose-600 transition">
                         <Ban className="w-5 h-5" />
                       </button>
                     </div>
@@ -204,11 +226,12 @@ export function UserManagement() {
             </tbody>
           </table>
         </div>
-      </div>
-
-      <div className="flex items-center justify-between px-6 py-4 bg-slate-900 rounded-lg border border-red-500/20">
-        <div className="text-sm text-slate-400">
-          Showing <span className="font-medium text-white">{filteredUsers.length}</span> of <span className="font-medium text-white">{users.length}</span> users
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 text-sm text-slate-500 flex justify-between">
+          <span>
+            Showing <span className="font-semibold text-slate-900">{filteredUsers.length}</span> of{' '}
+            <span className="font-semibold text-slate-900">{users.length}</span> users
+          </span>
+          <span className="text-slate-400">Filters applied: role {filterRole} / status {filterStatus}</span>
         </div>
       </div>
     </div>
