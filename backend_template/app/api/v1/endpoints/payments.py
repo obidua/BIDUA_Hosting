@@ -118,8 +118,12 @@ async def create_payment_order(
         plan = await plan_service.get_plan_by_id(db, payment_request.plan_id)
         if not plan:
             raise HTTPException(status_code=404, detail="Plan not found")
-            
-        amount = plan.monthly_price  # Base server cost
+        
+        # Use amount from frontend if provided (includes all addons), otherwise use base plan price
+        if payment_request.amount:
+            amount = Decimal(str(payment_request.amount))
+        else:
+            amount = plan.monthly_price  # Fallback to base server cost
         
         # Check if user has active ₹499 premium subscription
         from sqlalchemy import select, and_

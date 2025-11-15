@@ -247,6 +247,8 @@ export function Checkout() {
   const [backupStorage, setBackupStorage] = useState(''); // '', '100gb', '200gb', '300gb', '500gb', '1000gb'
   const [sslCertificate, setSslCertificate] = useState(''); // '', 'essential', 'essential-wildcard', 'comodo', 'comodo-wildcard', 'rapid', 'rapid-wildcard'
   const [supportPackage, setSupportPackage] = useState(''); // '', 'basic', 'premium'
+  const [extraStorage, setExtraStorage] = useState(0); // GB - ₹2/GB/month
+  const [extraBandwidth, setExtraBandwidth] = useState(0); // TB - ₹100/TB/month
   const [invoiceDate] = useState(() => new Date());
   const [invoiceNumber] = useState(() => {
     const now = new Date();
@@ -385,6 +387,16 @@ export function Checkout() {
   // Calculate add-ons cost
   const calculateAddOnsCost = () => {
     let addOnsCost = 0;
+    
+    // Extra Storage - ₹2/GB/month
+    if (extraStorage > 0) {
+      addOnsCost += extraStorage * 2;
+    }
+    
+    // Extra Bandwidth - ₹100/TB/month
+    if (extraBandwidth > 0) {
+      addOnsCost += extraBandwidth * 100;
+    }
     
     // IPv4 addresses
     if (additionalIPv4 > 0) {
@@ -540,12 +552,14 @@ export function Checkout() {
       // Step 1: Create Payment Order
       console.log('🔄 Creating payment order...', {
         plan_id: serverConfig.planId,
-        billing_cycle: serverConfig.billingCycle
+        billing_cycle: serverConfig.billingCycle,
+        total_amount: calculateTotal()
       });
 
       const paymentOrderResponse = await api.post('/api/v1/payments/create-order', {
         payment_type: 'server',
         plan_id: serverConfig.planId,
+        amount: calculateTotal(), // Send calculated total including all addons
         billing_cycle: serverConfig.billingCycle === 'monthly' ? 'monthly' :
                        serverConfig.billingCycle === 'quarterly' ? 'quarterly' :
                        serverConfig.billingCycle === 'semiannually' ? 'semi_annual' :
@@ -564,6 +578,9 @@ export function Checkout() {
           plesk_addon: pleskAddon,
           backup_storage: backupStorage,
           ssl_certificate: sslCertificate,
+          support_package: supportPackage,
+          extra_storage: extraStorage,
+          extra_bandwidth: extraBandwidth,
           quantity: serverQuantity
         }
       });
@@ -979,6 +996,62 @@ export function Checkout() {
                             <span className="text-white font-semibold w-8 text-center">{additionalIPv4}</span>
                             <button
                               onClick={() => setAdditionalIPv4(Math.min(10, additionalIPv4 + 1))}
+                              className="w-8 h-8 bg-cyan-600 text-white rounded-lg hover:bg-cyan-500 flex items-center justify-center"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Extra Storage */}
+                        <div className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-700">
+                          <div className="flex-1">
+                            <p className="font-medium text-white">Extra Storage</p>
+                            <p className="text-sm text-slate-400">{formatCurrency(2)}/GB/month</p>
+                          </div>
+                          <div className="flex items-center space-x-3">
+                            <button
+                              onClick={() => setExtraStorage(Math.max(0, extraStorage - 10))}
+                              className="w-8 h-8 bg-slate-800 text-white rounded-lg hover:bg-slate-700 flex items-center justify-center"
+                            >
+                              <Minus className="h-4 w-4" />
+                            </button>
+                            <div className="text-center">
+                              <span className="text-white font-semibold block">{extraStorage} GB</span>
+                              {extraStorage > 0 && (
+                                <span className="text-xs text-cyan-400">{formatCurrency(extraStorage * 2)}/mo</span>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => setExtraStorage(Math.min(1000, extraStorage + 10))}
+                              className="w-8 h-8 bg-cyan-600 text-white rounded-lg hover:bg-cyan-500 flex items-center justify-center"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Extra Bandwidth */}
+                        <div className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-700">
+                          <div className="flex-1">
+                            <p className="font-medium text-white">Extra Bandwidth</p>
+                            <p className="text-sm text-slate-400">{formatCurrency(100)}/TB/month</p>
+                          </div>
+                          <div className="flex items-center space-x-3">
+                            <button
+                              onClick={() => setExtraBandwidth(Math.max(0, extraBandwidth - 1))}
+                              className="w-8 h-8 bg-slate-800 text-white rounded-lg hover:bg-slate-700 flex items-center justify-center"
+                            >
+                              <Minus className="h-4 w-4" />
+                            </button>
+                            <div className="text-center">
+                              <span className="text-white font-semibold block">{extraBandwidth} TB</span>
+                              {extraBandwidth > 0 && (
+                                <span className="text-xs text-cyan-400">{formatCurrency(extraBandwidth * 100)}/mo</span>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => setExtraBandwidth(Math.min(100, extraBandwidth + 1))}
                               className="w-8 h-8 bg-cyan-600 text-white rounded-lg hover:bg-cyan-500 flex items-center justify-center"
                             >
                               <Plus className="h-4 w-4" />
@@ -1935,6 +2008,20 @@ export function Checkout() {
                 </div>
 
                 {/* Add-ons */}
+                {extraStorage > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">» Extra Storage ({extraStorage} GB):</span>
+                    <span className="text-white">{formatCurrency((extraStorage * 2) * (currentStep >= 2 ? serverQuantity : 1))}</span>
+                  </div>
+                )}
+
+                {extraBandwidth > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">» Extra Bandwidth ({extraBandwidth} TB):</span>
+                    <span className="text-white">{formatCurrency((extraBandwidth * 100) * (currentStep >= 2 ? serverQuantity : 1))}</span>
+                  </div>
+                )}
+
                 {additionalIPv4 > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">» Additional IPv4 ({additionalIPv4}x):</span>
