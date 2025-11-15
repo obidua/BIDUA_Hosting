@@ -1261,26 +1261,22 @@ export function Checkout() {
                         Billing Cycle
                       </h4>
                       <p className="text-lg text-white capitalize">{serverConfig.billingCycle}</p>
-                      {serverConfig.discount > 0 && (
-                        <p className="text-sm text-green-400 mt-2">
-                          <Percent className="h-4 w-4 inline mr-1" />
-                          Saving {(() => {
-                            const monthlyBase = serverConfig.monthlyPrice;
-                            const totalWithoutDiscount = monthlyBase * (
-                              serverConfig.billingCycle === 'monthly' ? 1 :
-                              serverConfig.billingCycle === 'quarterly' ? 3 :
-                              serverConfig.billingCycle === 'semiannually' ? 6 :
-                              serverConfig.billingCycle === 'annually' ? 12 :
-                              serverConfig.billingCycle === 'biennially' ? 24 :
-                              serverConfig.billingCycle === 'triennially' ? 36 : 1
-                            );
-                            const discountPercent = totalWithoutDiscount > 0 
-                              ? Math.round((serverConfig.discount / totalWithoutDiscount) * 100)
-                              : 0;
-                            return `${discountPercent}%`;
-                          })()} with {serverConfig.billingCycle} billing
-                        </p>
-                      )}
+                      <p className="text-sm text-green-400 mt-2">
+                        <Percent className="h-4 w-4 inline mr-1" />
+                        Saving {(() => {
+                          // Define discount percentages based on billing cycle
+                          const discountMap: Record<string, number> = {
+                            'monthly': 5,
+                            'quarterly': 10,
+                            'semiannually': 15,
+                            'annually': 20,
+                            'biennially': 25,
+                            'triennially': 35
+                          };
+                          const discountPercent = discountMap[serverConfig.billingCycle] || 0;
+                          return `${discountPercent}%`;
+                        })()} with {serverConfig.billingCycle} billing
+                      </p>
                     </div>
 
                     {/* Included Features */}
