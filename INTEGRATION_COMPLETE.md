@@ -14,7 +14,7 @@
   - `affiliate_stats`
 
 ### 2. ✅ Frontend Integration
-**File Updated:** `RAMAERA_Hosting-main/src/App.tsx`
+**File Updated:** `BIDUA_Hosting-main/src/App.tsx`
 - Imported `ReferralsEnhanced` component
 - Updated referrals route to use new enhanced dashboard
 - Users now see full affiliate features at `/dashboard/referrals`

@@ -4,7 +4,7 @@ echo "🧹 Clearing all caches..."
 
 # Clear frontend cache
 echo "🗑️  Clearing Vite cache..."
-cd "RAMAERA_Hosting-main"
+cd "BIDUA_Hosting-main"
 rm -rf node_modules/.vite dist .vite 2>/dev/null
 echo "✅ Vite cache cleared"
 
@@ -26,4 +26,4 @@ echo "🎉 All caches cleared!"
 echo ""
 echo "To start servers:"
 echo "  Backend:  cd backend_template && source venv/bin/activate && uvicorn app.main:app --reload --port 8000"
-echo "  Frontend: cd RAMAERA_Hosting-main && npm run dev"
+echo "  Frontend: cd BIDUA_Hosting-main && npm run dev"

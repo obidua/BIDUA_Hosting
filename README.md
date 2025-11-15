@@ -133,7 +133,7 @@ API Documentation: `http://localhost:8000/docs`
 Open a new terminal window:
 
 ```bash
-cd RAMAERA_Hosting-main
+cd BIDUA_Hosting-main
 ```
 
 #### Step 2: Install Dependencies
@@ -144,7 +144,7 @@ npm install
 
 #### Step 3: Configure Environment Variables
 
-Create a `.env` file in the `RAMAERA_Hosting-main` directory:
+Create a `.env` file in the `BIDUA_Hosting-main` directory:
 
 ```bash
 VITE_API_URL=http://localhost:8000/api/v1
@@ -284,7 +284,7 @@ sudo certbot --nginx -d api.yourdomain.com
 1. Push your code to GitHub
 2. Go to [vercel.com](https://vercel.com)
 3. Import the repository
-4. Set root directory to `RAMAERA_Hosting-main`
+4. Set root directory to `BIDUA_Hosting-main`
 5. Add environment variables:
    - `VITE_API_URL=https://api.yourdomain.com/api/v1`
 6. Deploy
@@ -292,7 +292,7 @@ sudo certbot --nginx -d api.yourdomain.com
 #### Option 2: Nginx Static Hosting
 
 ```bash
-cd /var/www/BIDUA_Hosting/RAMAERA_Hosting-main
+cd /var/www/BIDUA_Hosting/BIDUA_Hosting-main
 
 # Build for production
 npm install
@@ -308,7 +308,7 @@ Add configuration:
 server {
     listen 80;
     server_name yourdomain.com www.yourdomain.com;
-    root /var/www/BIDUA_Hosting/RAMAERA_Hosting-main/dist;
+    root /var/www/BIDUA_Hosting/BIDUA_Hosting-main/dist;
     index index.html;
 
     location / {
@@ -362,7 +362,7 @@ services:
       - postgres
 
   frontend:
-    build: ./RAMAERA_Hosting-main
+    build: ./BIDUA_Hosting-main
     ports:
       - "4334:80"
     environment:
@@ -397,7 +397,7 @@ Edit `backend_template/app/core/config.py` for:
 
 ### Frontend Configuration
 
-Edit `RAMAERA_Hosting-main/vite.config.ts` for:
+Edit `BIDUA_Hosting-main/vite.config.ts` for:
 - Build settings
 - PWA configuration
 - Port settings
@@ -454,7 +454,7 @@ cd backend_template
 pytest
 
 # Frontend tests
-cd RAMAERA_Hosting-main
+cd BIDUA_Hosting-main
 npm test
 ```
 

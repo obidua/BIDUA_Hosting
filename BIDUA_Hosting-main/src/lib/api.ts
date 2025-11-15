@@ -86,8 +86,13 @@ class ApiClient {
           console.error('Error:', error);
         }
         
-        // Special handling for 401 errors
+        // Special handling for 401 errors - but not for login/register endpoints
         if (response.status === 401) {
+          // For login/register, return the actual error message
+          if (isPublicEndpoint) {
+            throw new Error(error.detail || 'Invalid credentials. Please check your email and password.');
+          }
+          // For protected endpoints, it's a session expiry
           throw new Error('Your session has expired. Please log in again.');
         }
         

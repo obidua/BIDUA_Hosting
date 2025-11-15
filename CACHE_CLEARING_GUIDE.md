@@ -18,7 +18,7 @@ This will:
 
 ### Frontend (Vite) Cache
 ```bash
-cd RAMAERA_Hosting-main
+cd BIDUA_Hosting-main
 rm -rf node_modules/.vite dist .vite
 ```
 
@@ -66,7 +66,7 @@ uvicorn app.main:app --reload --port 8000
 
 ### Frontend
 ```bash
-cd RAMAERA_Hosting-main
+cd BIDUA_Hosting-main
 npm run dev
 ```
 

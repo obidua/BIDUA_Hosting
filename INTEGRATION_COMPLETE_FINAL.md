@@ -31,7 +31,7 @@ All affiliate system components have been successfully implemented, integrated, 
 - **Default Fallback**: 10% / 2% / 1% (L1/L2/L3)
 
 ### 3. ✅ Frontend Integration
-**File:** `RAMAERA_Hosting-main/src/App.tsx`
+**File:** `BIDUA_Hosting-main/src/App.tsx`
 - Imported `ReferralsEnhanced` component
 - Updated route to use new affiliate dashboard
 - Users now have full affiliate features at `/dashboard/referrals`

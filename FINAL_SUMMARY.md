@@ -13,36 +13,36 @@
 - **Benefit:** Users can start earning commissions immediately
 
 ### 3. ✅ **Vite HMR WebSocket Fix** [DONE]
-- **File:** `RAMAERA_Hosting-main/vite.config.ts:8-12`
+- **File:** `BIDUA_Hosting-main/vite.config.ts:8-12`
 - **What:** Fixed hot module replacement
 - **Benefit:** No more hard refresh needed during development
 
 ### 4. ✅ **User Registration API Fix** [DONE]
-- **File:** `RAMAERA_Hosting-main/src/lib/api.ts:107`
+- **File:** `BIDUA_Hosting-main/src/lib/api.ts:107`
 - **What:** Changed `/signup` to `/register` endpoint
 - **Benefit:** User registration now works
 
 ### 5. ✅ **Registration Flow with Checkout** [DONE]
 - **Files:**
-  - `RAMAERA_Hosting-main/src/pages/Signup.tsx:20-36`
-  - `RAMAERA_Hosting-main/src/pages/Login.tsx:145-151`
-  - `RAMAERA_Hosting-main/src/contexts/AuthContext.tsx:64-81`
+  - `BIDUA_Hosting-main/src/pages/Signup.tsx:20-36`
+  - `BIDUA_Hosting-main/src/pages/Login.tsx:145-151`
+  - `BIDUA_Hosting-main/src/contexts/AuthContext.tsx:64-81`
 - **What:** Users redirected to checkout after signup if they selected a server
 - **Benefit:** Seamless server purchase flow for new users
 
 ### 6. ✅ **Billing Page API Endpoints Fix** [DONE]
-- **File:** `RAMAERA_Hosting-main/src/pages/dashboard/Billing.tsx:39,48`
+- **File:** `BIDUA_Hosting-main/src/pages/dashboard/Billing.tsx:39,48`
 - **What:** Fixed invoice and payment methods API calls
 - **Benefit:** Billing page loads correctly
 
 ### 7. ✅ **Pricing Page - Plan ID Integration** [DONE]
-- **File:** `RAMAERA_Hosting-main/src/pages/Pricing.tsx`
+- **File:** `BIDUA_Hosting-main/src/pages/Pricing.tsx`
 - **Lines:** 100 (add id to transformPlanToUI), 177 (add planId to serverConfig)
 - **What:** Plan ID now passed to checkout
 - **Benefit:** Backend knows which plan was purchased
 
 ### 8. ✅ **Environment Variable Added** [DONE]
-- **File:** `RAMAERA_Hosting-main/.env:2`
+- **File:** `BIDUA_Hosting-main/.env:2`
 - **What:** Added `VITE_RAZORPAY_KEY_ID`
 - **Benefit:** Ready for Razorpay integration
 
@@ -76,7 +76,7 @@
 
 #### 1. **Checkout Razorpay Integration**
 **Status:** 🟡 Code ready, needs copy-paste implementation
-**File:** `RAMAERA_Hosting-main/src/pages/Checkout.tsx`
+**File:** `BIDUA_Hosting-main/src/pages/Checkout.tsx`
 **Guide:** See `CHECKOUT_RAZORPAY_IMPLEMENTATION.md` Step 1
 **Time:** 30 minutes (just copy-paste the code)
 
@@ -95,7 +95,7 @@
 
 #### 2. **Billing Page - Pay Now Button**
 **Status:** 🟡 Code ready, needs implementation
-**File:** `RAMAERA_Hosting-main/src/pages/dashboard/Billing.tsx`
+**File:** `BIDUA_Hosting-main/src/pages/dashboard/Billing.tsx`
 **Guide:** See `CHECKOUT_RAZORPAY_IMPLEMENTATION.md` Step 4
 **Time:** 15 minutes
 
@@ -111,7 +111,7 @@
 
 #### 3. **Settings Page - Profile Auto-Fill**
 **Status:** 🟡 Needs investigation
-**File:** `RAMAERA_Hosting-main/src/pages/dashboard/Settings.tsx`
+**File:** `BIDUA_Hosting-main/src/pages/dashboard/Settings.tsx`
 **Time:** 30 minutes
 
 **Requirements:**
@@ -147,8 +147,8 @@ useEffect(() => {
 #### 4. **Two-Way Billing Sync**
 **Status:** 🟡 May already be partially implemented
 **Files:**
-  - `RAMAERA_Hosting-main/src/pages/Checkout.tsx`
-  - `RAMAERA_Hosting-main/src/pages/dashboard/Settings.tsx`
+  - `BIDUA_Hosting-main/src/pages/Checkout.tsx`
+  - `BIDUA_Hosting-main/src/pages/dashboard/Settings.tsx`
 **Time:** 45 minutes
 
 **Requirements:**
@@ -162,7 +162,7 @@ useEffect(() => {
 
 #### 5. **Affiliate Page Enhancements**
 **Status:** 🟡 Code ready in IMPLEMENTATION_PLAN.md
-**File:** `RAMAERA_Hosting-main/src/pages/dashboard/ReferralsEnhanced.tsx`
+**File:** `BIDUA_Hosting-main/src/pages/dashboard/ReferralsEnhanced.tsx`
 **Time:** 20 minutes
 
 **What to add:**
@@ -242,15 +242,15 @@ useEffect(() => {
 1. ✅ `backend_template/app/api/v1/endpoints/payments.py` - Added server creation + affiliate activation
 
 ### Frontend:
-1. ✅ `RAMAERA_Hosting-main/vite.config.ts` - Fixed HMR
-2. ✅ `RAMAERA_Hosting-main/src/lib/api.ts` - Fixed registration endpoint
-3. ✅ `RAMAERA_Hosting-main/src/lib/auth.ts` - Added referral code support
-4. ✅ `RAMAERA_Hosting-main/src/contexts/AuthContext.tsx` - Enhanced signup flow
-5. ✅ `RAMAERA_Hosting-main/src/pages/Signup.tsx` - Added redirect logic
-6. ✅ `RAMAERA_Hosting-main/src/pages/Login.tsx` - Preserve server config
-7. ✅ `RAMAERA_Hosting-main/src/pages/Pricing.tsx` - Added plan ID
-8. ✅ `RAMAERA_Hosting-main/src/pages/dashboard/Billing.tsx` - Fixed API endpoints
-9. ✅ `RAMAERA_Hosting-main/.env` - Added Razorpay key
+1. ✅ `BIDUA_Hosting-main/vite.config.ts` - Fixed HMR
+2. ✅ `BIDUA_Hosting-main/src/lib/api.ts` - Fixed registration endpoint
+3. ✅ `BIDUA_Hosting-main/src/lib/auth.ts` - Added referral code support
+4. ✅ `BIDUA_Hosting-main/src/contexts/AuthContext.tsx` - Enhanced signup flow
+5. ✅ `BIDUA_Hosting-main/src/pages/Signup.tsx` - Added redirect logic
+6. ✅ `BIDUA_Hosting-main/src/pages/Login.tsx` - Preserve server config
+7. ✅ `BIDUA_Hosting-main/src/pages/Pricing.tsx` - Added plan ID
+8. ✅ `BIDUA_Hosting-main/src/pages/dashboard/Billing.tsx` - Fixed API endpoints
+9. ✅ `BIDUA_Hosting-main/.env` - Added Razorpay key
 
 ### Documentation Created:
 1. ✅ `IMPLEMENTATION_PLAN.md` - Complete implementation guide
@@ -263,7 +263,7 @@ useEffect(() => {
 ## 🔑 IMPORTANT NOTES
 
 ### Environment Variables:
-**Frontend** (`RAMAERA_Hosting-main/.env`):
+**Frontend** (`BIDUA_Hosting-main/.env`):
 ```env
 VITE_API_URL=http://localhost:8000
 VITE_RAZORPAY_KEY_ID=rzp_test_YOUR_KEY_HERE  # ⚠️ UPDATE THIS
@@ -298,7 +298,7 @@ DATABASE_URL=postgresql+asyncpg://...         # Should exist
 
 2. **Update .env:**
    ```bash
-   cd "RAMAERA_Hosting-main"
+   cd "BIDUA_Hosting-main"
    # Edit .env and replace rzp_test_your_key_here with actual key
    ```
 

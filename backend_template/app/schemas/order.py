@@ -320,7 +320,7 @@
 
 
 from pydantic import BaseModel, validator, Field
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 from decimal import Decimal
 
@@ -333,7 +333,9 @@ class OrderBase(BaseModel):
 
 
 class OrderCreate(OrderBase):
-    server_details: Optional[Dict[str, Any]] = None
+    addon_ids: Optional[List[int]] = []  # List of addon IDs to attach to order
+    service_ids: Optional[List[int]] = []  # List of service IDs to attach to order
+    server_details: Optional[Dict[str, Any]] = None  # Kept for backward compatibility
 
     @validator('billing_cycle')
     def validate_billing_cycle(cls, v):

@@ -3,7 +3,7 @@
 ## Issues Identified
 
 ### 1. ❌ Checkout Page Not Integrated with Backend
-**Location:** `RAMAERA_Hosting-main/src/pages/Checkout.tsx:500`
+**Location:** `BIDUA_Hosting-main/src/pages/Checkout.tsx:500`
 **Issue:** Line 500 has `// TODO: Integrate with backend orders API`
 **Impact:** Orders are not being created, no payments processed
 
@@ -18,12 +18,12 @@
 **Impact:** Users don't get their free affiliate membership
 
 ### 4. ⚠️ Billing Page Missing "Pay Now" Button
-**Location:** `RAMAERA_Hosting-main/src/pages/dashboard/Billing.tsx:182`
+**Location:** `BIDUA_Hosting-main/src/pages/dashboard/Billing.tsx:182`
 **Issue:** Download button shown, but no "Pay Now" for pending invoices
 **Impact:** Users can't pay pending invoices
 
 ### 5. ⚠️ Server Panel Lacks Details
-**Location:** `RAMAERA_Hosting-main/src/pages/dashboard/MyServers.tsx`
+**Location:** `BIDUA_Hosting-main/src/pages/dashboard/MyServers.tsx`
 **Issue:** No server control panel page, only list view
 **Impact:** Users can't manage server settings
 
@@ -97,7 +97,7 @@ except Exception as e:
 ### PHASE 2: Frontend Checkout Integration (HIGH PRIORITY)
 
 #### 2.1 Replace Checkout handleCompleteOrder Function
-**File:** `RAMAERA_Hosting-main/src/pages/Checkout.tsx`
+**File:** `BIDUA_Hosting-main/src/pages/Checkout.tsx`
 **Line:** 495-514
 
 **New Implementation:**
@@ -234,7 +234,7 @@ interface ServerConfig {
 ```
 
 #### 2.4 Update Pricing.tsx to Pass Plan ID
-**File:** `RAMAERA_Hosting-main/src/pages/Pricing.tsx`
+**File:** `BIDUA_Hosting-main/src/pages/Pricing.tsx`
 **In handleDeploy function (around line 174):**
 ```typescript
 const handleDeploy = (plan: Plan, apiPlan: HostingPlan) => {
@@ -267,7 +267,7 @@ const handleDeploy = (plan: Plan, apiPlan: HostingPlan) => {
 ### PHASE 3: Billing Page Enhancements
 
 #### 3.1 Add "Pay Now" Button for Pending Invoices
-**File:** `RAMAERA_Hosting-main/src/pages/dashboard/Billing.tsx`
+**File:** `BIDUA_Hosting-main/src/pages/dashboard/Billing.tsx`
 **Replace line 182-186:**
 ```typescript
 <td className="py-3 sm:py-4 px-2 sm:px-4 whitespace-nowrap">
@@ -317,7 +317,7 @@ const handlePayNow = async (invoice: Invoice) => {
 ### PHASE 4: Server Panel Enhancements
 
 #### 4.1 Create Server Detail Page
-**Create new file:** `RAMAERA_Hosting-main/src/pages/dashboard/ServerDetails.tsx`
+**Create new file:** `BIDUA_Hosting-main/src/pages/dashboard/ServerDetails.tsx`
 
 This file will contain:
 - Server overview card
@@ -336,7 +336,7 @@ This file will contain:
 ### PHASE 5: Affiliate Page Enhancements
 
 #### 5.1 Add Earnings Summary & Instructions
-**File:** `RAMAERA_Hosting-main/src/pages/dashboard/ReferralsEnhanced.tsx`
+**File:** `BIDUA_Hosting-main/src/pages/dashboard/ReferralsEnhanced.tsx`
 
 Add at the top (after the welcome banner):
 ```tsx
@@ -409,7 +409,7 @@ const [showBanner, setShowBanner] = useState(true);
 
 ## 🔑 Environment Variables Needed
 
-Add to `RAMAERA_Hosting-main/.env`:
+Add to `BIDUA_Hosting-main/.env`:
 ```
 VITE_RAZORPAY_KEY_ID=your_razorpay_key_id
 ```
@@ -463,14 +463,14 @@ RAZORPAY_KEY_SECRET=your_razorpay_secret
 2. `backend_template/.env` - Add Razorpay credentials
 
 ### Frontend:
-1. `RAMAERA_Hosting-main/src/pages/Checkout.tsx` - Complete payment integration
-2. `RAMAERA_Hosting-main/src/pages/Pricing.tsx` - Add planId to serverConfig
-3. `RAMAERA_Hosting-main/src/pages/dashboard/Billing.tsx` - Add Pay Now button
-4. `RAMAERA_Hosting-main/src/pages/dashboard/ReferralsEnhanced.tsx` - Add summary & closable banner
-5. `RAMAERA_Hosting-main/.env` - Add Razorpay key
+1. `BIDUA_Hosting-main/src/pages/Checkout.tsx` - Complete payment integration
+2. `BIDUA_Hosting-main/src/pages/Pricing.tsx` - Add planId to serverConfig
+3. `BIDUA_Hosting-main/src/pages/dashboard/Billing.tsx` - Add Pay Now button
+4. `BIDUA_Hosting-main/src/pages/dashboard/ReferralsEnhanced.tsx` - Add summary & closable banner
+5. `BIDUA_Hosting-main/.env` - Add Razorpay key
 
 ### New Files:
-1. `RAMAERA_Hosting-main/src/pages/dashboard/ServerDetails.tsx` - Server control panel
+1. `BIDUA_Hosting-main/src/pages/dashboard/ServerDetails.tsx` - Server control panel
 
 ---
 
@@ -504,7 +504,7 @@ RAZORPAY_KEY_SECRET=your_razorpay_secret
 Edit `backend_template/app/api/v1/endpoints/payments.py` → Add server creation code
 
 ### 2. Frontend Checkout Integration (2 hours)
-Edit `RAMAERA_Hosting-main/src/pages/Checkout.tsx` → Replace handleCompleteOrder
+Edit `BIDUA_Hosting-main/src/pages/Checkout.tsx` → Replace handleCompleteOrder
 
 ### 3. Test End-to-End (30 min)
 Buy a server → Verify server created → Check database

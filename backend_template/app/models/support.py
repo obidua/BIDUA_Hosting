@@ -127,3 +127,4 @@ class SupportTicket(Base):
         back_populates="ticket",
         cascade="all, delete-orphan"
     )
+

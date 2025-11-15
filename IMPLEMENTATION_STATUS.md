@@ -373,7 +373,7 @@ Status: APPROVED → PAID
    - Referral code generation
    - Email confirmation
 
-4. **Create Frontend Components** (RAMAERA_Hosting-main/src/)
+4. **Create Frontend Components** (BIDUA_Hosting-main/src/)
    - Affiliate dashboard page
    - Referral tree component
    - Commission tracker

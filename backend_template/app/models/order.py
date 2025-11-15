@@ -79,6 +79,21 @@ class Order(Base):
         lazy="select"  # 🔹 Better performance
     )
 
+    # 🔹 Link to addons and services
+    order_addons = relationship(
+        "OrderAddon",
+        back_populates="order",
+        cascade="all, delete-orphan",
+        lazy="select"
+    )
+
+    order_services = relationship(
+        "OrderService",
+        back_populates="order",
+        cascade="all, delete-orphan",
+        lazy="select"
+    )
+
     # Link referral earnings
     referral_earnings = relationship(
         "ReferralEarning",

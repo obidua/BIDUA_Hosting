@@ -1,0 +1,389 @@
+import { DocLayout } from '../../../components/docs/DocLayout';
+import { Lock, Key, User, CheckCircle, AlertCircle } from 'lucide-react';
+
+export function AuthAPI() {
+  return (
+    <DocLayout
+      title="Authentication API"
+      description="Complete guide to BIDUA Hosting authentication endpoints and JWT token management."
+      breadcrumbs={[{ label: 'API' }, { label: 'Authentication' }]}
+      prevPage={{ title: 'Database Schema', path: '/docs/database' }}
+      nextPage={{ title: 'Plans API', path: '/docs/api/plans' }}
+    >
+      <div className="space-y-8">
+        {/* Overview */}
+        <section>
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Authentication Overview</h2>
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-6 border border-slate-200">
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-slate-900 mb-2">Security Method</h3>
+                <p className="text-slate-700">JWT (JSON Web Token) based authentication with Bearer token in Authorization header</p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-900 mb-2">Token Format</h3>
+                <div className="bg-slate-900 rounded p-3 text-green-400 font-mono text-sm overflow-x-auto">
+                  Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                </div>
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-900 mb-2">Token Expiration</h3>
+                <p className="text-slate-700">Access tokens expire after 30 minutes. Use refresh endpoint to get new token.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Register Endpoint */}
+        <section>
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="p-2 bg-cyan-50 rounded-lg">
+              <User className="h-6 w-6 text-cyan-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900">Register New User</h2>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-lg p-6 space-y-4">
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">Endpoint</h3>
+              <div className="bg-slate-900 rounded p-3 text-green-400 font-mono text-sm overflow-x-auto">
+                POST /api/v1/auth/register
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">Request Body</h3>
+              <div className="bg-slate-50 rounded p-4 overflow-x-auto">
+                <pre className="text-slate-700 font-mono text-sm">{`{
+  "email": "user@example.com",
+  "username": "johndoe",
+  "password": "SecurePassword123",
+  "first_name": "John",
+  "last_name": "Doe",
+  "company_name": "ACME Corp",
+  "phone": "+1234567890",
+  "country_id": 1,
+  "referral_code": "REF123"  // Optional
+}`}</pre>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">Response (201 Created)</h3>
+              <div className="bg-slate-50 rounded p-4 overflow-x-auto">
+                <pre className="text-slate-700 font-mono text-sm">{`{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "user": {
+    "id": 1,
+    "email": "user@example.com",
+    "username": "johndoe",
+    "first_name": "John",
+    "last_name": "Doe",
+    "is_active": true,
+    "is_admin": false,
+    "referral_code": "USR_abc123"
+  }
+}`}</pre>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">Possible Errors</h3>
+              <div className="space-y-2">
+                <div className="bg-red-50 border border-red-200 rounded p-3">
+                  <p className="font-semibold text-red-900 text-sm">400 Bad Request</p>
+                  <p className="text-red-800 text-sm">User with email already exists or validation error</p>
+                </div>
+                <div className="bg-red-50 border border-red-200 rounded p-3">
+                  <p className="font-semibold text-red-900 text-sm">400 Bad Request</p>
+                  <p className="text-red-800 text-sm">Invalid referral code if provided</p>
+                </div>
+                <div className="bg-red-50 border border-red-200 rounded p-3">
+                  <p className="font-semibold text-red-900 text-sm">422 Unprocessable Entity</p>
+                  <p className="text-red-800 text-sm">Required fields missing or invalid format</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Login Endpoint */}
+        <section>
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="p-2 bg-blue-50 rounded-lg">
+              <Key className="h-6 w-6 text-blue-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900">User Login</h2>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-lg p-6 space-y-4">
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">Endpoint</h3>
+              <div className="bg-slate-900 rounded p-3 text-green-400 font-mono text-sm overflow-x-auto">
+                POST /api/v1/auth/login
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">Request Body</h3>
+              <div className="bg-slate-50 rounded p-4 overflow-x-auto">
+                <pre className="text-slate-700 font-mono text-sm">{`{
+  "email": "user@example.com",
+  "password": "SecurePassword123"
+}`}</pre>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">Response (200 OK)</h3>
+              <div className="bg-slate-50 rounded p-4 overflow-x-auto">
+                <pre className="text-slate-700 font-mono text-sm">{`{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "user": {
+    "id": 1,
+    "email": "user@example.com",
+    "username": "johndoe",
+    "first_name": "John",
+    "last_name": "Doe",
+    "company_name": "ACME Corp",
+    "is_active": true,
+    "is_admin": false
+  }
+}`}</pre>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">Possible Errors</h3>
+              <div className="space-y-2">
+                <div className="bg-red-50 border border-red-200 rounded p-3">
+                  <p className="font-semibold text-red-900 text-sm">401 Unauthorized</p>
+                  <p className="text-red-800 text-sm">Invalid credentials - email or password incorrect</p>
+                </div>
+                <div className="bg-red-50 border border-red-200 rounded p-3">
+                  <p className="font-semibold text-red-900 text-sm">404 Not Found</p>
+                  <p className="text-red-800 text-sm">User with provided email not found</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Refresh Token Endpoint */}
+        <section>
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Refresh Access Token</h2>
+
+          <div className="bg-white border border-slate-200 rounded-lg p-6 space-y-4">
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">Endpoint</h3>
+              <div className="bg-slate-900 rounded p-3 text-green-400 font-mono text-sm overflow-x-auto">
+                POST /api/v1/auth/refresh
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">Headers</h3>
+              <div className="bg-slate-50 rounded p-4 font-mono text-sm">
+                <div className="text-slate-700">Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...</div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">Request Body</h3>
+              <p className="text-slate-700 text-sm mb-2">Empty body required</p>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">Response (200 OK)</h3>
+              <div className="bg-slate-50 rounded p-4 overflow-x-auto">
+                <pre className="text-slate-700 font-mono text-sm">{`{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "expires_in": 1800
+}`}</pre>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">Possible Errors</h3>
+              <div className="space-y-2">
+                <div className="bg-red-50 border border-red-200 rounded p-3">
+                  <p className="font-semibold text-red-900 text-sm">401 Unauthorized</p>
+                  <p className="text-red-800 text-sm">Token is expired or invalid</p>
+                </div>
+                <div className="bg-red-50 border border-red-200 rounded p-3">
+                  <p className="font-semibold text-red-900 text-sm">403 Forbidden</p>
+                  <p className="text-red-800 text-sm">User is inactive</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Change Password Endpoint */}
+        <section>
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Change Password</h2>
+
+          <div className="bg-white border border-slate-200 rounded-lg p-6 space-y-4">
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">Endpoint</h3>
+              <div className="bg-slate-900 rounded p-3 text-green-400 font-mono text-sm overflow-x-auto">
+                POST /api/v1/auth/change-password
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">Headers</h3>
+              <div className="bg-slate-50 rounded p-4 font-mono text-sm">
+                <div className="text-slate-700">Authorization: Bearer {'{token}'}</div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">Request Body</h3>
+              <div className="bg-slate-50 rounded p-4 overflow-x-auto">
+                <pre className="text-slate-700 font-mono text-sm">{`{
+  "current_password": "OldPassword123",
+  "new_password": "NewSecurePassword456",
+  "confirm_password": "NewSecurePassword456"
+}`}</pre>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">Response (200 OK)</h3>
+              <div className="bg-slate-50 rounded p-4 overflow-x-auto">
+                <pre className="text-slate-700 font-mono text-sm">{`{
+  "message": "Password changed successfully"
+}`}</pre>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">Possible Errors</h3>
+              <div className="space-y-2">
+                <div className="bg-red-50 border border-red-200 rounded p-3">
+                  <p className="font-semibold text-red-900 text-sm">401 Unauthorized</p>
+                  <p className="text-red-800 text-sm">Current password is incorrect</p>
+                </div>
+                <div className="bg-red-50 border border-red-200 rounded p-3">
+                  <p className="font-semibold text-red-900 text-sm">400 Bad Request</p>
+                  <p className="text-red-800 text-sm">Passwords do not match or invalid password format</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Authentication Flow */}
+        <section>
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Authentication Flow</h2>
+          <div className="bg-white border border-slate-200 rounded-lg p-6">
+            <div className="space-y-4">
+              <div className="bg-cyan-50 border-l-4 border-cyan-500 p-4 rounded-r-lg">
+                <h3 className="font-semibold text-slate-900 mb-2 flex items-center">
+                  <CheckCircle className="h-5 w-5 mr-2 text-cyan-500" />
+                  1. User Registration
+                </h3>
+                <p className="text-slate-700 text-sm">User submits registration form with email, password, and profile information</p>
+              </div>
+
+              <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                <h3 className="font-semibold text-slate-900 mb-2 flex items-center">
+                  <CheckCircle className="h-5 w-5 mr-2 text-blue-500" />
+                  2. Account Created
+                </h3>
+                <p className="text-slate-700 text-sm">Server creates user, hashes password, returns JWT access token and referral code</p>
+              </div>
+
+              <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
+                <h3 className="font-semibold text-slate-900 mb-2 flex items-center">
+                  <CheckCircle className="h-5 w-5 mr-2 text-purple-500" />
+                  3. Login
+                </h3>
+                <p className="text-slate-700 text-sm">User submits email and password credentials to login endpoint</p>
+              </div>
+
+              <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
+                <h3 className="font-semibold text-slate-900 mb-2 flex items-center">
+                  <CheckCircle className="h-5 w-5 mr-2 text-green-500" />
+                  4. Token Issued
+                </h3>
+                <p className="text-slate-700 text-sm">Server verifies credentials and returns new JWT token valid for 30 minutes</p>
+              </div>
+
+              <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg">
+                <h3 className="font-semibold text-slate-900 mb-2 flex items-center">
+                  <CheckCircle className="h-5 w-5 mr-2 text-amber-500" />
+                  5. Authenticated Requests
+                </h3>
+                <p className="text-slate-700 text-sm">Frontend stores token and includes it in Authorization header for all API requests</p>
+              </div>
+
+              <div className="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-r-lg">
+                <h3 className="font-semibold text-slate-900 mb-2 flex items-center">
+                  <CheckCircle className="h-5 w-5 mr-2 text-indigo-500" />
+                  6. Token Refresh
+                </h3>
+                <p className="text-slate-700 text-sm">When token expires, use refresh endpoint to get new token without re-login</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Best Practices */}
+        <section>
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Best Practices</h2>
+          <div className="space-y-4">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <h3 className="font-semibold text-green-900 mb-2 flex items-center">
+                <CheckCircle className="h-5 w-5 mr-2" />
+                Do's
+              </h3>
+              <ul className="text-green-800 text-sm space-y-1">
+                <li>• Store token securely (httpOnly cookies or secure localStorage)</li>
+                <li>• Include token in Authorization header for all authenticated requests</li>
+                <li>• Implement token refresh logic before expiration</li>
+                <li>• Clear token on logout</li>
+                <li>• Use HTTPS for all authentication requests</li>
+                <li>• Validate token claims on frontend before critical operations</li>
+              </ul>
+            </div>
+
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <h3 className="font-semibold text-red-900 mb-2 flex items-center">
+                <AlertCircle className="h-5 w-5 mr-2" />
+                Don'ts
+              </h3>
+              <ul className="text-red-800 text-sm space-y-1">
+                <li>• Never expose token in URL parameters</li>
+                <li>• Don't store sensitive credentials in localStorage without encryption</li>
+                <li>• Never commit .env files with SECRET_KEY to version control</li>
+                <li>• Avoid sending password in GET requests</li>
+                <li>• Don't trust client-side token validation - always verify on server</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* Next Steps */}
+        <section className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-xl p-8 border border-cyan-200">
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Next API Endpoints</h2>
+          <p className="text-slate-700 mb-6">
+            Continue exploring other API modules to understand complete platform functionality.
+          </p>
+          <div className="space-y-3">
+            <a
+              href="/docs/api/plans"
+              className="inline-block px-6 py-3 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition font-medium"
+            >
+              View Plans API →
+            </a>
+          </div>
+        </section>
+      </div>
+    </DocLayout>
+  );
+}

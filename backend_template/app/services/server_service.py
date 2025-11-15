@@ -514,12 +514,14 @@
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 from decimal import Decimal
 
 from app.models.server import Server
 from app.models.plan import HostingPlan
+from app.models.order import Order
 from app.schemas.server import ServerCreate, ServerUpdate, ServerStats
 
 
@@ -531,9 +533,41 @@ class ServerService:
     # --------------------------------------------------------
     async def get_user_servers(self, db: AsyncSession, user_id: int) -> List[Server]:
         result = await db.execute(
-            select(Server).where(Server.user_id == user_id)
+            select(Server)
+            .options(
+                selectinload(Server.order).selectinload(Order.order_addons),
+                selectinload(Server.order).selectinload(Order.order_services)
+            )
+            .where(Server.user_id == user_id)
         )
-        return result.scalars().all()
+        servers = result.scalars().all()
+        
+        # Enrich servers with addon/service data
+        enriched_servers = []
+        for server in servers:
+            server_dict = {
+                "id": server.id,
+                "user_id": server.user_id,
+                "order_id": server.order_id,
+                "server_name": server.server_name,
+                "server_status": server.server_status,
+                "ip_address": server.ip_address,
+                "ram_gb": server.ram_gb,
+                "storage_gb": server.storage_gb,
+                "operating_system": server.operating_system,
+                "created_date": server.created_date,
+                "expiry_date": server.expiry_date,
+                "addons": [],
+                "services": [],
+            }
+            
+            if server.order:
+                server_dict["addons"] = [addon.to_dict() for addon in server.order.order_addons] if server.order.order_addons else []
+                server_dict["services"] = [service.to_dict() for service in server.order.order_services] if server.order.order_services else []
+            
+            enriched_servers.append(server_dict)
+        
+        return enriched_servers
 
     async def get_user_active_servers(self, db: AsyncSession, user_id: int) -> List[Server]:
         result = await db.execute(
@@ -561,8 +595,41 @@ class ServerService:
         return result.scalar_one_or_none()
 
     async def get_all_servers(self, db: AsyncSession) -> List[Server]:
-        result = await db.execute(select(Server))
-        return result.scalars().all()
+        result = await db.execute(
+            select(Server)
+            .options(
+                selectinload(Server.order).selectinload(Order.order_addons),
+                selectinload(Server.order).selectinload(Order.order_services)
+            )
+        )
+        servers = result.scalars().all()
+        
+        # Enrich servers with addon/service data
+        enriched_servers = []
+        for server in servers:
+            server_dict = {
+                "id": server.id,
+                "user_id": server.user_id,
+                "order_id": server.order_id,
+                "server_name": server.server_name,
+                "server_status": server.server_status,
+                "ip_address": server.ip_address,
+                "ram_gb": server.ram_gb,
+                "storage_gb": server.storage_gb,
+                "operating_system": server.operating_system,
+                "created_date": server.created_date,
+                "expiry_date": server.expiry_date,
+                "addons": [],
+                "services": [],
+            }
+            
+            if server.order:
+                server_dict["addons"] = [addon.to_dict() for addon in server.order.order_addons] if server.order.order_addons else []
+                server_dict["services"] = [service.to_dict() for service in server.order.order_services] if server.order.order_services else []
+            
+            enriched_servers.append(server_dict)
+        
+        return enriched_servers
 
 
 

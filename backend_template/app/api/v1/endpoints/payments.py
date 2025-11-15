@@ -444,12 +444,12 @@ async def verify_payment(
                 from app.services.server_service import ServerService
                 from app.schemas.server import ServerCreate
                 from sqlalchemy import select
-                from app.models.plan import Plan
+                from app.models.plan import HostingPlan
 
                 server_service = ServerService()
 
                 # Get plan details
-                result = await db.execute(select(Plan).filter(Plan.id == plan_id))
+                result = await db.execute(select(HostingPlan).filter(HostingPlan.id == plan_id))
                 plan = result.scalar_one_or_none()
 
                 if plan:

@@ -10,6 +10,10 @@ from app.models.order import Order
 from app.models.plan import HostingPlan
 from app.models.users import UserProfile
 from app.models.invoice import Invoice
+from app.models.addon import Addon
+from app.models.service import Service
+from app.models.order_addon import OrderAddon
+from app.models.order_service import OrderService as OrderServiceModel
 from app.schemas.order import OrderCreate, OrderUpdate, OrderSummary, InvoiceResponse
 from app.models.referrals import ReferralEarning
 from app.services.referral_service import ReferralService
@@ -138,26 +142,130 @@ class OrderService:
             }
             discount_percent = discount_map.get(order_data.billing_cycle.lower(), Decimal("0.00"))
 
-            # ✅ 4️⃣ Calculate totals
-            subtotal = Decimal(order_data.total_amount)
-            discount_amount = (subtotal * discount_percent) / Decimal("100.00")
-            discounted_total = subtotal - discount_amount
+            # ✅ 4️⃣ Calculate base totals from hosting plan
+            plan_subtotal = Decimal(order_data.total_amount)
+            plan_discount_amount = (plan_subtotal * discount_percent) / Decimal("100.00")
+            plan_discounted_total = plan_subtotal - plan_discount_amount
 
-            gst_amount = (discounted_total * Decimal("18.00")) / Decimal("100.00")
-            tds_amount = (discounted_total * Decimal("10.00")) / Decimal("100.00")
-            grand_total = discounted_total + gst_amount - tds_amount
+            # ✅ 5️⃣ Process Addons
+            addon_total = Decimal("0.00")
+            addon_records = []
+            invoice_addon_items = []
+            
+            if order_data.addon_ids:
+                addon_result = await db.execute(
+                    select(Addon).where(Addon.id.in_(order_data.addon_ids), Addon.is_active == True)
+                )
+                addons = addon_result.scalars().all()
+                
+                for addon in addons:
+                    unit_price = Decimal(str(addon.price))
+                    quantity = Decimal("1")  # Default quantity, can be extended later
+                    subtotal = unit_price * quantity
+                    
+                    # Apply same discount as plan
+                    addon_discount = (subtotal * discount_percent) / Decimal("100.00")
+                    addon_discounted = subtotal - addon_discount
+                    addon_tax = (addon_discounted * Decimal("18.00")) / Decimal("100.00")
+                    addon_item_total = addon_discounted + addon_tax
+                    
+                    addon_total += addon_item_total
+                    
+                    # Store for OrderAddon creation later
+                    addon_records.append({
+                        "addon_id": addon.id,
+                        "unit_price": unit_price,
+                        "quantity": quantity,
+                        "subtotal": subtotal,
+                        "discount_amount": addon_discount,
+                        "tax_amount": addon_tax,
+                        "total_amount": addon_item_total,
+                        "billing_type": addon.billing_type,
+                    })
+                    
+                    # Invoice line item
+                    invoice_addon_items.append({
+                        "description": f"{addon.name} - {addon.category.value}",
+                        "quantity": int(quantity),
+                        "unit_price": float(unit_price),
+                        "discount_percent": float(discount_percent),
+                        "discount_amount": float(addon_discount),
+                        "subtotal_after_discount": float(addon_discounted),
+                        "gst_percent": 18.0,
+                        "gst_amount": float(addon_tax),
+                        "total_amount": float(addon_item_total)
+                    })
 
-            # ✅ 5️⃣ Create Order
+            # ✅ 6️⃣ Process Services
+            service_total = Decimal("0.00")
+            service_records = []
+            invoice_service_items = []
+            
+            if order_data.service_ids:
+                service_result = await db.execute(
+                    select(Service).where(Service.id.in_(order_data.service_ids), Service.is_active == True)
+                )
+                services = service_result.scalars().all()
+                
+                for service in services:
+                    unit_price = Decimal(str(service.base_price))
+                    quantity = Decimal("1")
+                    subtotal = unit_price * quantity
+                    
+                    # Apply same discount as plan
+                    service_discount = (subtotal * discount_percent) / Decimal("100.00")
+                    service_discounted = subtotal - service_discount
+                    service_tax = (service_discounted * Decimal("18.00")) / Decimal("100.00")
+                    service_item_total = service_discounted + service_tax
+                    
+                    service_total += service_item_total
+                    
+                    # Store for OrderService creation later
+                    service_records.append({
+                        "service_id": service.id,
+                        "unit_price": unit_price,
+                        "quantity": quantity,
+                        "subtotal": subtotal,
+                        "discount_amount": service_discount,
+                        "tax_amount": service_tax,
+                        "total_amount": service_item_total,
+                        "service_status": "pending",
+                    })
+                    
+                    # Invoice line item
+                    invoice_service_items.append({
+                        "description": f"{service.name} - {service.category.value}",
+                        "quantity": int(quantity),
+                        "unit_price": float(unit_price),
+                        "discount_percent": float(discount_percent),
+                        "discount_amount": float(service_discount),
+                        "subtotal_after_discount": float(service_discounted),
+                        "gst_percent": 18.0,
+                        "gst_amount": float(service_tax),
+                        "total_amount": float(service_item_total)
+                    })
+
+            # ✅ 7️⃣ Calculate final totals (Plan + Addons + Services)
+            total_discount_amount = plan_discount_amount + sum(a["discount_amount"] for a in addon_records) + sum(s["discount_amount"] for s in service_records)
+            total_discounted = plan_discounted_total + sum(a["subtotal"] - a["discount_amount"] for a in addon_records) + sum(s["subtotal"] - s["discount_amount"] for s in service_records)
+            
+            # GST calculation (18% on total discounted amount)
+            gst_amount = (total_discounted * Decimal("18.00")) / Decimal("100.00")
+            
+            # Grand total for customer invoice
+            grand_total = total_discounted + gst_amount
+
+            # ✅ 8️⃣ Create Order
             new_order = Order(
                 user_id=user_id,
                 plan_id=order_data.plan_id,
                 order_number=order_number,
                 billing_cycle=order_data.billing_cycle,
-                total_amount=subtotal,
-                discount_amount=discount_amount,
+                total_amount=plan_subtotal + sum(a["subtotal"] for a in addon_records) + sum(s["subtotal"] for s in service_records),
+                discount_amount=total_discount_amount,
                 tax_amount=gst_amount,
                 grand_total=grand_total,
-                server_details=order_data.server_details,
+                server_details=order_data.server_details,  # Kept for backward compatibility
                 order_status="pending",
                 payment_status="pending",
                 currency="INR",
@@ -166,17 +274,65 @@ class OrderService:
             )
 
             db.add(new_order)
-            await db.flush()  # So we get new_order.id
+            await db.flush()  # Get new_order.id
 
-            # ✅ 6️⃣ Create Invoice
+            # ✅ 9️⃣ Create OrderAddon records
+            for addon_data in addon_records:
+                order_addon = OrderAddon(
+                    order_id=new_order.id,
+                    addon_id=addon_data["addon_id"],
+                    unit_price=addon_data["unit_price"],
+                    quantity=addon_data["quantity"],
+                    subtotal=addon_data["subtotal"],
+                    discount_amount=addon_data["discount_amount"],
+                    tax_amount=addon_data["tax_amount"],
+                    total_amount=addon_data["total_amount"],
+                    billing_type=addon_data["billing_type"],
+                    is_active=True,
+                )
+                db.add(order_addon)
+
+            # ✅ 🔟 Create OrderService records
+            for service_data in service_records:
+                order_service = OrderServiceModel(
+                    order_id=new_order.id,
+                    service_id=service_data["service_id"],
+                    unit_price=service_data["unit_price"],
+                    quantity=service_data["quantity"],
+                    subtotal=service_data["subtotal"],
+                    discount_amount=service_data["discount_amount"],
+                    tax_amount=service_data["tax_amount"],
+                    total_amount=service_data["total_amount"],
+                    service_status=service_data["service_status"],
+                )
+                db.add(order_service)
+
+            # ✅ 1️⃣1️⃣ Create Invoice with all line items
             invoice_number = await self._generate_invoice_number(db)
+            
+            # Build complete invoice items array: plan + addons + services
+            plan_item = {
+                "description": f"{plan.name} - {order_data.billing_cycle.title()} Plan",
+                "quantity": 1,
+                "amount": float(grand_total),
+                "unit_price": float(plan_subtotal),
+                "discount_percent": float(discount_percent),
+                "discount_amount": float(plan_discount_amount),
+                "subtotal_after_discount": float(plan_discounted_total),
+                "gst_percent": 18.0,
+                "gst_amount": float((plan_discounted_total * Decimal("18.00")) / Decimal("100.00")),
+                "total_amount": float(plan_discounted_total + (plan_discounted_total * Decimal("18.00")) / Decimal("100.00"))
+            }
+            
+            invoice_items = [plan_item] + invoice_addon_items + invoice_service_items
+            
             new_invoice = Invoice(
                 user_id=user_id,
                 order_id=new_order.id,
                 invoice_number=invoice_number,
                 invoice_date=datetime.utcnow(),
                 due_date=datetime.utcnow() + timedelta(days=7),
-                subtotal=subtotal,
+                subtotal=total_discounted,
                 tax_amount=gst_amount,
                 total_amount=grand_total,
                 amount_paid=Decimal("0.00"),
@@ -187,40 +343,31 @@ class OrderService:
                 tax_rate=Decimal("18.00"),
                 late_fee=Decimal("0.00"),
                 days_overdue=0,
-                items=[
-                    {
-                        "description": f"{plan.name} - {order_data.billing_cycle.title()} Plan",
-                        "quantity": 1,
-                        "unit_price": float(subtotal),
-                        "discount_percent": float(discount_percent),
-                        "gst_percent": 18.0,
-                        "tds_percent": 10.0,
-                        "amount": float(grand_total)
-                    }
-                ],
+                items=invoice_items,
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow(),
             )
 
             db.add(new_invoice)
 
-            # ✅ 7️⃣ Commit both
+            # ✅ 1️⃣2️⃣ Commit all changes
             await db.commit()
             await db.refresh(new_order)
             await db.refresh(new_invoice)
 
-            # ✅ 8️⃣ Auto Commission (optional)
+            # ✅ 1️⃣3️⃣ Auto Commission (optional)
             # If payment_status == "completed" → auto distribute commission
             if new_order.order_status == "completed":
                 referral_service = ReferralService()
                 await referral_service.record_commission_earnings(
                     db=db,
                     user_id=new_order.user_id,
+                    order_id=new_order.id,
                     plan_amount=new_order.grand_total,
                     plan_type="recurring" if order_data.billing_cycle.lower() == "monthly" else "longterm",
                 )
 
-            # ✅ 9️⃣ Return combined response
+            # ✅ 1️⃣4️⃣ Return combined response with addons and services
             return {
                 "order": {
                     "id": new_order.id,
@@ -236,6 +383,24 @@ class OrderService:
                     "grand_total": float(new_order.grand_total),
                     "currency": new_order.currency,
                     "server_details": new_order.server_details,
+                    "addons": [
+                        {
+                            "addon_id": a["addon_id"],
+                            "unit_price": float(a["unit_price"]),
+                            "quantity": float(a["quantity"]),
+                            "total": float(a["total_amount"])
+                        }
+                        for a in addon_records
+                    ],
+                    "services": [
+                        {
+                            "service_id": s["service_id"],
+                            "unit_price": float(s["unit_price"]),
+                            "quantity": float(s["quantity"]),
+                            "total": float(s["total_amount"])
+                        }
+                        for s in service_records
+                    ],
                     "created_at": new_order.created_at,
                     "updated_at": new_order.updated_at,
                 },
@@ -247,6 +412,7 @@ class OrderService:
                     "total_amount": float(new_invoice.total_amount),
                     "subtotal": float(new_invoice.subtotal),
                     "tax_amount": float(new_invoice.tax_amount),
+                    "items": new_invoice.items,
                     "invoice_date": new_invoice.invoice_date,
                     "due_date": new_invoice.due_date,
                     "created_at": new_invoice.created_at,

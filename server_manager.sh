@@ -49,7 +49,7 @@ case $choice in
         cd ..
         
         # Start frontend in background
-        cd RAMAERA_Hosting-main
+        cd BIDUA_Hosting-main
         npm run dev > /dev/null 2>&1 &
         FRONTEND_PID=$!
         cd ..
@@ -83,7 +83,7 @@ case $choice in
         cd ..
         
         # Start frontend
-        cd RAMAERA_Hosting-main
+        cd BIDUA_Hosting-main
         npm run dev > /dev/null 2>&1 &
         cd ..
         
@@ -95,7 +95,7 @@ case $choice in
         echo -e "${BLUE}🧹 Clearing cache and restarting...${NC}"
         
         # Clear caches
-        cd RAMAERA_Hosting-main
+        cd BIDUA_Hosting-main
         rm -rf node_modules/.vite dist .vite 2>/dev/null
         cd ../backend_template
         find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null
@@ -113,7 +113,7 @@ case $choice in
         cd backend_template
         source venv/bin/activate
         uvicorn app.main:app --reload --port 8000 > /dev/null 2>&1 &
-        cd ../RAMAERA_Hosting-main
+        cd ../BIDUA_Hosting-main
         npm run dev > /dev/null 2>&1 &
         cd ..
         

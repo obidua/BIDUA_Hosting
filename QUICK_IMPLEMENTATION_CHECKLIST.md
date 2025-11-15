@@ -2,7 +2,7 @@
 
 ## Your Razorpay Credentials (Already Set ✅)
 
-### Frontend: `RAMAERA_Hosting-main/.env`
+### Frontend: `BIDUA_Hosting-main/.env`
 ```env
 VITE_RAZORPAY_KEY_ID=rzp_test_RcsDiWWWebnqQU ✅
 ```
@@ -19,7 +19,7 @@ RAZORPAY_KEY_SECRET="d1nEKpJ4q16QF2a7J7IydP9J" ✅
 
 ### 1. Razorpay Checkout Integration (30 min)
 
-**File:** `RAMAERA_Hosting-main/src/pages/Checkout.tsx`
+**File:** `BIDUA_Hosting-main/src/pages/Checkout.tsx`
 
 Open `CHECKOUT_RAZORPAY_IMPLEMENTATION.md` and follow **Step 1** (Sections A, B, C, D).
 
@@ -29,7 +29,7 @@ All code is ready - just copy and paste into the right locations!
 
 ### 2. Billing "Pay Now" Button (15 min)
 
-**File:** `RAMAERA_Hosting-main/src/pages/dashboard/Billing.tsx`
+**File:** `BIDUA_Hosting-main/src/pages/dashboard/Billing.tsx`
 
 Open `CHECKOUT_RAZORPAY_IMPLEMENTATION.md` and follow **Step 4** (Sections A, B).
 
@@ -37,7 +37,7 @@ Open `CHECKOUT_RAZORPAY_IMPLEMENTATION.md` and follow **Step 4** (Sections A, B)
 
 ### 3. Settings Page - Profile Auto-Fill
 
-**File:** `RAMAERA_Hosting-main/src/pages/dashboard/Settings.tsx`
+**File:** `BIDUA_Hosting-main/src/pages/dashboard/Settings.tsx`
 
 **Current state:** Line 13 already has `fullName: profile?.full_name || ''`
 
@@ -104,7 +104,7 @@ await api.updateBillingSettings({
 
 ### 5. Affiliate Page Enhancements
 
-**File:** `RAMAERA_Hosting-main/src/pages/dashboard/ReferralsEnhanced.tsx`
+**File:** `BIDUA_Hosting-main/src/pages/dashboard/ReferralsEnhanced.tsx`
 
 See `IMPLEMENTATION_PLAN.md` Section 5 for complete code.
 
@@ -118,7 +118,7 @@ See `IMPLEMENTATION_PLAN.md` Section 5 for complete code.
 
 1. **Restart frontend:**
    ```bash
-   cd RAMAERA_Hosting-main
+   cd BIDUA_Hosting-main
    npm run dev
    ```
 

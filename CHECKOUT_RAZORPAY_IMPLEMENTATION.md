@@ -2,7 +2,7 @@
 
 ## Step 1: Update Checkout.tsx - Add Razorpay Integration
 
-### Location: `RAMAERA_Hosting-main/src/pages/Checkout.tsx`
+### Location: `BIDUA_Hosting-main/src/pages/Checkout.tsx`
 
 ### A. Add new state variables (after existing useState declarations around line 240):
 
@@ -233,7 +233,7 @@ interface ServerConfig {
 
 ## Step 2: Update .env with Real Razorpay Key
 
-### File: `RAMAERA_Hosting-main/.env`
+### File: `BIDUA_Hosting-main/.env`
 
 **Current:**
 ```env
@@ -270,7 +270,7 @@ VITE_RAZORPAY_KEY_ID=rzp_test_XXXXXXXXXXXX
 
 ## Step 4: Billing Page - Add Pay Now Button
 
-### File: `RAMAERA_Hosting-main/src/pages/dashboard/Billing.tsx`
+### File: `BIDUA_Hosting-main/src/pages/dashboard/Billing.tsx`
 
 ### A. Add handlePayNow function (before the return statement, around line 84):
 
@@ -391,7 +391,7 @@ const handlePayNow = async (invoice: Invoice) => {
 
 ## Step 5: Settings Page - Auto-fill Profile & Email Non-Editable
 
-### File: `RAMAERA_Hosting-main/src/pages/dashboard/Settings.tsx`
+### File: `BIDUA_Hosting-main/src/pages/dashboard/Settings.tsx`
 
 **Note:** I'll need to see this file to provide exact code. The changes needed:
 

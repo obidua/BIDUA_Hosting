@@ -126,6 +126,16 @@ app.add_middleware(NoCacheMiddleware)
 # API router
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
+# Health endpoint under /api/v1 for frontend BackendStatusBanner
+@app.get(f"{settings.API_V1_STR}/health", tags=["Health"])
+async def api_health_check():
+    """Health check endpoint for frontend monitoring"""
+    return {
+        "status": "ok",
+        "service": "BIDUA IT Connect API",
+        "version": settings.VERSION
+    }
+
 # Mount static files
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 

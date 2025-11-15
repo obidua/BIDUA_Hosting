@@ -30,7 +30,7 @@ Backend will run on: http://localhost:8000
 
 ### 2. Start Frontend
 ```bash
-cd RAMAERA_Hosting-main
+cd BIDUA_Hosting-main
 npm run dev
 ```
 Frontend will run on: http://localhost:5173
@@ -165,7 +165,7 @@ Frontend will run on: http://localhost:5173
 Full documentation available in:
 - `PROFESSIONAL_TICKETING_SYSTEM.md` - Complete feature guide
 - Backend: `backend_template/app/api/v1/endpoints/support_enhanced.py`
-- Frontend: `RAMAERA_Hosting-main/src/pages/dashboard/SupportEnhanced.tsx`
+- Frontend: `BIDUA_Hosting-main/src/pages/dashboard/SupportEnhanced.tsx`
 
 ## Support
 

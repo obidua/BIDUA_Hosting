@@ -54,7 +54,7 @@ if payment_transaction.payment_type == PaymentType.SERVER:
 ## 📋 Remaining Tasks (Frontend)
 
 ### 1. ⚠️ **Checkout Page Backend Integration** [CRITICAL - NOT STARTED]
-**File:** `RAMAERA_Hosting-main/src/pages/Checkout.tsx:495-514`
+**File:** `BIDUA_Hosting-main/src/pages/Checkout.tsx:495-514`
 
 **Current Status:** Line 500 still has `// TODO: Integrate with backend orders API`
 
@@ -81,7 +81,7 @@ See `IMPLEMENTATION_PLAN.md` Section 2.1 for complete code.
 ---
 
 ### 2. ⚠️ **Billing Page - Pay Now Button** [HIGH PRIORITY - NOT STARTED]
-**File:** `RAMAERA_Hosting-main/src/pages/dashboard/Billing.tsx:182`
+**File:** `BIDUA_Hosting-main/src/pages/dashboard/Billing.tsx:182`
 
 **Current Status:** Only "Download" button shown for all invoices
 
@@ -117,7 +117,7 @@ const handlePayNow = async (invoice: Invoice) => {
 ---
 
 ### 3. ⚠️ **Affiliate Page Enhancements** [MEDIUM PRIORITY - NOT STARTED]
-**File:** `RAMAERA_Hosting-main/src/pages/dashboard/ReferralsEnhanced.tsx`
+**File:** `BIDUA_Hosting-main/src/pages/dashboard/ReferralsEnhanced.tsx`
 
 **What needs to be done:**
 
@@ -176,7 +176,7 @@ const [showBanner, setShowBanner] = useState(true);
 ---
 
 ### 4. ⚠️ **Server Detail/Control Panel Page** [LOW PRIORITY - NOT STARTED]
-**New File:** `RAMAERA_Hosting-main/src/pages/dashboard/ServerDetails.tsx`
+**New File:** `BIDUA_Hosting-main/src/pages/dashboard/ServerDetails.tsx`
 
 **Current Status:** Clicking "Manage" on a server goes to `/dashboard/servers/{id}` but page doesn't exist
 
@@ -207,7 +207,7 @@ RAZORPAY_KEY_SECRET=your_razorpay_secret_key
 DATABASE_URL=postgresql+asyncpg://...
 ```
 
-### Frontend (`RAMAERA_Hosting-main/.env`):
+### Frontend (`BIDUA_Hosting-main/.env`):
 ```env
 # Already exists:
 VITE_API_URL=http://localhost:8000
@@ -277,9 +277,9 @@ python -m uvicorn app.main:app --reload --port 8000
 This is the MOST IMPORTANT remaining task. Without this, users can't buy servers.
 
 **Files to modify:**
-1. `RAMAERA_Hosting-main/src/pages/Checkout.tsx`
-2. `RAMAERA_Hosting-main/src/pages/Pricing.tsx`
-3. `RAMAERA_Hosting-main/.env`
+1. `BIDUA_Hosting-main/src/pages/Checkout.tsx`
+2. `BIDUA_Hosting-main/src/pages/Pricing.tsx`
+3. `BIDUA_Hosting-main/.env`
 
 **Full implementation code:** See `IMPLEMENTATION_PLAN.md` Section 2
 
@@ -287,7 +287,7 @@ This is the MOST IMPORTANT remaining task. Without this, users can't buy servers
 Users need to be able to pay pending invoices.
 
 **File to modify:**
-1. `RAMAERA_Hosting-main/src/pages/dashboard/Billing.tsx`
+1. `BIDUA_Hosting-main/src/pages/dashboard/Billing.tsx`
 
 **Full implementation code:** See `IMPLEMENTATION_PLAN.md` Section 3
 

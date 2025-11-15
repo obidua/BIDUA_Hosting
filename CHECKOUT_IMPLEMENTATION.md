@@ -421,7 +421,7 @@ PUT    /api/v1/orders/{id}/status  # Update order status
 **Deletions**: 152 lines
 
 ### Files Modified/Created:
-1. `RAMAERA_Hosting-main/src/pages/Checkout.tsx` (+671 lines)
+1. `BIDUA_Hosting-main/src/pages/Checkout.tsx` (+671 lines)
 2. `checkout_references/INTEGRATION_GUIDE.md` (new, 216 lines)
 3. `checkout_references/cart_view.json` (new, 207 lines)
 4. `checkout_references/checkout_page.json` (new, 295 lines)
