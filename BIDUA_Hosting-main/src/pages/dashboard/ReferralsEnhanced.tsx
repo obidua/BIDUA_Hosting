@@ -4,6 +4,7 @@ import {
   Award, CheckCircle, Download, ShoppingCart
 } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
   getCommissionRules,
   getReferralStats,
@@ -85,6 +86,7 @@ interface LegacyReferralStats {
 // NOTE: Using adapter-provided types from ../../types (import removed for brevity) prevents ID mismatch issues
 
 export function ReferralsEnhanced() {
+  const { profile } = useAuth();
   const [subscription, setSubscription] = useState<AffiliateSubscription | null>(null);
   const [stats, setStats] = useState<AffiliateStats | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -100,6 +102,7 @@ export function ReferralsEnhanced() {
   const [rulesLoading, setRulesLoading] = useState(false);
   const [autoActivated, setAutoActivated] = useState(false);
   const [legacyStats, setLegacyStats] = useState<LegacyReferralStats | null>(null);
+  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
   // Use relaxed ID typing (string | number) due to backend returning string IDs
   type UIReferralEarning = Omit<AdapterReferralEarning, 'id'> & { id: string | number };
   type UIReferralPayout = Omit<AdapterReferralPayout, 'id'> & { id: string | number };
@@ -108,6 +111,21 @@ export function ReferralsEnhanced() {
 
   useEffect(() => {
     loadData();
+  }, []);
+
+  // Load Razorpay script once
+  useEffect(() => {
+    const existing = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]') as HTMLScriptElement | null;
+    if (existing) {
+      setRazorpayLoaded(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => setRazorpayLoaded(true);
+    script.onerror = () => setRazorpayLoaded(false);
+    document.body.appendChild(script);
   }, []);
 
   const loadData = async () => {
@@ -238,17 +256,76 @@ export function ReferralsEnhanced() {
 
   const handleSubscribe = async () => {
     try {
-      // In a real implementation, integrate with payment gateway
-      const response = await api.post('/api/v1/affiliate/subscription/create', {
-        payment_method: 'razorpay',
-        payment_id: 'PAY_' + Date.now()
-      }) as AffiliateSubscription;
-      setSubscription(response);
-      setShowSubscriptionModal(false);
-      loadData();
-    } catch (error) {
-      console.error('Subscription failed:', error);
-      alert('Subscription payment failed. Please try again.');
+      // Create payment order for ₹499 subscription
+      const paymentOrderResponse = await api.post('/api/v1/payments/create-order', {
+        payment_type: 'subscription'
+      }) as any;
+
+      if (!paymentOrderResponse?.success) {
+        throw new Error('Failed to create payment order');
+      }
+
+      const { payment } = paymentOrderResponse;
+
+      // Ensure Razorpay loaded
+      if (!razorpayLoaded || !(window as any).Razorpay) {
+        alert('Payment system is loading. Please try again in a moment.');
+        return;
+      }
+
+      const options = {
+        key: (import.meta as any).env?.VITE_RAZORPAY_KEY_ID,
+        amount: payment.total_amount * 100, // paise
+        currency: payment.currency || 'INR',
+        name: 'BIDUA Hosting',
+        description: 'Affiliate Premium Subscription (₹499)',
+        order_id: payment.razorpay_order_id,
+        handler: async (response: any) => {
+          try {
+            // Verify payment on backend
+            const verificationResponse = await api.post('/api/v1/payments/verify-payment', {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            }) as any;
+
+            if (!verificationResponse?.success) {
+              throw new Error('Payment verification failed');
+            }
+
+            // Create affiliate subscription record
+            const subResp = await api.post('/api/v1/affiliate/subscription/create', {
+              payment_method: 'razorpay',
+              payment_id: response.razorpay_payment_id,
+              transaction_id: payment.transaction_id
+            }) as AffiliateSubscription;
+
+            setSubscription(subResp);
+            setShowSubscriptionModal(false);
+            await loadData();
+          } catch (err: any) {
+            console.error('Payment verification/subscription error:', err);
+            alert(`Payment verification failed: ${err?.message || 'Unknown error'}`);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            // User cancelled payment
+            console.log('Subscription payment cancelled by user');
+          }
+        },
+        theme: { color: '#06b6d4' }
+      };
+
+      const razorpay = new (window as any).Razorpay(options);
+      razorpay.on('payment.failed', (resp: any) => {
+        console.error('Payment failed:', resp?.error);
+        alert(resp?.error?.description || 'Payment failed');
+      });
+      razorpay.open();
+    } catch (error: any) {
+      console.error('Subscription initiation failed:', error);
+      alert(error?.message || 'Failed to initiate payment');
     }
   };
 
@@ -423,6 +500,9 @@ export function ReferralsEnhanced() {
                 <p className="text-slate-300 text-xs sm:text-sm">
                   Activated on {new Date(subscription.activated_at).toLocaleDateString()}
                 </p>
+                {profile?.referred_by && (
+                  <p className="text-cyan-300 text-xs mt-1">Sponsor ID: {profile.referred_by}</p>
+                )}
                 {autoActivated && (
                   <p className="text-green-400 text-xs mt-1">Automatically activated from your server purchase 🎉</p>
                 )}

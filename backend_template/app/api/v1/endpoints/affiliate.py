@@ -23,6 +23,61 @@ affiliate_service = AffiliateService()
 
 # ==================== Subscription Management ====================
 
+@router.get("/validate-code")
+async def validate_referral_code(
+    code: str = Query(..., min_length=3, description="Referral code to validate"),
+    db: AsyncSession = Depends(get_db)
+):
+    """Public: validate a referral code and return inviter details if valid.
+    Accepts both AffiliateSubscription.referral_code and legacy UserProfile.referral_code.
+    """
+    from sqlalchemy import select
+    from app.models.affiliate import AffiliateSubscription
+
+    # 1) Try affiliate subscription code (primary)
+    result = await db.execute(
+        select(AffiliateSubscription).where(AffiliateSubscription.referral_code == code)
+    )
+    aff = result.scalar_one_or_none()
+
+    inviter: Optional[UserProfile] = None
+    normalized_code: Optional[str] = None
+
+    if aff and aff.is_active:
+        normalized_code = aff.referral_code
+        inviter_result = await db.execute(
+            select(UserProfile).where(UserProfile.id == aff.user_id)
+        )
+        inviter = inviter_result.scalar_one_or_none()
+    else:
+        # 2) Try legacy user referral codes and map to their affiliate code if any
+        legacy_user_result = await db.execute(
+            select(UserProfile).where(UserProfile.referral_code == code)
+        )
+        legacy_user = legacy_user_result.scalar_one_or_none()
+        if legacy_user:
+            # If user has affiliate subscription, use that code; else still return basic inviter info
+            aff2_result = await db.execute(
+                select(AffiliateSubscription).where(AffiliateSubscription.user_id == legacy_user.id)
+            )
+            aff2 = aff2_result.scalar_one_or_none()
+            normalized_code = aff2.referral_code if (aff2 and aff2.is_active) else None
+            inviter = legacy_user
+
+    if not inviter:
+        return {"valid": False}
+
+    return {
+        "valid": True,
+        "code": normalized_code or code,
+        "inviter": {
+            "id": inviter.id,
+            "full_name": inviter.full_name,
+            "email": inviter.email,
+        },
+        "has_active_affiliate": bool(normalized_code)
+    }
+
 @router.post("/subscription/create", response_model=AffiliateSubscriptionResponse)
 async def create_affiliate_subscription(
     subscription_data: AffiliateSubscriptionCreate,

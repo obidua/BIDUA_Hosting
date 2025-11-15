@@ -76,9 +76,9 @@ export function ServerManagement() {
       stopped: 'bg-red-100 text-red-800',
       provisioning: 'bg-yellow-100 text-yellow-800',
       suspended: 'bg-orange-100 text-orange-800',
-      terminated: 'bg-gray-100 text-gray-800',
+      terminated: 'bg-slate-900 text-slate-200',
     };
-    return styles[status] || 'bg-gray-100 text-gray-800';
+    return styles[status] || 'bg-slate-900 text-slate-200';
   };
 
   const filteredServers = servers.filter(server => {
@@ -124,7 +124,7 @@ export function ServerManagement() {
         actions={
           <button
             onClick={fetchServers}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-950/60 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
@@ -133,24 +133,24 @@ export function ServerManagement() {
       />
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
+      <div className="bg-slate-950/60 p-4 rounded-lg shadow-md border border-slate-900">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 w-5 h-5" />
             <input
               type="text"
               placeholder="Search by name, hostname, IP, or user email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-slate-800 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <div className="flex items-center gap-2">
-            <Filter className="text-gray-400 w-5 h-5" />
+            <Filter className="text-slate-500 w-5 h-5" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-4 py-2 border border-slate-800 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -166,24 +166,24 @@ export function ServerManagement() {
 
       {/* Stats Summary */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
-          <p className="text-sm text-gray-600">Total Servers</p>
-          <p className="text-2xl font-bold text-gray-900">{servers.length}</p>
+        <div className="bg-slate-950/60 p-4 rounded-lg shadow-md border border-slate-900">
+          <p className="text-sm text-slate-400">Total Servers</p>
+          <p className="text-2xl font-bold text-white">{servers.length}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
-          <p className="text-sm text-gray-600">Active</p>
+        <div className="bg-slate-950/60 p-4 rounded-lg shadow-md border border-slate-900">
+          <p className="text-sm text-slate-400">Active</p>
           <p className="text-2xl font-bold text-green-600">
             {servers.filter(s => s.server_status === 'active' || s.server_status === 'running').length}
           </p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
-          <p className="text-sm text-gray-600">Provisioning</p>
+        <div className="bg-slate-950/60 p-4 rounded-lg shadow-md border border-slate-900">
+          <p className="text-sm text-slate-400">Provisioning</p>
           <p className="text-2xl font-bold text-yellow-600">
             {servers.filter(s => s.server_status === 'provisioning').length}
           </p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
-          <p className="text-sm text-gray-600">Monthly Revenue</p>
+        <div className="bg-slate-950/60 p-4 rounded-lg shadow-md border border-slate-900">
+          <p className="text-sm text-slate-400">Monthly Revenue</p>
           <p className="text-2xl font-bold text-blue-600">
             {formatCurrency(servers.reduce((sum, s) => sum + (s.monthly_cost || 0), 0))}
           </p>
@@ -191,57 +191,57 @@ export function ServerManagement() {
       </div>
 
       {/* Servers Table */}
-      <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+      <div className="bg-slate-950/60 rounded-lg shadow-md border border-slate-900 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-slate-950/70">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Server
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   User
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Specs
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Cost
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Created
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-slate-950/60 divide-y divide-gray-200">
               {filteredServers.map((server) => (
-                <tr key={server.id} className="hover:bg-gray-50">
+                <tr key={server.id} className="hover:bg-slate-950/70">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <Server className="w-5 h-5 text-gray-400 mr-3" />
+                      <Server className="w-5 h-5 text-slate-500 mr-3" />
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{server.server_name}</div>
-                        <div className="text-sm text-gray-500">{server.hostname}</div>
-                        <div className="text-xs text-gray-400">{server.ip_address || 'No IP'}</div>
+                        <div className="text-sm font-medium text-white">{server.server_name}</div>
+                        <div className="text-sm text-slate-500">{server.hostname}</div>
+                        <div className="text-xs text-slate-500">{server.ip_address || 'No IP'}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{server.user?.full_name || 'N/A'}</div>
-                    <div className="text-sm text-gray-500">{server.user?.email || 'N/A'}</div>
+                    <div className="text-sm text-white">{server.user?.full_name || 'N/A'}</div>
+                    <div className="text-sm text-slate-500">{server.user?.email || 'N/A'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{server.plan_name}</div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-sm text-white">{server.plan_name}</div>
+                    <div className="text-xs text-slate-500">
                       {server.vcpu} vCPU | {server.ram_gb}GB RAM | {server.storage_gb}GB SSD
                     </div>
-                    <div className="text-xs text-gray-400">{server.operating_system}</div>
+                    <div className="text-xs text-slate-500">{server.operating_system}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(server.server_status)}`}>
@@ -249,16 +249,16 @@ export function ServerManagement() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
+                    <div className="text-sm font-medium text-white">
                       {formatCurrency(server.monthly_cost)}
                     </div>
-                    <div className="text-xs text-gray-500">per month</div>
+                    <div className="text-xs text-slate-500">per month</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{formatDate(server.created_at)}</div>
-                    <div className="text-xs text-gray-500">Expires: {formatDate(server.expiry_date)}</div>
+                    <div className="text-sm text-white">{formatDate(server.created_at)}</div>
+                    <div className="text-xs text-slate-500">Expires: {formatDate(server.expiry_date)}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => {
@@ -306,7 +306,7 @@ export function ServerManagement() {
           </table>
         </div>
         {filteredServers.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-slate-500">
             <Server className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p>No servers found</p>
           </div>
@@ -316,13 +316,13 @@ export function ServerManagement() {
       {/* Server Details Modal */}
       {showDetails && selectedServer && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-slate-950/60 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Server Details</h2>
+                <h2 className="text-2xl font-bold text-white">Server Details</h2>
                 <button
                   onClick={() => setShowDetails(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-slate-500 hover:text-slate-400"
                 >
                   &times;
                 </button>
@@ -331,76 +331,76 @@ export function ServerManagement() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-600">Server Name</p>
+                    <p className="text-sm text-slate-400">Server Name</p>
                     <p className="font-medium">{selectedServer.server_name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Status</p>
+                    <p className="text-sm text-slate-400">Status</p>
                     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(selectedServer.server_status)}`}>
                       {selectedServer.server_status}
                     </span>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Hostname</p>
+                    <p className="text-sm text-slate-400">Hostname</p>
                     <p className="font-medium">{selectedServer.hostname}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">IP Address</p>
+                    <p className="text-sm text-slate-400">IP Address</p>
                     <p className="font-medium">{selectedServer.ip_address || 'Not Assigned'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Plan</p>
+                    <p className="text-sm text-slate-400">Plan</p>
                     <p className="font-medium">{selectedServer.plan_name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Monthly Cost</p>
+                    <p className="text-sm text-slate-400">Monthly Cost</p>
                     <p className="font-medium">{formatCurrency(selectedServer.monthly_cost)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">vCPU</p>
+                    <p className="text-sm text-slate-400">vCPU</p>
                     <p className="font-medium">{selectedServer.vcpu} cores</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">RAM</p>
+                    <p className="text-sm text-slate-400">RAM</p>
                     <p className="font-medium">{selectedServer.ram_gb} GB</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Storage</p>
+                    <p className="text-sm text-slate-400">Storage</p>
                     <p className="font-medium">{selectedServer.storage_gb} GB SSD</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Bandwidth</p>
+                    <p className="text-sm text-slate-400">Bandwidth</p>
                     <p className="font-medium">{selectedServer.bandwidth_gb} GB</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Operating System</p>
+                    <p className="text-sm text-slate-400">Operating System</p>
                     <p className="font-medium">{selectedServer.operating_system}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Server Type</p>
+                    <p className="text-sm text-slate-400">Server Type</p>
                     <p className="font-medium">{selectedServer.server_type}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Created</p>
+                    <p className="text-sm text-slate-400">Created</p>
                     <p className="font-medium">{formatDate(selectedServer.created_at)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Expires</p>
+                    <p className="text-sm text-slate-400">Expires</p>
                     <p className="font-medium">{formatDate(selectedServer.expiry_date)}</p>
                   </div>
                 </div>
 
                 <div className="border-t pt-4 mt-4">
-                  <p className="text-sm text-gray-600 mb-2">User Information</p>
+                  <p className="text-sm text-slate-400 mb-2">User Information</p>
                   <p className="font-medium">{selectedServer.user?.full_name || 'N/A'}</p>
-                  <p className="text-sm text-gray-500">{selectedServer.user?.email || 'N/A'}</p>
+                  <p className="text-sm text-slate-500">{selectedServer.user?.email || 'N/A'}</p>
                 </div>
               </div>
 
               <div className="flex justify-end gap-2 mt-6">
                 <button
                   onClick={() => setShowDetails(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 border border-slate-800 rounded-lg hover:bg-slate-950/70"
                 >
                   Close
                 </button>

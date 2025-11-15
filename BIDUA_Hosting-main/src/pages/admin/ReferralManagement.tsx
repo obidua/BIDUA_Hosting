@@ -113,7 +113,7 @@ export function ReferralManagement() {
         actions={
           <button
             onClick={fetchData}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-950/60 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
@@ -123,34 +123,34 @@ export function ReferralManagement() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
-          <p className="text-sm text-gray-600">Total Affiliates</p>
-          <p className="text-2xl font-bold text-gray-900">{affiliates.length}</p>
+        <div className="bg-slate-950/60 p-4 rounded-lg shadow-md border border-slate-900">
+          <p className="text-sm text-slate-400">Total Affiliates</p>
+          <p className="text-2xl font-bold text-white">{affiliates.length}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
-          <p className="text-sm text-gray-600">Total Referrals</p>
+        <div className="bg-slate-950/60 p-4 rounded-lg shadow-md border border-slate-900">
+          <p className="text-sm text-slate-400">Total Referrals</p>
           <p className="text-2xl font-bold text-blue-600">{totalReferrals}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
-          <p className="text-sm text-gray-600">Total Commissions</p>
+        <div className="bg-slate-950/60 p-4 rounded-lg shadow-md border border-slate-900">
+          <p className="text-sm text-slate-400">Total Commissions</p>
           <p className="text-2xl font-bold text-green-600">{formatCurrency(totalCommissions)}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
-          <p className="text-sm text-gray-600">Pending Payouts</p>
+        <div className="bg-slate-950/60 p-4 rounded-lg shadow-md border border-slate-900">
+          <p className="text-sm text-slate-400">Pending Payouts</p>
           <p className="text-2xl font-bold text-orange-600">{formatCurrency(pendingPayouts)}</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-lg shadow-md border border-gray-200">
-        <div className="border-b border-gray-200">
+      <div className="bg-slate-950/60 rounded-lg shadow-md border border-slate-900">
+        <div className="border-b border-slate-900">
           <div className="flex">
             <button
               onClick={() => setActiveTab('affiliates')}
               className={`px-6 py-3 font-medium ${
                 activeTab === 'affiliates'
                   ? 'border-b-2 border-blue-600 text-blue-600'
-                  : 'text-gray-500 hover:text-gray-700'
+                  : 'text-slate-500 hover:text-slate-300'
               }`}
             >
               Affiliates ({affiliates.length})
@@ -160,7 +160,7 @@ export function ReferralManagement() {
               className={`px-6 py-3 font-medium ${
                 activeTab === 'payouts'
                   ? 'border-b-2 border-blue-600 text-blue-600'
-                  : 'text-gray-500 hover:text-gray-700'
+                  : 'text-slate-500 hover:text-slate-300'
               }`}
             >
               Pending Payouts ({payouts.length})
@@ -172,35 +172,35 @@ export function ReferralManagement() {
           {activeTab === 'affiliates' && (
             <>
               <div className="mb-4 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 w-5 h-5" />
                 <input
                   type="text"
                   placeholder="Search affiliates..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg"
+                  className="w-full pl-10 pr-4 py-2 border border-slate-800 rounded-lg"
                 />
               </div>
 
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-slate-950/70">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Affiliate</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Referrals</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Balance</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Joined</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Affiliate</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Code</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Referrals</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Commission</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Balance</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Joined</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-slate-950/60 divide-y divide-gray-200">
                     {filteredAffiliates.map((affiliate) => (
-                      <tr key={affiliate.id} className="hover:bg-gray-50">
+                      <tr key={affiliate.id} className="hover:bg-slate-950/70">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{affiliate.user?.full_name || 'N/A'}</div>
-                          <div className="text-sm text-gray-500">{affiliate.user?.email || 'N/A'}</div>
+                          <div className="text-sm font-medium text-white">{affiliate.user?.full_name || 'N/A'}</div>
+                          <div className="text-sm text-slate-500">{affiliate.user?.email || 'N/A'}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded font-mono text-sm">
@@ -208,7 +208,7 @@ export function ReferralManagement() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{affiliate.total_referrals || 0}</div>
+                          <div className="text-sm font-medium text-white">{affiliate.total_referrals || 0}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-green-600">
@@ -227,7 +227,7 @@ export function ReferralManagement() {
                             {affiliate.is_active ? 'Active' : 'Inactive'}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                           {formatDate(affiliate.created_at)}
                         </td>
                       </tr>
@@ -237,7 +237,7 @@ export function ReferralManagement() {
               </div>
 
               {filteredAffiliates.length === 0 && (
-                <div className="text-center py-12 text-gray-500">
+                <div className="text-center py-12 text-slate-500">
                   <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>No affiliates found</p>
                 </div>
@@ -248,27 +248,27 @@ export function ReferralManagement() {
           {activeTab === 'payouts' && (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+                <thead className="bg-slate-950/70">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Method</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Requested</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">User</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Amount</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Method</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Requested</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-slate-950/60 divide-y divide-gray-200">
                   {payouts.map((payout) => (
-                    <tr key={payout.id} className="hover:bg-gray-50">
+                    <tr key={payout.id} className="hover:bg-slate-950/70">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{payout.user?.full_name || 'N/A'}</div>
-                        <div className="text-sm text-gray-500">{payout.user?.email || 'N/A'}</div>
+                        <div className="text-sm font-medium text-white">{payout.user?.full_name || 'N/A'}</div>
+                        <div className="text-sm text-slate-500">{payout.user?.email || 'N/A'}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-bold text-green-600">{formatCurrency(payout.amount)}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                         {payout.payment_method}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -276,7 +276,7 @@ export function ReferralManagement() {
                           {payout.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                         {formatDate(payout.requested_at)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -301,7 +301,7 @@ export function ReferralManagement() {
               </table>
 
               {payouts.length === 0 && (
-                <div className="text-center py-12 text-gray-500">
+                <div className="text-center py-12 text-slate-500">
                   <DollarSign className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>No pending payouts</p>
                 </div>

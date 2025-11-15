@@ -13,6 +13,9 @@ from app.core.security import (
     get_current_user, verify_token
 )
 from app.services.user_service import UserService
+from sqlalchemy import select
+from app.models.affiliate import AffiliateSubscription
+from app.models.users import UserProfile
 from app.schemas.users import User, UserCreate, LoginRequest, Token, PasswordChange,SubscriptionInfo, SubscriptionActivate
 
 router = APIRouter()
@@ -91,27 +94,51 @@ async def register(
                 detail="User with this email already exists"
             )
         
-        # Validate referral code if provided
-        referrer_code = None
-        if user_data.referral_code:
-            referral_user = await user_service.get_user_by_referral_code(db, user_data.referral_code)
-            if not referral_user:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid referral code"
+        # Validate referral code if provided (accept both AffiliateSubscription codes and legacy UserProfile codes)
+        referrer_code_to_track: str | None = None
+        provided_code = user_data.referral_code
+        if provided_code:
+            # 1) Check affiliate subscription codes (primary)
+            aff_result = await db.execute(
+                select(AffiliateSubscription).where(
+                    AffiliateSubscription.referral_code == provided_code
                 )
-            referrer_code = user_data.referral_code
+            )
+            aff_sub = aff_result.scalar_one_or_none()
+            if aff_sub and aff_sub.is_active:
+                referrer_code_to_track = aff_sub.referral_code
+            else:
+                # 2) Check legacy user referral codes and map to their affiliate code if active
+                legacy_user = await user_service.get_user_by_referral_code(db, provided_code)
+                if legacy_user:
+                    # Try to fetch the user's affiliate subscription to get canonical code
+                    aff_result2 = await db.execute(
+                        select(AffiliateSubscription).where(
+                            AffiliateSubscription.user_id == legacy_user.id
+                        )
+                    )
+                    aff_sub2 = aff_result2.scalar_one_or_none()
+                    if aff_sub2 and aff_sub2.is_active:
+                        referrer_code_to_track = aff_sub2.referral_code
+                    else:
+                        # No active affiliate program for this referrer; proceed without blocking signup
+                        referrer_code_to_track = None
+                else:
+                    # Invalid code provided; do not block signup, just ignore
+                    referrer_code_to_track = None
         
         # Create new user
-        user = await user_service.create_user(db, user_data)
+        # Important: Avoid passing affiliate code into create_user, since it validates only legacy UserProfile codes
+        create_payload = user_data.copy(update={"referral_code": None}) if hasattr(user_data, "copy") else user_data
+        user = await user_service.create_user(db, create_payload)
         
-        # 🆕 Track affiliate referral if code was provided
-        if referrer_code:
+        # 🆕 Track affiliate referral if a valid code was provided/mapped
+        if referrer_code_to_track:
             try:
                 from app.services.affiliate_service import AffiliateService
                 affiliate_service = AffiliateService()
                 await affiliate_service.track_referral(
-                    db, referrer_code, user.id, signup_ip=None
+                    db, referrer_code_to_track, user.id, signup_ip=None
                 )
             except Exception as aff_error:
                 # Log error but don't fail registration

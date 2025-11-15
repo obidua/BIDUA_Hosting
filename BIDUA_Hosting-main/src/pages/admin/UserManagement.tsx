@@ -110,7 +110,7 @@ export function UserManagement() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {summaryCards.map((card) => (
-          <div key={card.label} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <div key={card.label} className="bg-slate-950/60 border border-slate-200 rounded-2xl p-5 shadow-sm">
             <p className="text-sm text-slate-500">{card.label}</p>
             <p className="text-3xl font-semibold text-slate-900 mt-1">{card.value}</p>
             <p className="text-sm text-slate-500 mt-2">{card.helper}</p>
@@ -118,7 +118,7 @@ export function UserManagement() {
         ))}
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+      <div className="bg-slate-950/60 border border-slate-200 rounded-2xl shadow-sm p-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-600 mb-2">Search</label>
@@ -165,7 +165,7 @@ export function UserManagement() {
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-slate-950/60 border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-slate-50 border-b border-slate-200">

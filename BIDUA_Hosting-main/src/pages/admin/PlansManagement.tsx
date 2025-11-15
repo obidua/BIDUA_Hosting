@@ -154,14 +154,14 @@ export function PlansManagement() {
           <>
             <button
               onClick={fetchPlans}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition"
+              className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-slate-200 rounded-xl border border-slate-800 hover:bg-slate-900/70 transition"
             >
               <RefreshCw className="w-4 h-4" />
               Refresh
             </button>
             <button
               onClick={() => { resetForm(); setEditingPlan(null); setShowAddModal(true); }}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition shadow"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl hover:from-cyan-400 hover:to-blue-400 transition shadow-lg shadow-cyan-500/30"
             >
               <Plus className="w-4 h-4" />
               Add Plan
@@ -171,32 +171,32 @@ export function PlansManagement() {
       />
 
       {/* Search */}
-      <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
+      <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-900 shadow-[0_15px_45px_rgba(2,6,23,0.7)]">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 w-5 h-5" />
           <input
             type="text"
             placeholder="Search plans..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-10 pr-4 py-2 bg-slate-900 text-white border border-slate-800 rounded-xl focus:ring-2 focus:ring-cyan-500 placeholder-slate-500"
           />
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
-          <p className="text-sm text-gray-600">Total Plans</p>
-          <p className="text-2xl font-bold text-gray-900">{plans.length}</p>
+        <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-900">
+          <p className="text-sm text-slate-400">Total Plans</p>
+          <p className="text-2xl font-bold text-white">{plans.length}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
-          <p className="text-sm text-gray-600">Active Plans</p>
-          <p className="text-2xl font-bold text-green-600">{plans.filter(p => p.is_active).length}</p>
+        <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-900">
+          <p className="text-sm text-slate-400">Active Plans</p>
+          <p className="text-2xl font-bold text-emerald-400">{plans.filter(p => p.is_active).length}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
-          <p className="text-sm text-gray-600">Avg Price</p>
-          <p className="text-2xl font-bold text-blue-600">
+        <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-900">
+          <p className="text-sm text-slate-400">Avg Price</p>
+          <p className="text-2xl font-bold text-cyan-300">
             {formatCurrency(plans.length ? plans.reduce((s, p) => s + p.base_price, 0) / plans.length : 0)}
           </p>
         </div>
@@ -205,58 +205,58 @@ export function PlansManagement() {
       {/* Plans Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredPlans.map((plan) => (
-          <div key={plan.id} className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-4">
+          <div key={plan.id} className="bg-slate-950/60 rounded-2xl border border-slate-900 overflow-hidden shadow-[0_12px_35px_rgba(2,6,23,0.7)]">
+            <div className="p-6 space-y-4">
+              <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
-                  <p className="text-sm text-gray-500">{plan.slug}</p>
+                  <h3 className="text-xl font-bold text-white">{plan.name}</h3>
+                  <p className="text-sm text-slate-500">{plan.slug}</p>
                 </div>
-                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                  plan.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${
+                  plan.is_active ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-slate-900 text-slate-400 border-slate-700'
                 }`}>
                   {plan.is_active ? 'Active' : 'Inactive'}
                 </span>
               </div>
 
-              <p className="text-gray-600 text-sm mb-4">{plan.description || 'No description'}</p>
+              <p className="text-slate-400 text-sm">{plan.description || 'No description'}</p>
 
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">vCPU</span>
-                  <span className="font-medium">{plan.vcpu} cores</span>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm text-slate-400">
+                  <span>vCPU</span>
+                  <span className="font-semibold text-white">{plan.vcpu} cores</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">RAM</span>
-                  <span className="font-medium">{plan.ram_gb} GB</span>
+                <div className="flex justify-between text-sm text-slate-400">
+                  <span>RAM</span>
+                  <span className="font-semibold text-white">{plan.ram_gb} GB</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Storage</span>
-                  <span className="font-medium">{plan.storage_gb} GB SSD</span>
+                <div className="flex justify-between text-sm text-slate-400">
+                  <span>Storage</span>
+                  <span className="font-semibold text-white">{plan.storage_gb} GB SSD</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Bandwidth</span>
-                  <span className="font-medium">{plan.bandwidth_gb} GB</span>
+                <div className="flex justify-between text-sm text-slate-400">
+                  <span>Bandwidth</span>
+                  <span className="font-semibold text-white">{plan.bandwidth_gb} GB</span>
                 </div>
               </div>
 
-              <div className="border-t pt-4">
-                <p className="text-2xl font-bold text-blue-600">{formatCurrency(plan.base_price)}</p>
-                <p className="text-xs text-gray-500">per month</p>
+              <div className="border-t border-slate-900 pt-4">
+                <p className="text-2xl font-bold text-cyan-300">{formatCurrency(plan.base_price)}</p>
+                <p className="text-xs text-slate-500">per month</p>
               </div>
             </div>
 
-            <div className="bg-gray-50 px-6 py-3 flex justify-end gap-2">
+            <div className="bg-slate-900/70 px-6 py-3 flex justify-end gap-2 border-t border-slate-900">
               <button
                 onClick={() => openEditModal(plan)}
-                className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                className="p-2 text-cyan-300 hover:bg-cyan-500/10 rounded"
                 title="Edit"
               >
                 <Edit className="w-4 h-4" />
               </button>
               <button
                 onClick={() => handleDelete(plan.id)}
-                className="p-2 text-red-600 hover:bg-red-50 rounded"
+                className="p-2 text-rose-400 hover:bg-rose-500/10 rounded"
                 title="Delete"
               >
                 <Trash2 className="w-4 h-4" />
@@ -267,93 +267,93 @@ export function PlansManagement() {
       </div>
 
       {filteredPlans.length === 0 && (
-        <div className="text-center py-12 text-gray-500 bg-white rounded-lg shadow-md">
-          <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
+        <div className="text-center py-12 text-slate-400 bg-slate-950/60 rounded-2xl border border-slate-900 shadow-[0_12px_35px_rgba(2,6,23,0.7)]">
+          <Package className="w-12 h-12 mx-auto mb-4 text-slate-600" />
           <p>No plans found</p>
         </div>
       )}
 
       {/* Add/Edit Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h2 className="text-2xl font-bold mb-6">{editingPlan ? 'Edit Plan' : 'Add New Plan'}</h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-950 rounded-2xl border border-slate-900 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-[0_25px_70px_rgba(0,0,0,0.7)]">
+            <div className="p-6 space-y-4">
+              <h2 className="text-2xl font-bold text-white">{editingPlan ? 'Edit Plan' : 'Add New Plan'}</h2>
+              <form onSubmit={handleSubmit} className="space-y-4 text-white">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">Name</label>
                     <input
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg focus:ring-2 focus:ring-cyan-500"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Slug</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">Slug</label>
                     <input
                       type="text"
                       value={formData.slug}
                       onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg focus:ring-2 focus:ring-cyan-500"
                       required
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Description</label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg focus:ring-2 focus:ring-cyan-500"
                     rows={3}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">vCPU</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">vCPU</label>
                     <input
                       type="number"
                       value={formData.vcpu}
                       onChange={(e) => setFormData({ ...formData, vcpu: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg focus:ring-2 focus:ring-cyan-500"
                       min="1"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">RAM (GB)</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">RAM (GB)</label>
                     <input
                       type="number"
                       value={formData.ram_gb}
                       onChange={(e) => setFormData({ ...formData, ram_gb: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg focus:ring-2 focus:ring-cyan-500"
                       min="1"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Storage (GB)</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">Storage (GB)</label>
                     <input
                       type="number"
                       value={formData.storage_gb}
                       onChange={(e) => setFormData({ ...formData, storage_gb: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg focus:ring-2 focus:ring-cyan-500"
                       min="1"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Bandwidth (GB)</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">Bandwidth (GB)</label>
                     <input
                       type="number"
                       value={formData.bandwidth_gb}
                       onChange={(e) => setFormData({ ...formData, bandwidth_gb: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg focus:ring-2 focus:ring-cyan-500"
                       min="1"
                       required
                     />
@@ -361,12 +361,12 @@ export function PlansManagement() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Base Price (INR)</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Base Price (INR)</label>
                   <input
                     type="number"
                     value={formData.base_price}
                     onChange={(e) => setFormData({ ...formData, base_price: parseFloat(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg focus:ring-2 focus:ring-cyan-500"
                     min="0"
                     step="0.01"
                     required
@@ -374,37 +374,37 @@ export function PlansManagement() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Features (one per line)</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Features (one per line)</label>
                   <textarea
                     value={formData.features}
                     onChange={(e) => setFormData({ ...formData, features: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg focus:ring-2 focus:ring-cyan-500"
                     rows={4}
                     placeholder="24/7 Support&#10;SSD Storage&#10;Free SSL"
                   />
                 </div>
 
-                <div className="flex items-center">
+                <div className="flex items-center text-slate-300">
                   <input
                     type="checkbox"
                     checked={formData.is_active}
                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                    className="mr-2"
+                    className="mr-2 rounded border-slate-600 text-cyan-500 focus:ring-cyan-500 bg-slate-900"
                   />
-                  <label className="text-sm font-medium text-gray-700">Active</label>
+                  <label className="text-sm font-medium">Active</label>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-4">
                   <button
                     type="button"
                     onClick={() => { setShowAddModal(false); setEditingPlan(null); }}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    className="px-4 py-2 border border-slate-700 rounded-lg hover:bg-slate-900 text-slate-300"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg hover:from-cyan-400 hover:to-blue-400"
                   >
                     {editingPlan ? 'Update' : 'Create'}
                   </button>

@@ -1,4 +1,4 @@
-import { Server, Power, PowerOff, RefreshCw, Settings, MoreVertical, Info, X, DollarSign, Calendar, Package, Shield, Database, HardDrive, Cpu, MemoryStick } from 'lucide-react';
+import { Server, Power, PowerOff, RefreshCw, Settings, MoreVertical, Info, X, DollarSign, Package, Shield, Cpu } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
@@ -47,6 +47,14 @@ export function MyServers() {
   const [loading, setLoading] = useState(true);
   const [selectedServer, setSelectedServer] = useState<ServerData | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showNoServerBanner, setShowNoServerBanner] = useState<boolean>(() => {
+    try {
+      // Persist dismissal per-user if available later
+      return localStorage.getItem('dismiss_no_server_banner') !== 'true';
+    } catch {
+      return true;
+    }
+  });
 
   useEffect(() => {
     loadServers();
@@ -105,16 +113,43 @@ export function MyServers() {
           <p>Loading servers...</p>
         </div>
       ) : servers.length === 0 ? (
-        <div className="bg-slate-900 rounded-xl shadow-sm border-2 border-cyan-500 p-8 text-center">
-          <Server className="h-16 w-16 text-slate-600 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-white mb-2">No Servers Yet</h3>
-          <p className="text-slate-400 mb-6">Deploy your first server to get started</p>
-          <Link
-            to="/pricing"
-            className="inline-block px-6 py-3 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition font-semibold border-2 border-cyan-500"
-          >
-            View Plans
-          </Link>
+        <div className="space-y-3 px-2 sm:px-0">
+          {showNoServerBanner && (
+            <div className="flex items-start sm:items-center justify-between gap-3 bg-cyan-500/10 border border-cyan-500/30 text-cyan-100 rounded-lg p-3 sm:p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 bg-cyan-500/20 rounded-lg flex items-center justify-center">
+                  <Server className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-400" />
+                </div>
+                <div>
+                  <div className="text-white font-semibold text-sm sm:text-base">No servers yet</div>
+                  <div className="text-xs sm:text-sm text-cyan-100">
+                    Deploy your first server to get started. You can pick a plan that fits your needs.
+                  </div>
+                </div>
+              </div>
+              <button
+                aria-label="Dismiss"
+                className="text-cyan-300 hover:text-white text-xs sm:text-sm"
+                onClick={() => {
+                  try { localStorage.setItem('dismiss_no_server_banner', 'true'); } catch {}
+                  setShowNoServerBanner(false);
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          <div className="bg-slate-900 rounded-lg border border-cyan-500/30 p-4 text-center">
+            <h3 className="text-base sm:text-lg font-semibold text-white mb-1">No Servers Found</h3>
+            <p className="text-slate-400 mb-4 text-sm">Deploy your first server to get started.</p>
+            <Link
+              to="/pricing"
+              className="inline-block px-4 sm:px-5 py-2 sm:py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition font-semibold border border-cyan-500 text-sm"
+            >
+              View Plans
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:gap-6 px-2 sm:px-0">

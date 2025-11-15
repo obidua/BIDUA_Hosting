@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Server } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../lib/api';
 
 export function Signup() {
   const [searchParams] = useSearchParams();
@@ -11,6 +12,9 @@ export function Signup() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [referralCode, setReferralCode] = useState('');
+  const [referralCheckLoading, setReferralCheckLoading] = useState(false);
+  const [referralValid, setReferralValid] = useState<boolean | null>(null);
+  const [referralInviter, setReferralInviter] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signUp, user } = useAuth();
@@ -41,6 +45,35 @@ export function Signup() {
       setReferralCode(refCode);
     }
   }, [searchParams]);
+
+  // Validate referral code when it changes
+  useEffect(() => {
+    let active = true;
+    const check = async () => {
+      if (!referralCode) {
+        setReferralValid(null);
+        setReferralInviter(null);
+        return;
+      }
+      setReferralCheckLoading(true);
+      try {
+        const resp = await api.get<{ valid: boolean; inviter?: { full_name?: string; email?: string }; code?: string }>(`/api/v1/affiliate/validate-code?code=${encodeURIComponent(referralCode)}`);
+        if (!active) return;
+        setReferralValid(Boolean(resp?.valid));
+        setReferralInviter(resp?.inviter?.full_name || resp?.inviter?.email || null);
+      } catch {
+        if (!active) return;
+        // Backend unreachable or error: don't mark invalid, just unknown
+        setReferralValid(null);
+        setReferralInviter(null);
+      } finally {
+        if (active) setReferralCheckLoading(false);
+      }
+    };
+    // debounce a bit
+    const t = setTimeout(check, 250);
+    return () => { active = false; clearTimeout(t); };
+  }, [referralCode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,8 +108,9 @@ export function Signup() {
         // Default to dashboard
         navigate('/dashboard');
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to create account');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to create account';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -170,9 +204,17 @@ export function Signup() {
                 placeholder="Enter referral code"
               />
               {referralCode && (
-                <p className="mt-1 text-xs text-cyan-400">
-                  You'll be linked to the referrer's network
-                </p>
+                <div className="mt-1 text-xs">
+                  {referralCheckLoading && (
+                    <span className="text-slate-400">Checking code…</span>
+                  )}
+                  {!referralCheckLoading && referralValid === true && (
+                    <span className="text-green-400">Valid referral code{referralInviter ? ` from ${referralInviter}` : ''}</span>
+                  )}
+                  {!referralCheckLoading && referralValid === false && (
+                    <span className="text-red-400">Invalid or inactive referral code. You can still sign up without it.</span>
+                  )}
+                </div>
               )}
             </div>
 

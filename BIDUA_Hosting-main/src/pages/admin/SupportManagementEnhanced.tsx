@@ -234,7 +234,7 @@ export function SupportManagementEnhanced() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {summaryCards.map((card) => (
-          <div key={card.label} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+          <div key={card.label} className="bg-slate-950/60 rounded-2xl border border-slate-200 shadow-sm p-5">
             <p className="text-sm text-slate-500">{card.label}</p>
             <p className="text-3xl font-semibold text-slate-900 mt-1">{card.value}</p>
             <p className={`text-sm mt-2 ${card.accent}`}>{card.helper}</p>
@@ -243,7 +243,7 @@ export function SupportManagementEnhanced() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm">
+        <div className="lg:col-span-2 bg-slate-950/60 rounded-2xl border border-slate-200 shadow-sm">
           <div className="p-6 border-b border-slate-100">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
@@ -324,7 +324,7 @@ export function SupportManagementEnhanced() {
                       key={ticket.id}
                       onClick={() => loadTicketDetail(ticket.id)}
                       className={`w-full text-left p-4 rounded-2xl border transition hover:border-cyan-200 ${
-                        isActive ? 'border-cyan-300 bg-cyan-50/50' : 'border-slate-200 bg-white'
+                        isActive ? 'border-cyan-300 bg-cyan-50/50' : 'border-slate-200 bg-slate-950/60'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-3 mb-2">
@@ -366,7 +366,7 @@ export function SupportManagementEnhanced() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
+        <div className="bg-slate-950/60 rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
           {detailsLoading ? (
             <div className="flex items-center justify-center flex-1">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-600"></div>
