@@ -59,12 +59,19 @@ class PaymentService:
 
         # Special handling for ₹499 Premium Subscription
         is_premium_plan = metadata and metadata.get('is_premium_plan', False)
+        skip_backend_calculation = metadata and metadata.get('skip_backend_calculation', False)
         
         if is_premium_plan:
             # ₹499 Premium Plan: No discount, No tax
             discount_amount = Decimal('0.00')
             tax_amount = Decimal('0.00')
             total_amount = amount  # Exactly ₹499
+        elif skip_backend_calculation:
+            # Frontend already calculated everything (addons + tax)
+            # Use amount as final total, don't recalculate
+            discount_amount = Decimal('0.00')
+            tax_amount = Decimal('0.00')
+            total_amount = amount  # Use frontend's calculated total as-is
         else:
             # Server purchase: Apply discount and tax
             discount_amount = self._calculate_discount(amount, user.discount_percent)

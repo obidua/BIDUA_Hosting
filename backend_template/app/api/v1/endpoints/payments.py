@@ -119,11 +119,14 @@ async def create_payment_order(
         if not plan:
             raise HTTPException(status_code=404, detail="Plan not found")
         
-        # Use amount from frontend if provided (includes all addons), otherwise use base plan price
+        # Use amount from frontend if provided (includes all addons AND tax already calculated)
+        # Frontend sends final total, so we mark it to skip backend tax/discount recalculation
         if payment_request.amount:
             amount = Decimal(str(payment_request.amount))
+            skip_backend_calculation = True  # Use frontend's final amount
         else:
             amount = plan.monthly_price  # Fallback to base server cost
+            skip_backend_calculation = False  # Let backend calculate
         
         # Check if user has active ₹499 premium subscription
         from sqlalchemy import select, and_
@@ -139,7 +142,8 @@ async def create_payment_order(
             'server_config': payment_request.server_config,
             'plan_name': plan.name,
             'has_premium_subscription': has_premium,
-            'enable_commission': has_premium  # Commission केवल premium users के लिए
+            'enable_commission': has_premium,  # Commission केवल premium users के लिए
+            'skip_backend_calculation': skip_backend_calculation  # Flag to skip tax/discount recalc
         }
 
     try:
