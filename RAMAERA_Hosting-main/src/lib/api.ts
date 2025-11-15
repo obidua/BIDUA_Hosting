@@ -39,8 +39,8 @@ class ApiClient {
       });
     }
 
-    // Only add authorization for endpoints that need it (not login/signup)
-    const isPublicEndpoint = endpoint === '/api/v1/auth/login' || endpoint === '/api/v1/auth/signup';
+    // Only add authorization for endpoints that need it (not login/register)
+    const isPublicEndpoint = endpoint === '/api/v1/auth/login' || endpoint === '/api/v1/auth/register';
     
     if (!isPublicEndpoint) {
       const token = localStorage.getItem('access_token');
@@ -103,10 +103,16 @@ class ApiClient {
   }
 
   // Auth endpoints
-  async signUp(email: string, password: string, username: string, fullName: string) {
-    return this.request('/api/v1/auth/signup', {
+  async signUp(email: string, password: string, username: string, fullName: string, referralCode?: string) {
+    return this.request('/api/v1/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password, username, full_name: fullName }),
+      body: JSON.stringify({
+        email,
+        password,
+        username,
+        full_name: fullName,
+        referral_code: referralCode
+      }),
     });
   }
 

@@ -91,12 +91,13 @@ export function Pricing() {
   }, []);
 
   // Transform API plans to UI format
-  const transformPlanToUI = (p: HostingPlan, planType: string): Plan => {
+  const transformPlanToUI = (p: HostingPlan, planType: string): Plan & { id: number } => {
     // Calculate semiannual price (6 months with 15% discount)
     const basePrice = parseFloat(p.base_price);
     const semiannualPrice = Math.round(basePrice * 6 * 0.85); // 15% discount
-    
+
     return {
+      id: p.id, // 🆕 Add plan ID
       name: p.name,
       ram: p.ram_gb,
       vcpu: p.cpu_cores,
@@ -171,8 +172,9 @@ export function Pricing() {
     return Math.round(basePrice * (1 - discount / 100));
   };
 
-  const handleDeploy = (plan: Plan) => {
+  const handleDeploy = (plan: Plan & { id: number }) => {
     const serverConfig = {
+      planId: plan.id, // 🆕 Add plan ID
       planName: plan.name,
       planType: selectedType,
       vcpu: plan.vcpu,

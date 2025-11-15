@@ -8,9 +8,9 @@ export interface User {
     role: string;
 }
 
-export async function signUp(email: string, password: string, username: string, fullName: string) {
+export async function signUp(email: string, password: string, username: string, fullName: string, referralCode?: string) {
     try {
-        const data = await api.signUp(email, password, username, fullName);
+        const data = await api.signUp(email, password, username, fullName, referralCode);
         return { data, error: null };
     } catch (error) {
         console.error('Sign up error:', error);

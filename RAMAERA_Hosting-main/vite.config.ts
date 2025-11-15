@@ -5,7 +5,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 4333,
-    hmr: true, // Hot Module Replacement
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost',
+      port: 4333,
+    },
     watch: {
       usePolling: true, // Better file watching
     },

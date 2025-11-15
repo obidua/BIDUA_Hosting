@@ -63,18 +63,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string, referralCode?: string) => {
     const username = email.split('@')[0]; // Generate username from email
-    const { data, error } = await authSignUp(email, password, username, fullName);
+    const { data, error } = await authSignUp(email, password, username, fullName, referralCode);
     if (error) throw error;
 
-    // If referral code is provided, we'll handle it after the user is created
-    if (referralCode && data) {
-      try {
-        // The backend should handle referral logic in the signup endpoint
-        console.log('Referral code:', referralCode);
-      } catch (error) {
-        console.error('Error processing referral:', error);
+    // Set user data after successful registration
+    if (data && data.user) {
+      setUser(data.user as User);
+      setProfile(data.user as any);
+
+      // Store the access token
+      if (data.access_token) {
+        api.setToken(data.access_token);
       }
     }
+
+    return data;
   };
 
   const signOut = async () => {

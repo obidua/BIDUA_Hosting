@@ -142,7 +142,11 @@ export function Login() {
           <div className="mt-6 text-center">
             <p className="text-sm text-slate-400">
               Don't have an account?{' '}
-              <Link to="/signup" className="text-cyan-400 hover:text-cyan-300 font-semibold">
+              <Link
+                to={redirectUrl ? `/signup?redirect=${encodeURIComponent(redirectUrl)}` : '/signup'}
+                state={serverConfig ? { serverConfig } : undefined}
+                className="text-cyan-400 hover:text-cyan-300 font-semibold"
+              >
                 Sign up
               </Link>
             </p>

@@ -8,10 +8,11 @@ import {
   Server, Check, CreditCard, FileText, ChevronRight, ChevronLeft,
   Cpu, MemoryStick, HardDrive, Network, Clock, Shield, 
   User, Mail, Phone, MapPin, Building, Globe, Tag, Percent,
-  Lock, Plus, Minus, Zap, Database, ShieldCheck, FileDown
+  Lock, Plus, Minus, Zap, Database, ShieldCheck, FileDown, ChevronDown
 } from 'lucide-react';
 
 interface ServerConfig {
+  planId?: number; // 🆕 Add this line
   planName: string;
   planType: string;
   vcpu: number;
@@ -216,6 +217,9 @@ export function Checkout() {
   });
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [orderDetails, setOrderDetails] = useState<any>(null);
+  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+  const [showMobileSummary, setShowMobileSummary] = useState(false);
   
   // Countries state
   const { countries, loading: loadingCountries } = useCountryOptions();
@@ -320,6 +324,19 @@ export function Checkout() {
       loadBillingSettings();
     }
   }, [user, currentStep]);
+
+  // Load Razorpay script
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => setRazorpayLoaded(true);
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   const steps = [
     { number: 1, title: 'Review Configuration', icon: Server },
@@ -496,19 +513,192 @@ export function Checkout() {
     if (!serverConfig || !agreeToTerms) return;
 
     setProcessing(true);
+
     try {
-      // TODO: Integrate with backend orders API
-      console.log('Creating order:', { serverConfig, billingInfo });
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Move to confirmation step
-      setCurrentStep(3);
-    } catch (error) {
-      console.error('Order creation failed:', error);
-      alert('Failed to create order. Please try again.');
-    } finally {
+      // Step 1: Create Payment Order
+      console.log('🔄 Creating payment order...', {
+        plan_id: serverConfig.planId,
+        billing_cycle: serverConfig.billingCycle
+      });
+
+      const paymentOrderResponse = await api.post('/api/v1/payments/create-order', {
+        payment_type: 'server',
+        plan_id: serverConfig.planId,
+        billing_cycle: serverConfig.billingCycle === 'monthly' ? 'monthly' :
+                       serverConfig.billingCycle === 'quarterly' ? 'quarterly' :
+                       serverConfig.billingCycle === 'semiannually' ? 'semi_annual' :
+                       serverConfig.billingCycle === 'annually' ? 'annual' :
+                       serverConfig.billingCycle === 'biennially' ? 'biennial' :
+                       serverConfig.billingCycle === 'triennially' ? 'triennial' : 'monthly',
+        server_config: {
+          server_name: hostname || `${serverConfig.planName} Server`,
+          hostname: hostname || `server-${Date.now()}.bidua.com`,
+          os: operatingSystem || 'Ubuntu 22.04 LTS',
+          datacenter: datacenter || 'noida-india',
+          managed_service: managedService,
+          ddos_protection: ddosProtection,
+          additional_ipv4: additionalIPv4,
+          backup_service: backupService,
+          plesk_addon: pleskAddon,
+          backup_storage: backupStorage,
+          ssl_certificate: sslCertificate,
+          quantity: serverQuantity
+        }
+      });
+
+      if (!paymentOrderResponse.success) {
+        throw new Error('Failed to create payment order');
+      }
+
+      console.log('✅ Payment order created:', paymentOrderResponse);
+      const { payment, plan } = paymentOrderResponse;
+
+      // Step 2: Handle Payment Method
+      if (paymentMethod === 'razorpay') {
+        // Wait for Razorpay to load
+        if (!razorpayLoaded) {
+          alert('Payment system is loading. Please try again in a moment.');
+          setProcessing(false);
+          return;
+        }
+
+        // Initialize Razorpay
+        const options = {
+          key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+          amount: payment.total_amount * 100, // Amount in paise
+          currency: payment.currency || 'INR',
+          name: 'BIDUA Hosting',
+          description: `${serverConfig.planName} - ${serverConfig.billingCycle}`,
+          order_id: payment.razorpay_order_id,
+          handler: async (response: any) => {
+            try {
+              console.log('🔄 Verifying payment...', response);
+
+              // Step 3: Verify Payment
+              const verificationResponse = await api.post('/api/v1/payments/verify-payment', {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              });
+
+              console.log('✅ Payment verified:', verificationResponse);
+
+              if (verificationResponse.success) {
+                // Payment successful
+                setOrderDetails({
+                  ...verificationResponse.order,
+                  payment: verificationResponse.payment,
+                  server: verificationResponse.server,
+                  affiliate: verificationResponse.affiliate
+                });
+
+                // Save billing info to backend for future use
+                try {
+                  await api.updateBillingSettings({
+                    street: billingInfo.address,
+                    city: billingInfo.city,
+                    state: billingInfo.state,
+                    country: billingInfo.country,
+                    postal_code: billingInfo.postalCode,
+                    company_name: billingInfo.company,
+                    tax_id: billingInfo.taxId,
+                    billing_email: billingInfo.email,
+                    billing_phone: billingInfo.phone,
+                  });
+                  console.log('✅ Billing settings saved for future checkouts');
+                } catch (error) {
+                  console.warn('Could not save billing settings:', error);
+                  // Don't fail the checkout if billing save fails
+                }
+
+                // Show success message
+                if (verificationResponse.server?.created) {
+                  console.log('🎉 Server created:', verificationResponse.server.hostname);
+                }
+                if (verificationResponse.affiliate?.activated) {
+                  console.log('🎉 Affiliate activated!');
+                }
+
+                // Move to confirmation step
+                setCurrentStep(3);
+                
+                // Scroll to top of page smoothly
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              } else {
+                throw new Error('Payment verification failed');
+              }
+            } catch (error: any) {
+              console.error('❌ Payment verification error:', error);
+              alert(`Payment verification failed: ${error.message}. Please contact support with your payment ID: ${response.razorpay_payment_id}`);
+            } finally {
+              setProcessing(false);
+            }
+          },
+          prefill: {
+            name: billingInfo.fullName,
+            email: billingInfo.email,
+            contact: billingInfo.phone
+          },
+          notes: {
+            billing_cycle: serverConfig.billingCycle,
+            plan_name: serverConfig.planName,
+            plan_type: serverConfig.planType
+          },
+          theme: {
+            color: '#06b6d4' // Cyan color
+          },
+          modal: {
+            ondismiss: () => {
+              console.log('Payment cancelled by user');
+              setProcessing(false);
+            }
+          }
+        };
+
+        const razorpay = new (window as any).Razorpay(options);
+
+        razorpay.on('payment.failed', (response: any) => {
+          console.error('❌ Payment failed:', response.error);
+          alert(`Payment failed: ${response.error.description}`);
+          setProcessing(false);
+        });
+
+        razorpay.open();
+
+      } else if (paymentMethod === 'bank_transfer') {
+        // For bank transfer, just show the proforma invoice
+        setOrderDetails({
+          order_number: payment.razorpay_order_id,
+          amount: payment.total_amount,
+          status: 'pending'
+        });
+
+        // Save billing info to backend for future use
+        try {
+          await api.updateBillingSettings({
+            street: billingInfo.address,
+            city: billingInfo.city,
+            state: billingInfo.state,
+            country: billingInfo.country,
+            postal_code: billingInfo.postalCode,
+            company_name: billingInfo.company,
+            tax_id: billingInfo.taxId,
+            billing_email: billingInfo.email,
+            billing_phone: billingInfo.phone,
+          });
+          console.log('✅ Billing settings saved for future checkouts');
+        } catch (error) {
+          console.warn('Could not save billing settings:', error);
+          // Don't fail the checkout if billing save fails
+        }
+
+        setCurrentStep(3);
+        setProcessing(false);
+      }
+
+    } catch (error: any) {
+      console.error('❌ Order creation failed:', error);
+      alert(error.message || 'Failed to create order. Please try again.');
       setProcessing(false);
     }
   };
@@ -569,7 +759,7 @@ export function Checkout() {
   const balanceAmount = totalAmount - fundsApplied;
 
   return (
-    <div className="min-h-screen bg-slate-950 py-12">
+    <div className="min-h-screen bg-slate-950 py-12 pb-24 lg:pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Progress Steps */}
         <div className="mb-12">
@@ -979,7 +1169,21 @@ export function Checkout() {
                       {serverConfig.discount > 0 && (
                         <p className="text-sm text-green-400 mt-2">
                           <Percent className="h-4 w-4 inline mr-1" />
-                          Saving {formatCurrency(serverConfig.discount)} with {serverConfig.billingCycle} billing
+                          Saving {(() => {
+                            const monthlyBase = serverConfig.monthlyPrice;
+                            const totalWithoutDiscount = monthlyBase * (
+                              serverConfig.billingCycle === 'monthly' ? 1 :
+                              serverConfig.billingCycle === 'quarterly' ? 3 :
+                              serverConfig.billingCycle === 'semiannually' ? 6 :
+                              serverConfig.billingCycle === 'annually' ? 12 :
+                              serverConfig.billingCycle === 'biennially' ? 24 :
+                              serverConfig.billingCycle === 'triennially' ? 36 : 1
+                            );
+                            const discountPercent = totalWithoutDiscount > 0 
+                              ? Math.round((serverConfig.discount / totalWithoutDiscount) * 100)
+                              : 0;
+                            return `${discountPercent}%`;
+                          })()} with {serverConfig.billingCycle} billing
                         </p>
                       )}
                     </div>
@@ -1663,8 +1867,8 @@ export function Checkout() {
             </div>
           </div>
 
-          {/* Order Summary Sidebar */}
-          <div className="lg:col-span-1">
+          {/* Order Summary Sidebar - Hidden on Mobile */}
+          <div className="hidden lg:block lg:col-span-1">
             <div className="bg-slate-900 rounded-2xl border-2 border-cyan-500/30 p-6 sticky top-4">
               <h3 className="text-xl font-bold text-white mb-6">Order Summary</h3>
               
@@ -1844,6 +2048,158 @@ export function Checkout() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Mobile Bottom Summary Bar */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-gradient-to-br from-cyan-900 to-slate-900 border-t-2 border-cyan-500 shadow-2xl z-40 safe-area-inset pb-safe">
+          <button
+            onClick={() => setShowMobileSummary(!showMobileSummary)}
+            className="w-full px-4 py-4 flex items-center justify-between text-white touch-manipulation active:bg-slate-900/50 transition-colors"
+          >
+            <div className="flex items-center space-x-3">
+              <Server className="h-6 w-6 text-cyan-400 flex-shrink-0" />
+              <div className="text-left">
+                <div className="text-xs text-slate-300">Total Amount</div>
+                <div className="text-xl font-bold">{formatCurrency(calculateTotal())}</div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-cyan-300 font-medium">Summary</span>
+              <ChevronDown className={`h-5 w-5 text-cyan-400 transition-transform duration-300 ${showMobileSummary ? 'rotate-180' : ''}`} />
+            </div>
+          </button>
+
+          {showMobileSummary && (
+            <div className="px-4 pb-4 max-h-[60vh] overflow-y-auto animate-slideUp">
+              {/* Server Details */}
+              <div className="mb-4">
+                <h4 className="font-bold text-white mb-2">{serverConfig.planName}</h4>
+                <p className="text-sm text-cyan-400 mb-1">{serverConfig.planType}</p>
+                {currentStep >= 2 && serverQuantity > 1 && (
+                  <p className="text-sm text-green-400 mb-1">Quantity: {serverQuantity}x</p>
+                )}
+              </div>
+
+              {/* Configuration Details */}
+              <div className="space-y-2 mb-4 pb-4 border-b border-slate-700">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-300">Datacenter:</span>
+                  <span className="text-white">{datacenter === 'noida-india' ? 'India' : 'United Kingdom'}</span>
+                </div>
+                
+                {operatingSystem && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-300">OS:</span>
+                    <span className="text-white text-right">{operatingSystem.replace(/-/g, ' ')}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-300">Management:</span>
+                  <span className="text-white text-right">
+                    {managedService === 'self' ? 'Self-managed' : 
+                     managedService === 'basic' ? 'Basic' : 
+                     'Premium'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Pricing Breakdown */}
+              <div className="space-y-2 mb-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-300">Base Plan:</span>
+                  <span className="text-white">{formatCurrency(serverConfig.monthlyPrice * (currentStep >= 2 ? serverQuantity : 1))}</span>
+                </div>
+
+                {additionalIPv4 > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-300">Additional IPv4 ({additionalIPv4}x):</span>
+                    <span className="text-white">{formatCurrency((additionalIPv4 * 200) * (currentStep >= 2 ? serverQuantity : 1))}</span>
+                  </div>
+                )}
+
+                {pleskAddon && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-300">Plesk {pleskAddon === 'admin' ? 'Admin' : pleskAddon === 'pro' ? 'Pro' : 'Host'}:</span>
+                    <span className="text-white">{formatCurrency((pleskAddon === 'admin' ? 950 : pleskAddon === 'pro' ? 1750 : 2650) * (currentStep >= 2 ? serverQuantity : 1))}</span>
+                  </div>
+                )}
+
+                {backupStorage && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-300">Backup {backupStorage.toUpperCase()}:</span>
+                    <span className="text-white">{formatCurrency((backupStorage === '100gb' ? 750 : backupStorage === '200gb' ? 1500 : backupStorage === '300gb' ? 2250 : backupStorage === '500gb' ? 3750 : 7500) * (currentStep >= 2 ? serverQuantity : 1))}</span>
+                  </div>
+                )}
+
+                {sslCertificate && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-300">SSL Certificate:</span>
+                    <span className="text-white">{formatCurrency((sslCertificate === 'essential' ? 225 : sslCertificate === 'essential-wildcard' ? 1162 : sslCertificate === 'comodo' ? 208 : sslCertificate === 'comodo-wildcard' ? 1084 : sslCertificate === 'rapid' ? 250 : 1371) * (currentStep >= 2 ? serverQuantity : 1))}/mo</span>
+                  </div>
+                )}
+
+                {supportPackage && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-300">Support {supportPackage === 'basic' ? 'Basic' : 'Premium'}:</span>
+                    <span className="text-white">{formatCurrency((supportPackage === 'basic' ? 2500 : 7500) * (currentStep >= 2 ? serverQuantity : 1))}</span>
+                  </div>
+                )}
+
+                {managedService !== 'self' && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-300">{managedService === 'basic' ? 'Basic' : 'Premium'} Management:</span>
+                    <span className="text-white">{formatCurrency((managedService === 'basic' ? 2000 : 5000) * (currentStep >= 2 ? serverQuantity : 1))}</span>
+                  </div>
+                )}
+
+                {ddosProtection !== 'basic' && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-300">DDoS {ddosProtection === 'advanced' ? 'Advanced' : 'Enterprise'}:</span>
+                    <span className="text-white">{formatCurrency((ddosProtection === 'advanced' ? 1000 : 3000) * (currentStep >= 2 ? serverQuantity : 1))}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Totals */}
+              <div className="border-t border-cyan-500/30 pt-3 mb-3">
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-slate-300">Monthly:</span>
+                  <span className="text-white font-semibold">{formatCurrency(calculateSubtotal())}</span>
+                </div>
+
+                {promoDiscount > 0 && (
+                  <div className="flex justify-between text-sm text-green-400 mb-2">
+                    <span>Promo Discount:</span>
+                    <span>-{formatCurrency(promoDiscount)}</span>
+                  </div>
+                )}
+
+                {isBillingCountryIndia && (
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-slate-300">IGST @ 18.00%:</span>
+                    <span className="text-white">{formatCurrency(calculateTax())}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-slate-950 rounded-lg p-3 mb-3">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-sm text-cyan-400 font-bold">Total:</span>
+                  <span className="text-xl font-bold text-white">{formatCurrency(calculateTotal())}</span>
+                </div>
+              </div>
+
+              {/* Support Contact */}
+              <div className="mt-3 pt-3 border-t border-slate-700">
+                <p className="text-xs text-slate-400 mb-1">Need help?</p>
+                <div className="flex justify-between text-xs">
+                  <span className="text-cyan-400">📞 +91 120 416 8464</span>
+                  <span className="text-cyan-400">✉️ support@bidua.com</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

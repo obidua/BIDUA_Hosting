@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Server } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export function Signup() {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -12,8 +13,27 @@ export function Signup() {
   const [referralCode, setReferralCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signUp } = useAuth();
+  const { signUp, user } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect logged-in users to their intended destination
+  useEffect(() => {
+    if (user) {
+      const serverConfig = location.state?.serverConfig;
+      const redirectUrl = searchParams.get('redirect');
+
+      if (serverConfig && redirectUrl) {
+        // User is already logged in and has a server selection - go to checkout
+        navigate(decodeURIComponent(redirectUrl), { state: { serverConfig }, replace: true });
+      } else if (redirectUrl) {
+        // Generic redirect
+        navigate(decodeURIComponent(redirectUrl), { replace: true });
+      } else {
+        // Default to dashboard
+        navigate('/dashboard', { replace: true });
+      }
+    }
+  }, [user, navigate, location.state, searchParams]);
 
   useEffect(() => {
     const refCode = searchParams.get('ref');
@@ -40,7 +60,21 @@ export function Signup() {
 
     try {
       await signUp(email, password, fullName, referralCode);
-      navigate('/dashboard');
+
+      // Check if there's a pending server configuration from checkout flow
+      const serverConfig = location.state?.serverConfig;
+      const redirectUrl = searchParams.get('redirect');
+
+      if (serverConfig && redirectUrl) {
+        // User came from pricing page - redirect to checkout with server config
+        navigate(decodeURIComponent(redirectUrl), { state: { serverConfig } });
+      } else if (redirectUrl) {
+        // Generic redirect
+        navigate(decodeURIComponent(redirectUrl));
+      } else {
+        // Default to dashboard
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to create account');
     } finally {

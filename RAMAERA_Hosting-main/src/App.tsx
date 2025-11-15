@@ -14,6 +14,7 @@ import { Solutions } from './pages/Solutions';
 import { Contact } from './pages/Contact';
 import { Calculator } from './pages/Calculator';
 import { Checkout } from './pages/Checkout';
+import { InvoiceView } from './pages/InvoiceView';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
 import { Terms } from './pages/Terms';
@@ -50,6 +51,7 @@ function App() {
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/calculator" element={<Calculator />} />
             <Route path="/checkout" element={<Checkout />} />
+            <Route path="/invoice/:invoiceId" element={<InvoiceView />} />
             <Route path="/dedicated-servers" element={<DedicatedServers />} />
             <Route path="/solutions" element={<Solutions />} />
             <Route path="/contact" element={<Contact />} />

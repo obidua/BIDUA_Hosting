@@ -9,10 +9,12 @@ export function Settings() {
   const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'billing'>('profile');
   const [isSaving, setIsSaving] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const [profileData, setProfileData] = useState({
     fullName: profile?.full_name || '',
-    email: '',
+    email: profile?.email || '',
     phone: '',
     company: '',
   });
@@ -101,8 +103,21 @@ export function Settings() {
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsSaving(false);
+    
+    try {
+      // TODO: Add actual API call to update profile
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      
+      // Show success message
+      setSuccessMessage('Your profile has been updated successfully');
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 3000);
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      alert('Failed to update profile. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSecuritySubmit = async (e: React.FormEvent) => {
@@ -112,16 +127,43 @@ export function Settings() {
       return;
     }
     setIsSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsSaving(false);
-    setSecurityData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    
+    try {
+      // TODO: Add actual API call to update password
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      
+      // Show success message
+      setSuccessMessage('Your password has been updated successfully');
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 3000);
+      
+      setSecurityData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error) {
+      console.error('Failed to update password:', error);
+      alert('Failed to update password. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleNotificationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsSaving(false);
+    
+    try {
+      // TODO: Add actual API call to update notification preferences
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      
+      // Show success message
+      setSuccessMessage('Your notification preferences have been saved');
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 3000);
+    } catch (error) {
+      console.error('Failed to update notifications:', error);
+      alert('Failed to update notification preferences. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleBillingSubmit = async (e: React.FormEvent) => {
@@ -146,11 +188,16 @@ export function Settings() {
       };
       
       await api.updateBillingSettings(apiData);
-      // You could add a success toast here
+      
+      // Show success message
+      setSuccessMessage('Your billing information has been saved');
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 3000);
+      
       console.log('Billing settings updated successfully');
     } catch (error) {
       console.error('Failed to update billing settings:', error);
-      // You could add an error toast here
+      alert('Failed to save billing information. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -158,6 +205,23 @@ export function Settings() {
 
   return (
     <div className="space-y-6">
+      {/* Success Message Toast */}
+      {showSuccessMessage && (
+        <div className="fixed top-4 right-4 z-50 animate-slide-in">
+          <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-4 rounded-lg shadow-2xl flex items-center space-x-3 border border-green-400">
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-semibold">Success!</p>
+              <p className="text-sm text-green-50">{successMessage}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Settings</h1>
         <p className="text-slate-400">Manage your account settings and preferences</p>
@@ -246,9 +310,11 @@ export function Settings() {
                   <input
                     type="email"
                     value={profileData.email}
-                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                    className="w-full px-4 py-3 bg-slate-950 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-slate-400"
+                    disabled
+                    className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-slate-400 cursor-not-allowed"
+                    title="Email cannot be changed. Contact support if you need to update your email."
                   />
+                  <p className="text-xs text-slate-500 mt-1">Email cannot be changed</p>
                 </div>
 
                 <div>

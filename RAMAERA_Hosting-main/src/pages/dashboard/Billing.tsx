@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
-import { CreditCard, Download, Clock, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+import { CreditCard, Clock, CheckCircle, AlertCircle, XCircle, Eye } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useNavigate } from 'react-router-dom';
 
 interface Invoice {
   id: string;
   date: string;
-  amount: number;
+  amount?: number; // Keep for backward compatibility
+  total_amount?: number; // Backend uses this
   status: string;
   description: string;
+  invoice_date?: string;
+  invoice_number?: string;
+  payment_status?: string;
 }
 
 interface PaymentMethod {
@@ -21,6 +26,7 @@ interface PaymentMethod {
 }
 
 export function Billing() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'invoices' | 'payment-methods'>('invoices');
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -33,10 +39,10 @@ export function Billing() {
   const loadBillingData = async () => {
     try {
       setLoading(true);
-      
+
       // Load invoices
       try {
-        const invoiceResponse = await api.get('/billing/invoices');
+        const invoiceResponse = await api.get('/api/v1/invoices/');
         const invoicesArray = Array.isArray(invoiceResponse) ? invoiceResponse : invoiceResponse?.invoices || [];
         setInvoices(invoicesArray);
       } catch (error) {
@@ -45,7 +51,7 @@ export function Billing() {
 
       // Load payment methods
       try {
-        const paymentResponse = await api.get('/billing/payment-methods');
+        const paymentResponse = await api.get('/api/v1/billing/payment-methods');
         const methodsArray = Array.isArray(paymentResponse) ? paymentResponse : paymentResponse?.payment_methods || [];
         setPaymentMethods(methodsArray);
       } catch (error) {
@@ -82,6 +88,101 @@ export function Billing() {
     }
   };
 
+  const handlePayNow = async (invoice: Invoice) => {
+    // Don't allow payment for invoices without proper order data
+    if (!invoice.description || invoice.description.includes('undefined')) {
+      alert('This invoice cannot be paid online. Please contact support.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Get full invoice details
+      const invoiceDetails = await api.get(`/api/v1/invoices/${invoice.id}`);
+
+      // Initiate payment using the same Razorpay flow
+      // Load Razorpay script if not already loaded
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+
+      script.onload = async () => {
+        try {
+          // Create payment order for this invoice
+          const paymentOrderResponse = await api.post('/api/v1/payments/create-order', {
+            payment_type: 'server',
+            plan_id: invoiceDetails.plan_id,
+            billing_cycle: 'one_time',
+            invoice_id: invoice.id
+          });
+
+          if (!paymentOrderResponse.success) {
+            throw new Error('Failed to create payment order');
+          }
+
+          const { payment } = paymentOrderResponse;
+
+          // Initialize Razorpay
+          const options = {
+            key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+            amount: payment.total_amount * 100,
+            currency: payment.currency || 'INR',
+            name: 'BIDUA Hosting',
+            description: `Invoice #${invoice.id}`,
+            order_id: payment.razorpay_order_id,
+            handler: async (response: any) => {
+              try {
+                const verificationResponse = await api.post('/api/v1/payments/verify-payment', {
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature
+                });
+
+                if (verificationResponse.success) {
+                  alert('Payment successful!');
+                  loadBillingData(); // Reload invoices
+                }
+              } catch (error: any) {
+                alert(`Payment verification failed: ${error.message}`);
+              }
+            },
+            theme: {
+              color: '#06b6d4'
+            }
+          };
+
+          const razorpay = new (window as any).Razorpay(options);
+          razorpay.open();
+        } catch (error: any) {
+          alert(error.message || 'Failed to initiate payment');
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      document.body.appendChild(script);
+    } catch (error: any) {
+      console.error('Failed to initiate payment:', error);
+      alert('Failed to initiate payment. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  const handleViewInvoice = (invoice: Invoice) => {
+    // Navigate to invoice view page with invoice data
+    navigate(`/invoice/${invoice.id}`, { state: { invoice } });
+  };
+
+  // Calculate total outstanding balance
+  const calculateOutstandingBalance = () => {
+    return invoices
+      .filter(inv => (inv.payment_status || inv.status) === 'pending' || (inv.payment_status || inv.status) === 'unpaid')
+      .reduce((total, inv) => total + Number(inv.total_amount || inv.amount || 0), 0);
+  };
+
+  const outstandingBalance = calculateOutstandingBalance();
+
   return (
     <div className="space-y-4 sm:space-y-6 w-full h-full overflow-y-auto pb-6 px-2 sm:px-0">
       <div className="mb-4 sm:mb-6">
@@ -96,8 +197,12 @@ export function Billing() {
             <p className="text-xs sm:text-sm text-slate-400">Your account balance</p>
           </div>
           <div className="text-left sm:text-right">
-            <p className="text-2xl sm:text-3xl font-bold text-cyan-400">₹0.00</p>
-            <p className="text-xs sm:text-sm text-slate-400">No outstanding balance</p>
+            <p className={`text-2xl sm:text-3xl font-bold ${outstandingBalance > 0 ? 'text-red-400' : 'text-cyan-400'}`}>
+              ₹{outstandingBalance.toFixed(2)}
+            </p>
+            <p className="text-xs sm:text-sm text-slate-400">
+              {outstandingBalance > 0 ? `${invoices.filter(inv => (inv.payment_status || inv.status) === 'pending' || (inv.payment_status || inv.status) === 'unpaid').length} pending invoice${invoices.filter(inv => (inv.payment_status || inv.status) === 'pending' || (inv.payment_status || inv.status) === 'unpaid').length !== 1 ? 's' : ''}` : 'No outstanding balance'}
+            </p>
           </div>
         </div>
       </div>
@@ -157,31 +262,46 @@ export function Billing() {
                       <tbody className="divide-y divide-cyan-500/10">
                         {invoices.map((invoice) => (
                           <tr key={invoice.id} className="hover:bg-slate-950 transition">
-                            <td className="py-3 sm:py-4 px-2 sm:px-4 text-xs sm:text-sm font-medium text-white whitespace-nowrap">{invoice.id}</td>
+                            <td className="py-3 sm:py-4 px-2 sm:px-4 text-xs sm:text-sm font-medium text-white whitespace-nowrap">
+                              {invoice.invoice_number || invoice.id}
+                            </td>
                             <td className="py-3 sm:py-4 px-2 sm:px-4 text-xs sm:text-sm text-slate-400 whitespace-nowrap">
-                              {new Date(invoice.date).toLocaleDateString()}
+                              {new Date(invoice.invoice_date || invoice.date).toLocaleDateString()}
                             </td>
                             <td className="py-3 sm:py-4 px-2 sm:px-4 text-xs sm:text-sm text-slate-400 min-w-[150px] sm:min-w-[200px]">{invoice.description}</td>
                             <td className="py-3 sm:py-4 px-2 sm:px-4 text-xs sm:text-sm font-semibold text-white text-right whitespace-nowrap">
-                              ₹{invoice.amount.toFixed(2)}
+                              ₹{Number(invoice.total_amount || invoice.amount || 0).toFixed(2)}
                             </td>
                             <td className="py-3 sm:py-4 px-2 sm:px-4 whitespace-nowrap">
                               <div className="flex items-center justify-center">
                                 <span
                                   className={`inline-flex items-center space-x-1 px-2 sm:px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(
-                                    invoice.status
+                                    invoice.payment_status || invoice.status
                                   )}`}
                                 >
-                                  {getStatusIcon(invoice.status)}
-                                  <span className="capitalize">{invoice.status}</span>
+                                  {getStatusIcon(invoice.payment_status || invoice.status)}
+                                  <span className="capitalize">{invoice.payment_status || invoice.status}</span>
                                 </span>
                               </div>
                             </td>
                             <td className="py-3 sm:py-4 px-2 sm:px-4 whitespace-nowrap">
-                              <div className="flex items-center justify-center">
-                                <button className="inline-flex items-center space-x-1 px-2 sm:px-3 py-1.5 text-xs font-semibold text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 rounded-lg transition">
-                                  <Download className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                                  <span className="hidden sm:inline">Download</span>
+                              <div className="flex items-center justify-center gap-2">
+                                {((invoice.payment_status || invoice.status) === 'pending' || (invoice.payment_status || invoice.status) === 'unpaid') && (
+                                  <button
+                                    onClick={() => handlePayNow(invoice)}
+                                    disabled={loading}
+                                    className="inline-flex items-center space-x-1 px-3 py-1.5 text-xs font-semibold text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg transition disabled:opacity-50"
+                                  >
+                                    <CreditCard className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                                    <span>Pay Now</span>
+                                  </button>
+                                )}
+                                <button 
+                                  onClick={() => handleViewInvoice(invoice)}
+                                  className="inline-flex items-center space-x-1 px-2 sm:px-3 py-1.5 text-xs font-semibold text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 rounded-lg transition"
+                                >
+                                  <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                                  <span className="hidden sm:inline">View & Print</span>
                                 </button>
                               </div>
                             </td>
