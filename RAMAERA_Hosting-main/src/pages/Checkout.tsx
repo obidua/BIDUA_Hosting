@@ -271,6 +271,28 @@ export function Checkout() {
       return;
     }
 
+    // Check if coming from invoice payment
+    const fromInvoice = location.state?.fromInvoice;
+    const invoiceData = location.state?.invoice;
+    
+    if (fromInvoice && invoiceData) {
+      // Create server config from invoice
+      const config: ServerConfig = {
+        planName: invoiceData.description || 'Server Purchase',
+        planType: 'server',
+        vcpu: 0,
+        ram: 0,
+        storage: 0,
+        bandwidth: 0,
+        billingCycle: 'one_time',
+        monthlyPrice: invoiceData.total_amount || invoiceData.amount || 0,
+        totalPrice: invoiceData.total_amount || invoiceData.amount || 0,
+        discount: 0
+      };
+      setServerConfig(config);
+      return;
+    }
+
     // Get server configuration from navigation state
     const config = location.state?.serverConfig as ServerConfig;
     if (!config) {
