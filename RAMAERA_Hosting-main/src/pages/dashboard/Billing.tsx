@@ -89,84 +89,13 @@ export function Billing() {
   };
 
   const handlePayNow = async (invoice: Invoice) => {
-    // Don't allow payment for invoices without proper order data
-    if (!invoice.description || invoice.description.includes('undefined')) {
-      alert('This invoice cannot be paid online. Please contact support.');
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      // Get full invoice details
-      const invoiceDetails = await api.get(`/api/v1/invoices/${invoice.id}`);
-
-      // Initiate payment using the same Razorpay flow
-      // Load Razorpay script if not already loaded
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.async = true;
-
-      script.onload = async () => {
-        try {
-          // Create payment order for this invoice
-          const paymentOrderResponse = await api.post('/api/v1/payments/create-order', {
-            payment_type: 'server',
-            plan_id: invoiceDetails.plan_id,
-            billing_cycle: 'one_time',
-            invoice_id: invoice.id
-          });
-
-          if (!paymentOrderResponse.success) {
-            throw new Error('Failed to create payment order');
-          }
-
-          const { payment } = paymentOrderResponse;
-
-          // Initialize Razorpay
-          const options = {
-            key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-            amount: payment.total_amount * 100,
-            currency: payment.currency || 'INR',
-            name: 'BIDUA Hosting',
-            description: `Invoice #${invoice.id}`,
-            order_id: payment.razorpay_order_id,
-            handler: async (response: any) => {
-              try {
-                const verificationResponse = await api.post('/api/v1/payments/verify-payment', {
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature
-                });
-
-                if (verificationResponse.success) {
-                  alert('Payment successful!');
-                  loadBillingData(); // Reload invoices
-                }
-              } catch (error: any) {
-                alert(`Payment verification failed: ${error.message}`);
-              }
-            },
-            theme: {
-              color: '#06b6d4'
-            }
-          };
-
-          const razorpay = new (window as any).Razorpay(options);
-          razorpay.open();
-        } catch (error: any) {
-          alert(error.message || 'Failed to initiate payment');
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      document.body.appendChild(script);
-    } catch (error: any) {
-      console.error('Failed to initiate payment:', error);
-      alert('Failed to initiate payment. Please try again.');
-      setLoading(false);
-    }
+    // Navigate to checkout page with invoice details
+    navigate('/checkout', { 
+      state: { 
+        fromInvoice: true,
+        invoice: invoice
+      } 
+    });
   };
 
   const handleViewInvoice = (invoice: Invoice) => {
