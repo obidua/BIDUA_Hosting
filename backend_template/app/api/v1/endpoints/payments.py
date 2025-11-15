@@ -232,7 +232,7 @@ async def verify_payment(
         payment_for = payment_transaction.payment_metadata.get('payment_for')
         
         if payment_for == 'invoice':
-            # For invoice payment, just update the invoice status
+            # For invoice payment, update the invoice status
             invoice_id = payment_transaction.payment_metadata.get('invoice_id')
             
             if invoice_id:
@@ -245,6 +245,7 @@ async def verify_payment(
                 invoice_obj = invoice_result.scalars().first()
                 
                 if invoice_obj:
+                    # Update invoice status
                     invoice_obj.payment_status = 'paid'
                     invoice_obj.status = 'paid'
                     invoice_obj.amount_paid = invoice_obj.total_amount
@@ -253,6 +254,65 @@ async def verify_payment(
                     invoice_obj.paid_at = payment_transaction.paid_at
                     invoice_obj.payment_method = 'razorpay'
                     invoice_obj.payment_reference = payment_data.razorpay_payment_id
+                    
+                    # If invoice has an associated order, create the server
+                    if invoice_obj.order_id:
+                        from app.models.order import Order as OrderModel
+                        from app.services.server_service import ServerService
+                        
+                        order_result = await db.execute(
+                            select(OrderModel).where(OrderModel.id == invoice_obj.order_id)
+                        )
+                        order_obj = order_result.scalars().first()
+                        
+                        if order_obj and order_obj.plan_id:
+                            # Update order status
+                            order_obj.payment_status = 'paid'
+                            order_obj.order_status = 'completed'
+                            order_obj.razorpay_order_id = payment_data.razorpay_order_id
+                            order_obj.razorpay_payment_id = payment_data.razorpay_payment_id
+                            order_obj.paid_at = payment_transaction.paid_at
+                            
+                            # Create server
+                            server_service = ServerService()
+                            try:
+                                # Get plan details to create server
+                                from app.services.plan_service import PlanService
+                                from app.schemas.server import ServerCreate
+                                
+                                plan_service = PlanService()
+                                plan = await plan_service.get_plan_by_id(db, order_obj.plan_id)
+                                
+                                if plan:
+                                    server_data = ServerCreate(
+                                        plan_id=plan.id,
+                                        server_name=f"{plan.name} Server",
+                                        hostname=f"server-{current_user.id}-{order_obj.id}",
+                                        server_type=plan.plan_type,
+                                        operating_system="Ubuntu 22.04 LTS",
+                                        vcpu=plan.vcpu,
+                                        ram_gb=plan.ram,
+                                        storage_gb=plan.storage,
+                                        bandwidth_gb=plan.bandwidth,
+                                        monthly_cost=float(plan.monthly_price)
+                                    )
+                                    
+                                    server = await server_service.create_user_server(
+                                        db=db,
+                                        user_id=current_user.id,
+                                        server_data=server_data
+                                    )
+                                    
+                                    # Update order with server_id
+                                    if isinstance(server, dict):
+                                        order_obj.server_id = server.get('id')
+                                    else:
+                                        order_obj.server_id = server.id
+                                        
+                            except Exception as e:
+                                print(f"Warning: Server creation failed: {str(e)}")
+                                # Don't fail the payment if server creation fails
+                    
                     await db.commit()
             
             return {
