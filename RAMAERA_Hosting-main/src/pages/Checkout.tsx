@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
 import { BillingSettings } from '../types/billing';
 import { useCountryOptions, type CountryOption } from '../hooks/useCountryOptions';
+import { useAddons } from '../hooks/useAddons';
 import {
   Server, Check, CreditCard, FileText, ChevronRight, ChevronLeft,
   Cpu, MemoryStick, HardDrive, Network, Clock, Shield, 
@@ -195,6 +196,7 @@ export function Checkout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, profile } = useAuth();
+  const { addons, loading: addonsLoading, getAddonBySlug } = useAddons();
   const [currentStep, setCurrentStep] = useState(1);
   const [serverConfig, setServerConfig] = useState<ServerConfig | null>(null);
   const [billingInfo, setBillingInfo] = useState<BillingInfo>({
@@ -388,19 +390,25 @@ export function Checkout() {
   const calculateAddOnsCost = () => {
     let addOnsCost = 0;
     
-    // Extra Storage - ₹2/GB/month
+    // Extra Storage - Get price from backend
     if (extraStorage > 0) {
-      addOnsCost += extraStorage * 2;
+      const storageAddon = getAddonBySlug('extra-storage');
+      const storagePrice = storageAddon?.price || 2; // Fallback to ₹2/GB
+      addOnsCost += extraStorage * storagePrice;
     }
     
-    // Extra Bandwidth - ₹100/TB/month
+    // Extra Bandwidth - Get price from backend
     if (extraBandwidth > 0) {
-      addOnsCost += extraBandwidth * 100;
+      const bandwidthAddon = getAddonBySlug('extra-bandwidth');
+      const bandwidthPrice = bandwidthAddon?.price || 100; // Fallback to ₹100/TB
+      addOnsCost += extraBandwidth * bandwidthPrice;
     }
     
     // IPv4 addresses
     if (additionalIPv4 > 0) {
-      addOnsCost += additionalIPv4 * 200;
+      const ipv4Addon = getAddonBySlug('additional-ipv4');
+      const ipv4Price = ipv4Addon?.price || 200; // Fallback to ₹200/IP
+      addOnsCost += additionalIPv4 * ipv4Price;
     }
     
     // Old backup service (keeping for backwards compatibility)
@@ -410,26 +418,33 @@ export function Checkout() {
     
     // Managed server (self, basic, premium)
     if (managedService === 'basic') {
-      addOnsCost += 2000;
+      const managedBasicAddon = getAddonBySlug('managed-basic');
+      addOnsCost += managedBasicAddon?.price || 2000;
     } else if (managedService === 'premium') {
-      addOnsCost += 5000;
+      const managedPremiumAddon = getAddonBySlug('managed-premium');
+      addOnsCost += managedPremiumAddon?.price || 5000;
     }
     // managedService === 'self' adds nothing
     
     // DDoS protection
     if (ddosProtection === 'advanced') {
-      addOnsCost += 1000;
+      const ddosAdvancedAddon = getAddonBySlug('ddos-advanced');
+      addOnsCost += ddosAdvancedAddon?.price || 1000;
     } else if (ddosProtection === 'enterprise') {
-      addOnsCost += 3000;
+      const ddosEnterpriseAddon = getAddonBySlug('ddos-enterprise');
+      addOnsCost += ddosEnterpriseAddon?.price || 3000;
     }
     
     // Plesk addons
     if (pleskAddon === 'admin') {
-      addOnsCost += 950; // 10 domains
+      const pleskAdminAddon = getAddonBySlug('plesk-admin');
+      addOnsCost += pleskAdminAddon?.price || 950; // 10 domains
     } else if (pleskAddon === 'pro') {
-      addOnsCost += 1750; // 30 domains
+      const pleskProAddon = getAddonBySlug('plesk-pro');
+      addOnsCost += pleskProAddon?.price || 1750; // 30 domains
     } else if (pleskAddon === 'host') {
-      addOnsCost += 2650; // Unlimited domains
+      const pleskHostAddon = getAddonBySlug('plesk-host');
+      addOnsCost += pleskHostAddon?.price || 2650; // Unlimited domains
     }
     
     // Backup storage
@@ -1007,7 +1022,9 @@ export function Checkout() {
                         <div className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-700">
                           <div className="flex-1">
                             <p className="font-medium text-white">Extra Storage</p>
-                            <p className="text-sm text-slate-400">{formatCurrency(2)}/GB/month</p>
+                            <p className="text-sm text-slate-400">
+                              {formatCurrency(getAddonBySlug('extra-storage')?.price || 2)}/GB/month
+                            </p>
                           </div>
                           <div className="flex items-center space-x-3">
                             <button
@@ -1019,7 +1036,9 @@ export function Checkout() {
                             <div className="text-center">
                               <span className="text-white font-semibold block">{extraStorage} GB</span>
                               {extraStorage > 0 && (
-                                <span className="text-xs text-cyan-400">{formatCurrency(extraStorage * 2)}/mo</span>
+                                <span className="text-xs text-cyan-400">
+                                  {formatCurrency(extraStorage * (getAddonBySlug('extra-storage')?.price || 2))}/mo
+                                </span>
                               )}
                             </div>
                             <button
@@ -1035,7 +1054,9 @@ export function Checkout() {
                         <div className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-700">
                           <div className="flex-1">
                             <p className="font-medium text-white">Extra Bandwidth</p>
-                            <p className="text-sm text-slate-400">{formatCurrency(100)}/TB/month</p>
+                            <p className="text-sm text-slate-400">
+                              {formatCurrency(getAddonBySlug('extra-bandwidth')?.price || 100)}/TB/month
+                            </p>
                           </div>
                           <div className="flex items-center space-x-3">
                             <button
@@ -1047,7 +1068,9 @@ export function Checkout() {
                             <div className="text-center">
                               <span className="text-white font-semibold block">{extraBandwidth} TB</span>
                               {extraBandwidth > 0 && (
-                                <span className="text-xs text-cyan-400">{formatCurrency(extraBandwidth * 100)}/mo</span>
+                                <span className="text-xs text-cyan-400">
+                                  {formatCurrency(extraBandwidth * (getAddonBySlug('extra-bandwidth')?.price || 100))}/mo
+                                </span>
                               )}
                             </div>
                             <button
@@ -2007,14 +2030,18 @@ export function Checkout() {
                 {extraStorage > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">» Extra Storage ({extraStorage} GB):</span>
-                    <span className="text-white">{formatCurrency((extraStorage * 2) * (currentStep >= 2 ? serverQuantity : 1))}</span>
+                    <span className="text-white">
+                      {formatCurrency((extraStorage * (getAddonBySlug('extra-storage')?.price || 2)) * (currentStep >= 2 ? serverQuantity : 1))}
+                    </span>
                   </div>
                 )}
 
                 {extraBandwidth > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">» Extra Bandwidth ({extraBandwidth} TB):</span>
-                    <span className="text-white">{formatCurrency((extraBandwidth * 100) * (currentStep >= 2 ? serverQuantity : 1))}</span>
+                    <span className="text-white">
+                      {formatCurrency((extraBandwidth * (getAddonBySlug('extra-bandwidth')?.price || 100)) * (currentStep >= 2 ? serverQuantity : 1))}
+                    </span>
                   </div>
                 )}
 

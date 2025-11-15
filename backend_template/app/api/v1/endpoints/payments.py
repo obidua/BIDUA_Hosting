@@ -223,18 +223,24 @@ async def verify_payment(
     4. Distributes commission (if user activated via referral)
     5. Updates user subscription status (for subscription payments)
     """
+    import time
+    start_time = time.time()
+    print(f"🔄 Payment verification started at {start_time}")
+    
     payment_service = PaymentService()
     commission_service = CommissionService()
     order_service = OrderService()
 
     try:
         # Verify and complete payment
+        t1 = time.time()
         payment_transaction = await payment_service.verify_and_complete_payment(
             db=db,
             razorpay_order_id=payment_data.razorpay_order_id,
             razorpay_payment_id=payment_data.razorpay_payment_id,
             razorpay_signature=payment_data.razorpay_signature
         )
+        print(f"⏱️  Payment verification took {time.time() - t1:.2f}s")
 
         # Check if this is an invoice payment
         payment_for = payment_transaction.payment_metadata.get('payment_for')
@@ -342,6 +348,7 @@ async def verify_payment(
         # For ₹499 premium subscription, plan_id is None
         plan_id = payment_transaction.payment_metadata.get('plan_id')
         
+        t2 = time.time()
         order_create = OrderCreate(
             plan_id=plan_id,
             billing_cycle=payment_transaction.payment_metadata.get('billing_cycle', 'one_time'),
@@ -352,17 +359,20 @@ async def verify_payment(
         )
 
         order = await order_service.create_order(db, current_user.id, order_create)
+        print(f"⏱️  Order creation took {time.time() - t2:.2f}s")
 
         # Extract order details from the returned dictionary
         order_data = order.get('order', {}) if isinstance(order, dict) else order
         order_id = order_data.get('id') if isinstance(order_data, dict) else order_data.id
 
         # Link payment to order
+        t3 = time.time()
         await payment_service.link_payment_to_order(
             db=db,
             payment_transaction_id=payment_transaction.id,
             order_id=order_id
         )
+        print(f"⏱️  Payment linking took {time.time() - t3:.2f}s")
 
         # Update order with payment details - fetch the actual order object
         from sqlalchemy import select
@@ -403,10 +413,12 @@ async def verify_payment(
         # Distribute commission if applicable
         commission_earnings = []
         if payment_transaction.requires_commission():
+            t4 = time.time()
             commission_earnings = await commission_service.distribute_commission(
                 db=db,
                 payment_transaction_id=payment_transaction.id
             )
+            print(f"⏱️  Commission distribution took {time.time() - t4:.2f}s")
 
         # Update user subscription status for subscription payments
         if payment_transaction.payment_type == PaymentType.SUBSCRIPTION:
@@ -428,6 +440,7 @@ async def verify_payment(
         server_created = None
         if payment_transaction.payment_type == PaymentType.SERVER and plan_id:
             try:
+                t5 = time.time()
                 from app.services.server_service import ServerService
                 from app.schemas.server import ServerCreate
                 from sqlalchemy import select
@@ -458,8 +471,10 @@ async def verify_payment(
 
                     server_created = await server_service.create_user_server(db, current_user.id, server_data)
                     print(f"✅ Server {server_created.id} created for user {current_user.id}")
+                    print(f"⏱️  Server creation took {time.time() - t5:.2f}s")
             except Exception as e:
                 print(f"❌ Server creation failed: {str(e)}")
+                print(f"⏱️  Failed server creation took {time.time() - t5:.2f}s")
                 # Don't fail payment verification, but log the error
                 import traceback
                 traceback.print_exc()
@@ -468,6 +483,7 @@ async def verify_payment(
         affiliate_activated = False
         if payment_transaction.payment_type == PaymentType.SERVER:
             try:
+                t6 = time.time()
                 from app.services.affiliate_service import AffiliateService
                 affiliate_service = AffiliateService()
 
@@ -475,10 +491,13 @@ async def verify_payment(
                 await affiliate_service.activate_subscription_from_server_purchase(db, current_user.id)
                 affiliate_activated = True
                 print(f"✅ Affiliate subscription activated for user {current_user.id}")
+                print(f"⏱️  Affiliate activation took {time.time() - t6:.2f}s")
             except Exception as e:
                 print(f"❌ Affiliate activation failed: {str(e)}")
                 import traceback
                 traceback.print_exc()
+
+        print(f"✅ Total payment verification took {time.time() - start_time:.2f}s")
 
         return {
             "success": True,
