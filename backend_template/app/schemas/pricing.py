@@ -55,3 +55,37 @@ class CalculatorAddonResponse(BaseModel):
     min_value: int
     max_value: int
     default_value: int
+
+# --- Pricing Quote (for Checkout summary) ---
+class PricingQuoteRequest(BaseModel):
+    plan_id: int
+    billing_cycle: str  # monthly | quarterly | semiannually | annually | biennially | triennially
+    quantity: int = 1
+    # Selected add-ons from the configurator
+    additional_ipv4: int = 0
+    extra_storage_gb: int = 0
+    extra_bandwidth_tb: int = 0
+    plesk_addon: str = ''  # '', 'admin', 'pro', 'host'
+    backup_storage: str = ''  # '', '100gb','200gb','300gb','500gb','1000gb'
+    ssl_certificate: str = ''  # '', 'essential','essential-wildcard','comodo','comodo-wildcard','rapid','rapid-wildcard'
+    support_package: str = ''  # '', 'basic','premium'
+    managed_service: str = 'self'  # 'self','basic','premium'
+    ddos_protection: str = 'basic'  # 'basic','advanced','enterprise'
+
+class PricingQuoteBreakdown(BaseModel):
+    cycle_label: str
+    cycle_months: int
+    base_monthly: Decimal
+    addons_monthly: Decimal
+    subtotal_before_discount: Decimal  # monthly * months
+    discount_percent: Decimal
+    discount_amount: Decimal
+    subtotal_after_discount: Decimal
+    tax_percent: Decimal
+    tax_amount: Decimal
+    total: Decimal
+    currency: str = 'INR'
+
+class PricingQuoteResponse(BaseModel):
+    success: bool
+    quote: PricingQuoteBreakdown

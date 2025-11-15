@@ -244,6 +244,8 @@ export function Checkout() {
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState('razorpay');
   const [serverQuantity, setServerQuantity] = useState(1);
+  // Backend-computed pricing quote (per selected cycle)
+  const [pricingQuote, setPricingQuote] = useState<any | null>(null);
   
   // New addon states
   const [pleskAddon, setPleskAddon] = useState(''); // '', 'admin', 'pro', 'host'
@@ -495,10 +497,39 @@ export function Checkout() {
   };
 
   // Calculate subtotal including add-ons and quantity
+  const billingCycleInfo = useMemo(() => ({
+    months:
+      serverConfig?.billingCycle === 'quarterly' ? 3 :
+      serverConfig?.billingCycle === 'semiannually' ? 6 :
+      serverConfig?.billingCycle === 'annually' ? 12 :
+      serverConfig?.billingCycle === 'biennially' ? 24 :
+      serverConfig?.billingCycle === 'triennially' ? 36 : 1,
+    discount:
+      serverConfig?.billingCycle === 'quarterly' ? 10 :
+      serverConfig?.billingCycle === 'semiannually' ? 15 :
+      serverConfig?.billingCycle === 'annually' ? 20 :
+      serverConfig?.billingCycle === 'biennially' ? 25 :
+      serverConfig?.billingCycle === 'triennially' ? 35 : 5,
+    label:
+      serverConfig?.billingCycle === 'quarterly' ? 'Quarterly' :
+      serverConfig?.billingCycle === 'semiannually' ? 'Semiannually' :
+      serverConfig?.billingCycle === 'annually' ? 'Annually' :
+      serverConfig?.billingCycle === 'biennially' ? 'Biennially' :
+      serverConfig?.billingCycle === 'triennially' ? 'Triennially' : 'Monthly'
+  }), [serverConfig?.billingCycle]);
+
+  // Subtotal for the selected billing cycle after cycle discount, before promo
   const calculateSubtotal = () => {
     if (!serverConfig) return 0;
-    const perServerCost = serverConfig.monthlyPrice + calculateAddOnsCost();
-    return perServerCost * serverQuantity;
+    // Prefer backend quote if available
+    if (pricingQuote?.quote?.subtotal_after_discount != null) {
+      return Number(pricingQuote.quote.subtotal_after_discount) || 0;
+    }
+    // Fallback local calculation
+    const perServerMonthly = serverConfig.monthlyPrice + calculateAddOnsCost();
+    const base = perServerMonthly * billingCycleInfo.months * serverQuantity;
+    const discount = Math.round(base * (billingCycleInfo.discount / 100));
+    return base - discount;
   };
 
   const getTaxBreakdown = () => {
@@ -533,6 +564,37 @@ export function Checkout() {
     const tax = calculateTax();
     return subtotal - promoDiscount + tax;
   };
+
+  // Fetch backend pricing quote whenever relevant inputs change
+  useEffect(() => {
+    const fetchQuote = async () => {
+      if (!serverConfig) return;
+      try {
+        const quotePayload = {
+          plan_id: serverConfig.planId,
+          billing_cycle: serverConfig.billingCycle,
+          quantity: serverQuantity,
+          additional_ipv4: additionalIPv4,
+          extra_storage_gb: extraStorage,
+          extra_bandwidth_tb: extraBandwidth,
+          plesk_addon: pleskAddon,
+          backup_storage: backupStorage,
+          ssl_certificate: sslCertificate,
+          support_package: supportPackage,
+          managed_service: managedService,
+          ddos_protection: ddosProtection,
+        };
+        const res = await api.getPricingQuote(quotePayload);
+        setPricingQuote(res);
+      } catch (e) {
+        // Silently ignore; UI will fallback to local calc
+        console.warn('Pricing quote unavailable, using local calculation');
+        setPricingQuote(null);
+      }
+    };
+    fetchQuote();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverConfig?.planId, serverConfig?.billingCycle, serverQuantity, additionalIPv4, extraStorage, extraBandwidth, pleskAddon, backupStorage, sslCertificate, supportPackage, managedService, ddosProtection]);
 
   // Validate promo code
   const handleApplyPromoCode = () => {
@@ -583,7 +645,7 @@ export function Checkout() {
       const paymentOrderResponse = await api.post('/api/v1/payments/create-order', {
         payment_type: 'server',
         plan_id: serverConfig.planId,
-        amount: calculateTotal(), // Send calculated total including all addons
+        amount: pricingQuote?.quote?.total || calculateTotal(), // Prefer backend quote total
         billing_cycle: serverConfig.billingCycle === 'monthly' ? 'monthly' :
                        serverConfig.billingCycle === 'quarterly' ? 'quarterly' :
                        serverConfig.billingCycle === 'semiannually' ? 'semi_annual' :
@@ -1402,37 +1464,42 @@ export function Checkout() {
                   </div>
 
                   {/* Server Quantity Selector */}
-                  <div className="mb-6 bg-slate-950 rounded-xl p-6 border border-cyan-500/30">
+                  <div className="mb-6 bg-slate-950 rounded-xl p-4 sm:p-6 border border-cyan-500/30">
                     <h3 className="text-lg font-bold text-white mb-4 flex items-center">
                       <Server className="h-5 w-5 text-cyan-400 mr-2" />
                       Server Quantity
                     </h3>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                       <div className="flex-1">
-                        <p className="text-white font-medium">{serverConfig.planName}</p>
-                        <p className="text-sm text-slate-400">Select number of servers you want to deploy</p>
+                        <p className="text-white font-medium text-sm sm:text-base">{serverConfig.planName}</p>
+                        <p className="text-xs sm:text-sm text-slate-400">Select number of servers you want to deploy</p>
                       </div>
-                      <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-3 sm:space-x-4 justify-center sm:justify-end">
                         <button
                           type="button"
                           onClick={() => setServerQuantity(Math.max(1, serverQuantity - 1))}
-                          className="w-10 h-10 bg-slate-800 text-white rounded-lg hover:bg-slate-700 flex items-center justify-center transition-all"
+                          className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-800 text-white rounded-lg hover:bg-slate-700 flex items-center justify-center transition-all"
                         >
-                          <Minus className="h-5 w-5" />
+                          <Minus className="h-4 w-4 sm:h-5 sm:w-5" />
                         </button>
-                        <span className="text-2xl font-bold text-white w-16 text-center">{serverQuantity}</span>
+                        <span className="text-xl sm:text-2xl font-bold text-white w-12 sm:w-16 text-center">{serverQuantity}</span>
                         <button
                           type="button"
                           onClick={() => setServerQuantity(Math.min(100, serverQuantity + 1))}
-                          className="w-10 h-10 bg-cyan-600 text-white rounded-lg hover:bg-cyan-500 flex items-center justify-center transition-all"
+                          className="w-10 h-10 sm:w-12 sm:h-12 bg-cyan-600 text-white rounded-lg hover:bg-cyan-500 flex items-center justify-center transition-all"
                         >
-                          <Plus className="h-5 w-5" />
+                          <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
                         </button>
                       </div>
                     </div>
-                    <p className="text-xs text-slate-400 mt-3">
-                      Total: {serverQuantity} × {formatCurrency(serverConfig.monthlyPrice + calculateAddOnsCost())}/mo = {formatCurrency(calculateSubtotal())}/mo
-                    </p>
+                    <div className="mt-3 pt-3 border-t border-cyan-500/30">
+                      <p className="text-xs text-slate-400 flex flex-wrap items-center gap-1">
+                        <span>Total:</span>
+                        <span className="font-semibold text-white">{serverQuantity} × {formatCurrency(serverConfig.monthlyPrice + calculateAddOnsCost())}/mo</span>
+                        <span>=</span>
+                        <span className="font-bold text-cyan-400 text-sm">{formatCurrency(calculateSubtotal())}/mo</span>
+                      </p>
+                    </div>
                   </div>
 
                   <form className="space-y-6">
@@ -2167,8 +2234,8 @@ export function Checkout() {
                 </div>
                 
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="text-slate-400">Monthly:</span>
-                <span className="text-white font-semibold">{formatCurrency(calculateSubtotal())}</span>
+                  <span className="text-slate-400">{pricingQuote?.quote?.cycle_label || billingCycleInfo.label}:</span>
+                  <span className="text-white font-semibold">{formatCurrency(calculateSubtotal())}</span>
                 </div>
 
                 {promoDiscount > 0 && (
@@ -2333,7 +2400,7 @@ export function Checkout() {
               {/* Totals */}
               <div className="border-t border-cyan-500/30 pt-3 mb-3">
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="text-slate-300">Monthly:</span>
+                  <span className="text-slate-300">{pricingQuote?.quote?.cycle_label || billingCycleInfo.label}:</span>
                   <span className="text-white font-semibold">{formatCurrency(calculateSubtotal())}</span>
                 </div>
 
@@ -2514,7 +2581,7 @@ export function Checkout() {
                 </div>
 
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="text-slate-400">Monthly:</span>
+                  <span className="text-slate-400">{pricingQuote?.quote?.cycle_label || billingCycleInfo.label}:</span>
                   <span className="text-white font-semibold">{formatCurrency(calculateSubtotal())}</span>
                 </div>
 

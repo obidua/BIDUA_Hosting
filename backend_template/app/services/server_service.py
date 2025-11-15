@@ -535,39 +535,13 @@ class ServerService:
         result = await db.execute(
             select(Server)
             .options(
-                selectinload(Server.order).selectinload(Order.order_addons),
-                selectinload(Server.order).selectinload(Order.order_services)
+                selectinload(Server.user),
+                selectinload(Server.plan)
             )
             .where(Server.user_id == user_id)
         )
         servers = result.scalars().all()
-        
-        # Enrich servers with addon/service data
-        enriched_servers = []
-        for server in servers:
-            server_dict = {
-                "id": server.id,
-                "user_id": server.user_id,
-                "order_id": server.order_id,
-                "server_name": server.server_name,
-                "server_status": server.server_status,
-                "ip_address": server.ip_address,
-                "ram_gb": server.ram_gb,
-                "storage_gb": server.storage_gb,
-                "operating_system": server.operating_system,
-                "created_date": server.created_date,
-                "expiry_date": server.expiry_date,
-                "addons": [],
-                "services": [],
-            }
-            
-            if server.order:
-                server_dict["addons"] = [addon.to_dict() for addon in server.order.order_addons] if server.order.order_addons else []
-                server_dict["services"] = [service.to_dict() for service in server.order.order_services] if server.order.order_services else []
-            
-            enriched_servers.append(server_dict)
-        
-        return enriched_servers
+        return list(servers)
 
     async def get_user_active_servers(self, db: AsyncSession, user_id: int) -> List[Server]:
         result = await db.execute(
@@ -648,8 +622,29 @@ class ServerService:
         if not plan:
             raise ValueError("Hosting plan not found")
 
-        # Calculate expiry date (default 30 days)
-        expiry_date = datetime.now() + timedelta(days=30)
+        # Calculate expiry date based on billing cycle
+        billing_cycle_days = {
+            "monthly": 30,
+            "quarterly": 90,
+            "semiannually": 180,
+            "annually": 365,
+            "biennially": 730,
+            "triennially": 1095
+        }
+        cycle = (server_data.billing_cycle or "monthly").lower()
+        days = billing_cycle_days.get(cycle, 30)
+        expiry_date = datetime.now() + timedelta(days=days)
+
+        # Build specs with addons and services
+        specs_data = {
+            "vcpu": server_data.vcpu,
+            "ram_gb": server_data.ram_gb,
+            "storage_gb": server_data.storage_gb,
+            "bandwidth_gb": server_data.bandwidth_gb,
+            "os": server_data.operating_system,
+            "addons": server_data.addons or [],
+            "services": server_data.services or []
+        }
 
         db_server = Server(
             user_id=user_id,
@@ -664,14 +659,9 @@ class ServerService:
             plan_id=server_data.plan_id,
             plan_name=plan.name,
             monthly_cost=server_data.monthly_cost,
+            billing_cycle=server_data.billing_cycle or "monthly",
             expiry_date=expiry_date,
-            specs={
-                "vcpu": server_data.vcpu,
-                "ram_gb": server_data.ram_gb,
-                "storage_gb": server_data.storage_gb,
-                "bandwidth_gb": server_data.bandwidth_gb,
-                "os": server_data.operating_system,
-            },
+            specs=specs_data,
         )
 
         db.add(db_server)

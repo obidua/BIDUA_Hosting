@@ -77,11 +77,12 @@ class Server(Base):
     
     # Billing information
     monthly_cost = Column(Numeric(10, 2), nullable=False)
+    billing_cycle = Column(String(50), default='monthly')  # monthly, quarterly, semiannually, annually, etc.
     created_date = Column(DateTime(timezone=True), server_default=func.now())
     expiry_date = Column(DateTime(timezone=True), nullable=False)
     
     # Additional details
-    specs = Column(JSON, nullable=True)
+    specs = Column(JSON, nullable=True)  # Can store addon details, configurations, etc.
     notes = Column(Text, nullable=True)
     
     # Timestamps

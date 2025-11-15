@@ -192,7 +192,8 @@ We've transformed the basic checkout page into a **comprehensive, production-rea
 - DDoS Enterprise: ₹3,000
 
 #### `calculateSubtotal()`
-- Base monthly price + add-ons cost
+- Uses backend quote from `/api/v1/pricing/quote` to compute the selected billing cycle subtotal (months × (base monthly + addons) − cycle discount). Falls back to local calculation if backend is unreachable.
+- The label next to subtotal dynamically reflects the selected cycle (Monthly, Quarterly, Semiannually, Annually, etc.) on both desktop and mobile summaries.
 
 #### `calculateTax()`
 - 18% IGST for India

@@ -298,6 +298,11 @@ async def verify_payment(
                                 plan = await plan_service.get_plan_by_id(db, order_obj.plan_id)
                                 
                                 if plan:
+                                    # Extract addons and services from order metadata
+                                    order_addons = order_obj.order_metadata.get('addons', []) if order_obj.order_metadata else []
+                                    order_services = order_obj.order_metadata.get('services', []) if order_obj.order_metadata else []
+                                    billing_cycle = order_obj.billing_cycle or "monthly"
+                                    
                                     server_data = ServerCreate(
                                         plan_id=plan.id,
                                         server_name=f"{plan.name} Server",
@@ -308,7 +313,10 @@ async def verify_payment(
                                         ram_gb=plan.ram,
                                         storage_gb=plan.storage,
                                         bandwidth_gb=plan.bandwidth,
-                                        monthly_cost=float(plan.monthly_price)
+                                        monthly_cost=float(plan.monthly_price),
+                                        billing_cycle=billing_cycle,
+                                        addons=order_addons,
+                                        services=order_services
                                     )
                                     
                                     server = await server_service.create_user_server(

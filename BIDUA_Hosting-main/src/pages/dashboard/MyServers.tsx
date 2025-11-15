@@ -19,7 +19,18 @@ interface ServerData {
   expiry_date?: string;
   monthly_cost?: number | string;
   billing_cycle?: string;
-  specs?: any;
+  specs?: {
+    addons?: Array<{
+      name: string;
+      price: number;
+      quantity?: number;
+    }>;
+    services?: Array<{
+      name: string;
+      price: number;
+    }>;
+    [key: string]: any;
+  };
   addons?: Array<{
     name: string;
     price: number;
@@ -276,33 +287,52 @@ export function MyServers() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Billing Cycle:</span>
-                    <span className="text-white font-semibold capitalize">{selectedServer.billing_cycle || 'Monthly'}</span>
+                    <span className="text-white font-semibold capitalize">
+                      {selectedServer.billing_cycle === 'semiannually' ? 'Semi-Annually' :
+                       selectedServer.billing_cycle === 'biennially' ? 'Biennially' :
+                       selectedServer.billing_cycle === 'triennially' ? 'Triennially' :
+                       selectedServer.billing_cycle || 'Monthly'}
+                    </span>
                   </div>
                   <div className="flex justify-between border-t border-cyan-500/30 pt-3">
                     <span className="text-slate-400">Created:</span>
                     <span className="text-white font-semibold">
-                      {selectedServer.created_date ? new Date(selectedServer.created_date).toLocaleDateString() : 'N/A'}
+                      {selectedServer.created_date ? new Date(selectedServer.created_date).toLocaleDateString('en-GB') : 'N/A'}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Expires:</span>
                     <span className="text-white font-semibold">
-                      {selectedServer.expiry_date ? new Date(selectedServer.expiry_date).toLocaleDateString() : 'N/A'}
+                      {selectedServer.expiry_date ? new Date(selectedServer.expiry_date).toLocaleDateString('en-GB') : 'N/A'}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Add-ons */}
-              {selectedServer.addons && selectedServer.addons.length > 0 && (
+              {/* Add-ons - Check both specs.addons and addons array */}
+              {((selectedServer.specs?.addons && selectedServer.specs.addons.length > 0) || 
+                (selectedServer.addons && selectedServer.addons.length > 0)) && (
                 <div>
                   <h4 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
                     <Package className="h-5 w-5 text-cyan-400" />
                     <span>Active Add-ons</span>
                   </h4>
                   <div className="space-y-2">
-                    {selectedServer.addons.map((addon, index) => (
-                      <div key={index} className="bg-slate-950 p-3 rounded-lg border border-cyan-500/30 flex justify-between items-center">
+                    {/* Render from specs.addons if available */}
+                    {selectedServer.specs?.addons?.map((addon, index) => (
+                      <div key={`spec-addon-${index}`} className="bg-slate-950 p-3 rounded-lg border border-cyan-500/30 flex justify-between items-center">
+                        <div>
+                          <span className="text-white font-medium">{addon.name}</span>
+                          {addon.quantity && addon.quantity > 1 && (
+                            <span className="text-xs text-slate-400 ml-2">(×{addon.quantity})</span>
+                          )}
+                        </div>
+                        <span className="text-cyan-400 font-semibold">₹{Number(addon.price || 0).toFixed(2)}</span>
+                      </div>
+                    ))}
+                    {/* Fallback to addons array */}
+                    {!selectedServer.specs?.addons && selectedServer.addons?.map((addon, index) => (
+                      <div key={`addon-${index}`} className="bg-slate-950 p-3 rounded-lg border border-cyan-500/30 flex justify-between items-center">
                         <span className="text-white">{addon.name}</span>
                         <span className="text-cyan-400 font-semibold">₹{addon.price.toFixed(2)}</span>
                       </div>
@@ -311,16 +341,25 @@ export function MyServers() {
                 </div>
               )}
 
-              {/* Services */}
-              {selectedServer.services && selectedServer.services.length > 0 && (
+              {/* Services - Check both specs.services and services array */}
+              {((selectedServer.specs?.services && selectedServer.specs.services.length > 0) || 
+                (selectedServer.services && selectedServer.services.length > 0)) && (
                 <div>
                   <h4 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
                     <Shield className="h-5 w-5 text-cyan-400" />
                     <span>Active Services</span>
                   </h4>
                   <div className="space-y-2">
-                    {selectedServer.services.map((service, index) => (
-                      <div key={index} className="bg-slate-950 p-3 rounded-lg border border-cyan-500/30 flex justify-between items-center">
+                    {/* Render from specs.services if available */}
+                    {selectedServer.specs?.services?.map((service, index) => (
+                      <div key={`spec-service-${index}`} className="bg-slate-950 p-3 rounded-lg border border-cyan-500/30 flex justify-between items-center">
+                        <span className="text-white">{service.name}</span>
+                        <span className="text-cyan-400 font-semibold">₹{Number(service.price || 0).toFixed(2)}</span>
+                      </div>
+                    ))}
+                    {/* Fallback to services array */}
+                    {!selectedServer.specs?.services && selectedServer.services?.map((service, index) => (
+                      <div key={`service-${index}`} className="bg-slate-950 p-3 rounded-lg border border-cyan-500/30 flex justify-between items-center">
                         <span className="text-white">{service.name}</span>
                         <span className="text-cyan-400 font-semibold">₹{service.price.toFixed(2)}</span>
                       </div>

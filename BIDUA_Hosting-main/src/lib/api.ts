@@ -462,6 +462,14 @@ class ApiClient {
     });
   }
 
+  // Pricing quote (server plan + addons) computed on backend
+  async getPricingQuote(data: any) {
+    return this.request('/api/v1/pricing/quote', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   async post<T = any>(endpoint: string, data?: any): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',

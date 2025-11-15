@@ -1,5 +1,5 @@
-from pydantic import BaseModel, validator
-from typing import Optional, Dict, Any
+from pydantic import BaseModel, validator, Field
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 from decimal import Decimal
 
@@ -16,6 +16,9 @@ class ServerBase(BaseModel):
 class ServerCreate(ServerBase):
     plan_id: int
     monthly_cost: Decimal
+    billing_cycle: Optional[str] = "monthly"
+    addons: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
+    services: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
 
     @validator('vcpu')
     def validate_vcpu(cls, v):
@@ -42,6 +45,7 @@ class Server(ServerBase):
     ip_address: Optional[str] = None
     server_status: str = "provisioning"
     monthly_cost: Decimal
+    billing_cycle: str = "monthly"
     created_date: datetime
     expiry_date: datetime
     specs: Optional[Dict[str, Any]] = None

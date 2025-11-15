@@ -4,12 +4,12 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 6567,
+    port: 7777,
     strictPort: true,
     host: true,
     hmr: {
       overlay: true,
-      clientPort: 6567,
+      clientPort: 7777,
     },
     watch: {
       usePolling: true,
