@@ -81,10 +81,14 @@
 
 
 
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text
+from sqlalchemy import Column, String, Integer, DateTime, Boolean, Numeric, ForeignKey, Text, JSON
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
+
+if False:  # Type checking only
+    from app.models.ticket_attachment import TicketAttachment
+    from app.models.ticket_message import TicketMessage
 
 class SupportTicket(Base):
     __tablename__ = "support_tickets"
