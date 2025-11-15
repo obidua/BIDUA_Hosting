@@ -36,12 +36,14 @@ async def get_razorpay_key():
 # --------------------------------------------------------
 class CreatePaymentRequest(BaseModel):
     """
-    Unified payment creation request for both subscription and server payments
+    Unified payment creation request for subscription, server, and invoice payments
     """
-    payment_type: str  # 'subscription' or 'server'
-    plan_id: Optional[int] = None  # Required only for server purchase, not for ₹499 premium plan
-    billing_cycle: Optional[str] = 'one_time'  # For subscription: 'one_time', 'monthly', 'quarterly', etc.
+    payment_type: str  # 'subscription', 'server', or 'invoice'
+    plan_id: Optional[int] = None  # Required only for server purchase
+    billing_cycle: Optional[str] = 'one_time'
     server_config: Optional[Dict[str, Any]] = None  # For server purchase
+    amount: Optional[float] = None  # Required for invoice payment
+    invoice_id: Optional[int] = None  # For invoice payment tracking
 
 
 class VerifyPaymentRequest(BaseModel):
@@ -73,10 +75,10 @@ async def create_payment_order(
     plan_service = PlanService()
 
     # Validate payment type
-    if payment_request.payment_type not in ['subscription', 'server']:
+    if payment_request.payment_type not in ['subscription', 'server', 'invoice']:
         raise HTTPException(
             status_code=400,
-            detail="Invalid payment_type. Must be 'subscription' or 'server'"
+            detail="Invalid payment_type. Must be 'subscription', 'server', or 'invoice'"
         )
 
     # Determine amount based on payment type
@@ -92,6 +94,20 @@ async def create_payment_order(
             'plan_name': 'Premium Subscription',
             'subscription_type': 'premium_membership',
             'is_premium_plan': True
+        }
+    elif payment_request.payment_type == 'invoice':
+        # For invoice payment - use amount passed from frontend
+        if not payment_request.amount:
+            raise HTTPException(status_code=400, detail="amount is required for invoice payment")
+        
+        amount = Decimal(str(payment_request.amount))
+        billing_cycle = 'one_time'
+        
+        metadata = {
+            'plan_id': None,
+            'billing_cycle': billing_cycle,
+            'payment_for': 'invoice',
+            'invoice_id': payment_request.invoice_id
         }
     else:
         # For server purchase - plan_id is mandatory
@@ -212,6 +228,46 @@ async def verify_payment(
             razorpay_signature=payment_data.razorpay_signature
         )
 
+        # Check if this is an invoice payment
+        payment_for = payment_transaction.payment_metadata.get('payment_for')
+        
+        if payment_for == 'invoice':
+            # For invoice payment, just update the invoice status
+            invoice_id = payment_transaction.payment_metadata.get('invoice_id')
+            
+            if invoice_id:
+                from sqlalchemy import select
+                from app.models.invoice import Invoice as InvoiceModel
+                
+                invoice_result = await db.execute(
+                    select(InvoiceModel).where(InvoiceModel.id == invoice_id)
+                )
+                invoice_obj = invoice_result.scalars().first()
+                
+                if invoice_obj:
+                    invoice_obj.payment_status = 'paid'
+                    invoice_obj.status = 'paid'
+                    invoice_obj.amount_paid = invoice_obj.total_amount
+                    invoice_obj.balance_due = 0
+                    invoice_obj.payment_date = payment_transaction.paid_at
+                    invoice_obj.paid_at = payment_transaction.paid_at
+                    invoice_obj.payment_method = 'razorpay'
+                    invoice_obj.payment_reference = payment_data.razorpay_payment_id
+                    await db.commit()
+            
+            return {
+                "success": True,
+                "message": "Invoice payment verified successfully",
+                "payment": {
+                    "transaction_id": payment_transaction.id,
+                    "razorpay_payment_id": payment_data.razorpay_payment_id,
+                    "amount": float(payment_transaction.total_amount),
+                    "status": "paid",
+                    "invoice_id": invoice_id
+                }
+            }
+        
+        # For server/subscription payments, create order
         # Create order record
         from app.schemas.order import OrderCreate
         

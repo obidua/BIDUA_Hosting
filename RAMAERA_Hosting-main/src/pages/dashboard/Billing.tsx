@@ -89,13 +89,8 @@ export function Billing() {
   };
 
   const handlePayNow = async (invoice: Invoice) => {
-    // Navigate to checkout page with invoice details
-    navigate('/checkout', { 
-      state: { 
-        fromInvoice: true,
-        invoice: invoice
-      } 
-    });
+    // Navigate to dedicated invoice payment page
+    navigate(`/pay-invoice/${invoice.id}`);
   };
 
   const handleViewInvoice = (invoice: Invoice) => {

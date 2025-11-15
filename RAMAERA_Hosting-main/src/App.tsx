@@ -15,6 +15,7 @@ import { Contact } from './pages/Contact';
 import { Calculator } from './pages/Calculator';
 import { Checkout } from './pages/Checkout';
 import { InvoiceView } from './pages/InvoiceView';
+import { InvoicePayment } from './pages/InvoicePayment';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
 import { Terms } from './pages/Terms';
@@ -48,6 +49,9 @@ function App() {
         <Routes>
           {/* Invoice route without layout */}
           <Route path="/invoice/:invoiceId" element={<InvoiceView />} />
+          
+          {/* Invoice Payment route without layout */}
+          <Route path="/pay-invoice/:invoiceId" element={<InvoicePayment />} />
           
           <Route element={<PublicLayout />}>
             <Route path="/" element={<Home />} />
