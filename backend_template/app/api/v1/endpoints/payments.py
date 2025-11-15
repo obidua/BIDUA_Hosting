@@ -229,20 +229,52 @@ async def verify_payment(
 
         order = await order_service.create_order(db, current_user.id, order_create)
 
+        # Extract order details from the returned dictionary
+        order_data = order.get('order', {}) if isinstance(order, dict) else order
+        order_id = order_data.get('id') if isinstance(order_data, dict) else order_data.id
+
         # Link payment to order
         await payment_service.link_payment_to_order(
             db=db,
             payment_transaction_id=payment_transaction.id,
-            order_id=order.id
+            order_id=order_id
         )
 
-        # Update order with payment details
-        order.payment_type = payment_transaction.payment_type.value
-        order.activation_type = payment_transaction.activation_type.value
-        order.razorpay_order_id = payment_data.razorpay_order_id
-        order.razorpay_payment_id = payment_data.razorpay_payment_id
-        order.paid_at = payment_transaction.paid_at
-        await db.commit()
+        # Update order with payment details - fetch the actual order object
+        from sqlalchemy import select
+        from app.models.order import Order as OrderModel
+        from app.models.invoice import Invoice as InvoiceModel
+        
+        result = await db.execute(
+            select(OrderModel).where(OrderModel.id == order_id)
+        )
+        order_obj = result.scalars().first()
+        
+        if order_obj:
+            order_obj.payment_type = payment_transaction.payment_type.value
+            order_obj.activation_type = payment_transaction.activation_type.value
+            order_obj.razorpay_order_id = payment_data.razorpay_order_id
+            order_obj.razorpay_payment_id = payment_data.razorpay_payment_id
+            order_obj.paid_at = payment_transaction.paid_at
+            order_obj.order_status = 'completed'
+            order_obj.payment_status = 'paid'
+            
+            # Update associated invoice
+            invoice_result = await db.execute(
+                select(InvoiceModel).where(InvoiceModel.order_id == order_id)
+            )
+            invoice_obj = invoice_result.scalars().first()
+            if invoice_obj:
+                invoice_obj.payment_status = 'paid'
+                invoice_obj.status = 'paid'
+                invoice_obj.amount_paid = invoice_obj.total_amount
+                invoice_obj.balance_due = 0
+                invoice_obj.payment_date = payment_transaction.paid_at
+                invoice_obj.paid_at = payment_transaction.paid_at
+                invoice_obj.payment_method = 'razorpay'
+                invoice_obj.payment_reference = payment_data.razorpay_payment_id
+            
+            await db.commit()
 
         # Distribute commission if applicable
         commission_earnings = []
@@ -256,7 +288,7 @@ async def verify_payment(
         if payment_transaction.payment_type == PaymentType.SUBSCRIPTION:
             from sqlalchemy import select
             from app.models.users import UserProfile
-            
+
             result = await db.execute(
                 select(UserProfile).where(UserProfile.id == current_user.id)
             )
@@ -267,6 +299,62 @@ async def verify_payment(
                 # Calculate end date based on billing cycle
                 # You can implement this based on billing cycle
                 await db.commit()
+
+        # 🆕 Auto-create server if this is a server purchase
+        server_created = None
+        if payment_transaction.payment_type == PaymentType.SERVER and plan_id:
+            try:
+                from app.services.server_service import ServerService
+                from app.schemas.server import ServerCreate
+                from sqlalchemy import select
+                from app.models.plan import Plan
+
+                server_service = ServerService()
+
+                # Get plan details
+                result = await db.execute(select(Plan).filter(Plan.id == plan_id))
+                plan = result.scalar_one_or_none()
+
+                if plan:
+                    # Extract server config from payment metadata
+                    server_metadata = payment_transaction.payment_metadata or {}
+
+                    server_data = ServerCreate(
+                        server_name=server_metadata.get('server_name', f'{plan.name} Server'),
+                        hostname=server_metadata.get('hostname', f'server-{current_user.id}-{order_id}.bidua.com'),
+                        server_type='VPS',
+                        operating_system=server_metadata.get('os', 'Ubuntu 22.04 LTS'),
+                        vcpu=plan.cpu_cores,
+                        ram_gb=plan.ram_gb,
+                        storage_gb=plan.storage_gb,
+                        bandwidth_gb=plan.bandwidth_gb or 1000,
+                        plan_id=plan.id,
+                        monthly_cost=plan.base_price
+                    )
+
+                    server_created = await server_service.create_user_server(db, current_user.id, server_data)
+                    print(f"✅ Server {server_created.id} created for user {current_user.id}")
+            except Exception as e:
+                print(f"❌ Server creation failed: {str(e)}")
+                # Don't fail payment verification, but log the error
+                import traceback
+                traceback.print_exc()
+
+        # 🆕 Auto-activate affiliate subscription after server purchase
+        affiliate_activated = False
+        if payment_transaction.payment_type == PaymentType.SERVER:
+            try:
+                from app.services.affiliate_service import AffiliateService
+                affiliate_service = AffiliateService()
+
+                # Activate affiliate subscription (free with server purchase)
+                await affiliate_service.activate_subscription_from_server_purchase(db, current_user.id)
+                affiliate_activated = True
+                print(f"✅ Affiliate subscription activated for user {current_user.id}")
+            except Exception as e:
+                print(f"❌ Affiliate activation failed: {str(e)}")
+                import traceback
+                traceback.print_exc()
 
         return {
             "success": True,
@@ -280,15 +368,23 @@ async def verify_payment(
                 "payment_method": payment_transaction.payment_method
             },
             "order": {
-                "id": order.id,
-                "order_number": order.order_number,
-                "status": order.order_status
+                "id": order_data.get('id') if isinstance(order_data, dict) else order_data.id,
+                "order_number": order_data.get('order_number') if isinstance(order_data, dict) else order_data.order_number,
+                "status": order_data.get('order_status') if isinstance(order_data, dict) else order_data.order_status
             },
             "commission": {
                 "distributed": payment_transaction.commission_distributed,
                 "earnings_count": len(commission_earnings),
                 "total_distributed": sum(float(e.commission_amount) for e in commission_earnings)
-            }
+            },
+            "server": {
+                "created": server_created is not None,
+                "server_id": server_created.id if server_created else None,
+                "hostname": server_created.hostname if server_created else None
+            } if payment_transaction.payment_type == PaymentType.SERVER else None,
+            "affiliate": {
+                "activated": affiliate_activated
+            } if payment_transaction.payment_type == PaymentType.SERVER else None
         }
 
     except HTTPException as e:

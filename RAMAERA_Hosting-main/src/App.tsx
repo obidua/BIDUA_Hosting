@@ -46,12 +46,14 @@ function App() {
         <TawkToWidget hideOnRoutes={['/login', '/signup']} />
         <PWAInstallPrompt />
         <Routes>
+          {/* Invoice route without layout */}
+          <Route path="/invoice/:invoiceId" element={<InvoiceView />} />
+          
           <Route element={<PublicLayout />}>
             <Route path="/" element={<Home />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/calculator" element={<Calculator />} />
             <Route path="/checkout" element={<Checkout />} />
-            <Route path="/invoice/:invoiceId" element={<InvoiceView />} />
             <Route path="/dedicated-servers" element={<DedicatedServers />} />
             <Route path="/solutions" element={<Solutions />} />
             <Route path="/contact" element={<Contact />} />
