@@ -51,24 +51,24 @@ export function UserManagement() {
     switch (role) {
       case 'admin':
       case 'super_admin':
-        return 'bg-indigo-50 text-indigo-600 border-indigo-100';
+        return 'bg-indigo-500/15 text-indigo-200 border-indigo-500/40';
       case 'support':
-        return 'bg-sky-50 text-sky-600 border-sky-100';
+        return 'bg-sky-500/15 text-sky-200 border-sky-500/40';
       default:
-        return 'bg-slate-50 text-slate-600 border-slate-200';
+        return 'bg-slate-500/15 text-slate-200 border-slate-500/40';
     }
   };
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'active':
-        return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+        return 'bg-emerald-500/15 text-emerald-200 border-emerald-500/40';
       case 'suspended':
-        return 'bg-amber-50 text-amber-600 border-amber-100';
+        return 'bg-amber-500/15 text-amber-200 border-amber-500/40';
       case 'banned':
-        return 'bg-rose-50 text-rose-600 border-rose-100';
+        return 'bg-rose-500/15 text-rose-200 border-rose-500/40';
       default:
-        return 'bg-slate-50 text-slate-600 border-slate-200';
+        return 'bg-slate-500/15 text-slate-200 border-slate-500/40';
     }
   };
 
@@ -108,36 +108,36 @@ export function UserManagement() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {summaryCards.map((card) => (
-          <div key={card.label} className="bg-slate-950/60 border border-slate-200 rounded-2xl p-5 shadow-sm">
-            <p className="text-sm text-slate-500">{card.label}</p>
-            <p className="text-3xl font-semibold text-slate-900 mt-1">{card.value}</p>
-            <p className="text-sm text-slate-500 mt-2">{card.helper}</p>
+          <div key={card.label} className="bg-slate-950/60 border border-slate-900 rounded-2xl p-5 shadow-sm">
+            <p className="text-sm text-slate-400">{card.label}</p>
+            <p className="text-3xl font-semibold text-white mt-1">{card.value}</p>
+            <p className="text-sm text-slate-400 mt-2">{card.helper}</p>
           </div>
         ))}
       </div>
 
-      <div className="bg-slate-950/60 border border-slate-200 rounded-2xl shadow-sm p-6">
+      <div className="bg-slate-950/60 border border-slate-900 rounded-2xl shadow-sm p-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-600 mb-2">Search</label>
+            <label className="block text-sm font-medium text-slate-300 mb-2">Search</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-500" />
               <input
                 type="text"
                 placeholder="Search by name or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
+                className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 placeholder-slate-500"
               />
             </div>
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-slate-600 mb-2">Role</label>
+            <label className="block text-sm font-medium text-slate-300 mb-2">Role</label>
             <select
               value={filterRole}
               onChange={(e) => setFilterRole(e.target.value)}
-              className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
+              className="w-full px-4 py-2 bg-slate-900 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
             >
               <option value="all">All Roles</option>
               <option value="customer">Customer</option>
@@ -148,11 +148,11 @@ export function UserManagement() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-600 mb-2">Account Status</label>
+            <label className="block text-sm font-medium text-slate-300 mb-2">Account Status</label>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
+              className="w-full px-4 py-2 bg-slate-900 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -163,36 +163,36 @@ export function UserManagement() {
         </div>
       </div>
 
-      <div className="bg-slate-950/60 border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-slate-950/60 border border-slate-900 rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-200">
+            <thead className="bg-slate-900/60 border-b border-slate-800">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">User</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Joined</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">User</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Email</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Role</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Joined</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-800">
               {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-slate-50/70 transition-colors">
+                <tr key={user.id} className="hover:bg-slate-900/40 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
                         {user.full_name?.charAt(0) || user.username?.charAt(0) || 'U'}
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-semibold text-slate-900">{user.full_name || user.username}</div>
-                        <div className="text-sm text-slate-500">@{user.username}</div>
+                        <div className="text-sm font-semibold text-white">{user.full_name || user.username}</div>
+                        <div className="text-sm text-slate-400">@{user.username}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2 text-slate-600">
-                      <Mail className="w-4 h-4 text-slate-400" />
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <Mail className="w-4 h-4 text-slate-500" />
                       {user.email}
                     </div>
                   </td>
@@ -206,15 +206,15 @@ export function UserManagement() {
                       {user.account_status?.toUpperCase()}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">
                     {new Date(user.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
-                      <button className="text-cyan-600 hover:text-cyan-700 transition">
+                      <button className="text-cyan-400 hover:text-cyan-300 transition">
                         <Shield className="w-5 h-5" />
                       </button>
-                      <button className="text-rose-500 hover:text-rose-600 transition">
+                      <button className="text-rose-400 hover:text-rose-300 transition">
                         <Ban className="w-5 h-5" />
                       </button>
                     </div>
@@ -224,12 +224,12 @@ export function UserManagement() {
             </tbody>
           </table>
         </div>
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 text-sm text-slate-500 flex justify-between">
+        <div className="px-6 py-4 bg-slate-900/60 border-t border-slate-800 text-sm text-slate-400 flex justify-between">
           <span>
-            Showing <span className="font-semibold text-slate-900">{filteredUsers.length}</span> of{' '}
-            <span className="font-semibold text-slate-900">{users.length}</span> users
+            Showing <span className="font-semibold text-slate-300">{filteredUsers.length}</span> of{' '}
+            <span className="font-semibold text-slate-300">{users.length}</span> users
           </span>
-          <span className="text-slate-400">Filters applied: role {filterRole} / status {filterStatus}</span>
+          <span className="text-slate-500">Filters applied: role {filterRole} / status {filterStatus}</span>
         </div>
       </div>
     </div>

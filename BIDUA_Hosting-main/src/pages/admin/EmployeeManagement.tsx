@@ -234,7 +234,7 @@ export function EmployeeManagement() {
         actions={
           <button
             onClick={fetchData}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-950/60 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-950/60 border border-slate-800 text-slate-300 rounded-xl hover:bg-slate-900/70 transition"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh

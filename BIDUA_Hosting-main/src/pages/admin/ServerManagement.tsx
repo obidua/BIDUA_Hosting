@@ -128,7 +128,7 @@ export function ServerManagement() {
         actions={
           <button
             onClick={fetchServers}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-950/60 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-slate-200 rounded-xl border border-slate-800 hover:bg-slate-900/70 transition"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh

@@ -268,7 +268,7 @@ export function PlansManagement() {
 
       {filteredPlans.length === 0 && (
         <div className="text-center py-12 text-slate-400 bg-slate-950/60 rounded-2xl border border-slate-900 shadow-[0_12px_35px_rgba(2,6,23,0.7)]">
-          <Package className="w-12 h-12 mx-auto mb-4 text-slate-600" />
+          <Package className="w-12 h-12 mx-auto mb-4 text-slate-400" />
           <p>No plans found</p>
         </div>
       )}
