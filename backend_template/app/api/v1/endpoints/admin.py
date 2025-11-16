@@ -333,71 +333,226 @@ async def get_all_servers(
 async def get_all_orders(
     skip: int = 0,
     limit: int = 100,
+    status: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     current_user: UserProfile = Depends(require_admin)
 ):
-    """Get all orders with pagination"""
-    stmt = select(Order).offset(skip).limit(limit).order_by(Order.created_at.desc())
-    result = await db.execute(stmt)
-    orders = result.scalars().all()
-    
-    # Get total count
-    count_stmt = select(func.count(Order.id))
-    count_result = await db.execute(count_stmt)
-    total = count_result.scalar() or 0
-    
-    return {
-        "orders": [
-            {
-                "id": order.id,
-                "user_id": order.user_id,
-                "plan_id": order.plan_id,
-                "status": order.status,
-                "total_amount": float(order.total_amount) if order.total_amount else 0,
-                "created_at": order.created_at.isoformat() if order.created_at else None,
-            }
-            for order in orders
-        ],
-        "total": total,
-        "skip": skip,
-        "limit": limit
-    }
+    """Get all orders with pagination and filtering"""
+    try:
+        from sqlalchemy.orm import selectinload
+        
+        # Build query with optional status filter
+        query = select(Order)
+        if status and status != 'all':
+            query = query.where(Order.order_status == status)
+        
+        # Add eager loading and pagination
+        query = query.options(selectinload(Order.user), selectinload(Order.plan))
+        query = query.offset(skip).limit(limit).order_by(Order.created_at.desc())
+        
+        result = await db.execute(query)
+        orders = result.unique().scalars().all()
+        
+        # Get total count
+        count_query = select(func.count(Order.id))
+        if status and status != 'all':
+            count_query = count_query.where(Order.order_status == status)
+        count_result = await db.execute(count_query)
+        total = count_result.scalar() or 0
+        
+        return {
+            "orders": [
+                {
+                    "id": order.id,
+                    "order_number": getattr(order, 'order_number', f'ORD-{order.id}'),
+                    "user_id": order.user_id,
+                    "plan_id": order.plan_id,
+                    "order_status": getattr(order, 'order_status', 'pending'),
+                    "payment_status": getattr(order, 'payment_status', 'pending'),
+                    "billing_cycle": getattr(order, 'billing_cycle', 'monthly'),
+                    "total_amount": float(order.total_amount) if order.total_amount else 0,
+                    "discount_amount": float(getattr(order, 'discount_amount', 0)) or 0,
+                    "tax_amount": float(getattr(order, 'tax_amount', 0)) or 0,
+                    "grand_total": float(getattr(order, 'grand_total', order.total_amount)) or 0,
+                    "currency": getattr(order, 'currency', 'INR'),
+                    "payment_method": getattr(order, 'payment_method', None),
+                    "razorpay_order_id": getattr(order, 'razorpay_order_id', None),
+                    "razorpay_payment_id": getattr(order, 'razorpay_payment_id', None),
+                    "created_at": order.created_at.isoformat() if order.created_at else None,
+                    "paid_at": getattr(order, 'paid_at', None),
+                    "plan_name": order.plan.name if order.plan else 'N/A',
+                    "user": {
+                        "id": order.user.id if order.user else None,
+                        "email": order.user.email if order.user else "N/A",
+                        "full_name": order.user.full_name if order.user else "N/A"
+                    }
+                }
+                for order in orders
+            ],
+            "total": total,
+            "skip": skip,
+            "limit": limit
+        }
+    except Exception as e:
+        print(f"Error getting orders: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "orders": [],
+            "total": 0,
+            "skip": skip,
+            "limit": limit,
+            "error": str(e)
+        }
 
 
 @router.get("/tickets")
 async def get_all_tickets(
     skip: int = 0,
     limit: int = 100,
+    status: Optional[str] = None,
+    priority: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     current_user: UserProfile = Depends(require_admin)
 ):
-    """Get all support tickets with pagination"""
-    stmt = select(SupportTicket).offset(skip).limit(limit).order_by(SupportTicket.created_at.desc())
-    result = await db.execute(stmt)
-    tickets = result.scalars().all()
+    """Get all support tickets with pagination and filtering"""
+    try:
+        from sqlalchemy.orm import selectinload
+        
+        # Build query with optional filters
+        query = select(SupportTicket)
+        if status and status != 'all':
+            query = query.where(SupportTicket.status == status)
+        if priority and priority != 'all':
+            query = query.where(SupportTicket.priority == priority)
+        
+        # Add eager loading and pagination
+        query = query.options(selectinload(SupportTicket.user))
+        query = query.offset(skip).limit(limit).order_by(SupportTicket.created_at.desc())
+        
+        result = await db.execute(query)
+        tickets = result.unique().scalars().all()
 
-    # Get total count
-    count_stmt = select(func.count(SupportTicket.id))
-    count_result = await db.execute(count_stmt)
-    total = count_result.scalar() or 0
+        # Get total count
+        count_query = select(func.count(SupportTicket.id))
+        if status and status != 'all':
+            count_query = count_query.where(SupportTicket.status == status)
+        if priority and priority != 'all':
+            count_query = count_query.where(SupportTicket.priority == priority)
+        count_result = await db.execute(count_query)
+        total = count_result.scalar() or 0
 
-    return {
-        "tickets": [
-            {
-                "id": ticket.id,
-                "user_id": ticket.user_id,
-                "subject": ticket.subject,
-                "status": ticket.status,
-                "priority": ticket.priority,
-                "category": ticket.category,
-                "created_at": ticket.created_at.isoformat() if ticket.created_at else None,
-            }
-            for ticket in tickets
-        ],
-        "total": total,
-        "skip": skip,
-        "limit": limit
-    }
+        return {
+            "tickets": [
+                {
+                    "id": ticket.id,
+                    "ticket_number": getattr(ticket, 'ticket_number', f'TKT-{ticket.id}'),
+                    "user_id": ticket.user_id,
+                    "subject": ticket.subject,
+                    "description": getattr(ticket, 'description', ''),
+                    "status": ticket.status,
+                    "priority": ticket.priority,
+                    "category": ticket.category,
+                    "response_time_minutes": getattr(ticket, 'response_time_minutes', 0),
+                    "last_reply_at": getattr(ticket, 'last_reply_at', None),
+                    "created_at": ticket.created_at.isoformat() if ticket.created_at else None,
+                    "resolved_at": getattr(ticket, 'resolved_at', None),
+                    "user": {
+                        "id": ticket.user.id if ticket.user else None,
+                        "email": ticket.user.email if ticket.user else "N/A",
+                        "full_name": ticket.user.full_name if ticket.user else "N/A"
+                    }
+                }
+                for ticket in tickets
+            ],
+            "total": total,
+            "skip": skip,
+            "limit": limit
+        }
+    except Exception as e:
+        print(f"Error getting tickets: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "tickets": [],
+            "total": 0,
+            "skip": skip,
+            "limit": limit,
+            "error": str(e)
+        }
+
+
+# ========================================
+# REFERRAL MANAGEMENT ENDPOINTS
+# ========================================
+
+@router.get("/referrals")
+async def get_all_referrals(
+    skip: int = 0,
+    limit: int = 100,
+    status: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserProfile = Depends(require_admin)
+):
+    """Get all referrals with pagination and filtering"""
+    try:
+        from sqlalchemy.orm import selectinload
+        
+        # Build query with optional status filter
+        query = select(Referral)
+        if status and status != 'all':
+            query = query.where(Referral.status == status)
+        
+        # Add eager loading and pagination
+        query = query.options(selectinload(Referral.user), selectinload(Referral.referred_user))
+        query = query.offset(skip).limit(limit).order_by(Referral.created_at.desc())
+        
+        result = await db.execute(query)
+        referrals = result.unique().scalars().all()
+        
+        # Get total count
+        count_query = select(func.count(Referral.id))
+        if status and status != 'all':
+            count_query = count_query.where(Referral.status == status)
+        count_result = await db.execute(count_query)
+        total = count_result.scalar() or 0
+        
+        return {
+            "referrals": [
+                {
+                    "id": referral.id,
+                    "user_id": referral.user_id,
+                    "referred_user_id": getattr(referral, 'referred_user_id', None),
+                    "referral_code": getattr(referral, 'referral_code', ''),
+                    "status": getattr(referral, 'status', 'active'),
+                    "is_active": getattr(referral, 'is_active', True),
+                    "total_referrals": getattr(referral, 'total_referrals', 0),
+                    "total_commission": float(getattr(referral, 'total_commission', 0)) or 0,
+                    "available_balance": float(getattr(referral, 'available_balance', 0)) or 0,
+                    "created_at": referral.created_at.isoformat() if referral.created_at else None,
+                    "user": {
+                        "id": referral.user.id if referral.user else None,
+                        "email": referral.user.email if referral.user else "N/A",
+                        "full_name": referral.user.full_name if referral.user else "N/A"
+                    }
+                }
+                for referral in referrals
+            ],
+            "total": total,
+            "skip": skip,
+            "limit": limit
+        }
+    except Exception as e:
+        print(f"Error getting referrals: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "referrals": [],
+            "total": 0,
+            "skip": skip,
+            "limit": limit,
+            "error": str(e)
+        }
 
 
 # ========================================
