@@ -104,68 +104,102 @@ async def get_admin_stats(
     current_user: UserProfile = Depends(require_admin)
 ):
     """Get admin dashboard statistics"""
-    
-    # Get total users count
-    users_stmt = select(func.count(UserProfile.id))
-    users_result = await db.execute(users_stmt)
-    total_users = users_result.scalar() or 0
-    
-    # Get users created this month
-    current_month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    users_this_month_stmt = select(func.count(UserProfile.id)).where(
-        UserProfile.created_at >= current_month_start
-    )
-    users_this_month_result = await db.execute(users_this_month_stmt)
-    users_this_month = users_this_month_result.scalar() or 0
-    
-    # Get active servers count
-    servers_stmt = select(func.count(Server.id)).where(Server.server_status == 'active')
-    servers_result = await db.execute(servers_stmt)
-    active_servers = servers_result.scalar() or 0
-    
-    # Get total servers count
-    total_servers_stmt = select(func.count(Server.id))
-    total_servers_result = await db.execute(total_servers_stmt)
-    total_servers = total_servers_result.scalar() or 0
-    
-    # Get total orders count
-    orders_stmt = select(func.count(Order.id))
-    orders_result = await db.execute(orders_stmt)
-    total_orders = orders_result.scalar() or 0
-    
-    # Get monthly revenue (sum of completed orders this month)
-    monthly_revenue_stmt = select(func.sum(Order.total_amount)).where(
-        and_(
-            Order.created_at >= current_month_start,
-            Order.order_status == 'completed'
+    try:
+        # Get total users count
+        users_result = await db.execute(select(func.count(UserProfile.id)))
+        total_users = users_result.scalar() or 0
+        
+        # Get users created this month
+        current_month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        users_this_month_result = await db.execute(
+            select(func.count(UserProfile.id)).where(UserProfile.created_at >= current_month_start)
         )
-    )
-    monthly_revenue_result = await db.execute(monthly_revenue_stmt)
-    monthly_revenue = float(monthly_revenue_result.scalar() or 0)
-    
-    # Get open support tickets
-    open_tickets_stmt = select(func.count(SupportTicket.id)).where(
-        SupportTicket.status.in_(['open', 'in_progress'])
-    )
-    open_tickets_result = await db.execute(open_tickets_stmt)
-    open_tickets = open_tickets_result.scalar() or 0
-    
-    # Get referral program status
-    referrals_stmt = select(func.count(Referral.id)).where(Referral.status == 'active')
-    referrals_result = await db.execute(referrals_stmt)
-    active_referrals = referrals_result.scalar() or 0
-    
-    return {
-        "total_users": total_users,
-        "users_this_month": users_this_month,
-        "active_servers": active_servers,
-        "total_servers": total_servers,
-        "total_orders": total_orders,
-        "monthly_revenue": monthly_revenue,
-        "open_tickets": open_tickets,
-        "active_referrals": active_referrals,
-        "referral_status": "Active" if active_referrals > 0 else "Inactive"
-    }
+        users_this_month = users_this_month_result.scalar() or 0
+        
+        # Get active servers count (safely handle if table doesn't exist)
+        try:
+            servers_result = await db.execute(
+                select(func.count(Server.id)).where(Server.server_status == 'active')
+            )
+            active_servers = servers_result.scalar() or 0
+        except:
+            active_servers = 0
+        
+        # Get total servers count
+        try:
+            total_servers_result = await db.execute(select(func.count(Server.id)))
+            total_servers = total_servers_result.scalar() or 0
+        except:
+            total_servers = 0
+        
+        # Get total orders count
+        try:
+            orders_result = await db.execute(select(func.count(Order.id)))
+            total_orders = orders_result.scalar() or 0
+        except:
+            total_orders = 0
+        
+        # Get monthly revenue (sum of completed orders this month)
+        try:
+            monthly_revenue_result = await db.execute(
+                select(func.sum(Order.total_amount)).where(
+                    and_(
+                        Order.created_at >= current_month_start,
+                        Order.order_status == 'completed'
+                    )
+                )
+            )
+            monthly_revenue = float(monthly_revenue_result.scalar() or 0)
+        except:
+            monthly_revenue = 0.0
+        
+        # Get open support tickets
+        try:
+            open_tickets_result = await db.execute(
+                select(func.count(SupportTicket.id)).where(
+                    SupportTicket.status.in_(['open', 'in_progress'])
+                )
+            )
+            open_tickets = open_tickets_result.scalar() or 0
+        except:
+            open_tickets = 0
+        
+        # Get referral program status
+        try:
+            referrals_result = await db.execute(
+                select(func.count(Referral.id)).where(Referral.status == 'active')
+            )
+            active_referrals = referrals_result.scalar() or 0
+        except:
+            active_referrals = 0
+        
+        return {
+            "total_users": total_users,
+            "users_this_month": users_this_month,
+            "active_servers": active_servers,
+            "total_servers": total_servers,
+            "total_orders": total_orders,
+            "monthly_revenue": monthly_revenue,
+            "open_tickets": open_tickets,
+            "active_referrals": active_referrals,
+            "referral_status": "Active" if active_referrals > 0 else "Inactive"
+        }
+    except Exception as e:
+        print(f"Error in admin stats: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        # Return default stats if there's an error
+        return {
+            "total_users": 0,
+            "users_this_month": 0,
+            "active_servers": 0,
+            "total_servers": 0,
+            "total_orders": 0,
+            "monthly_revenue": 0.0,
+            "open_tickets": 0,
+            "active_referrals": 0,
+            "referral_status": "Inactive"
+        }
 
 
 @router.get("/users")
@@ -176,33 +210,44 @@ async def get_all_users(
     current_user: UserProfile = Depends(require_admin)
 ):
     """Get all users with pagination"""
-    stmt = select(UserProfile).offset(skip).limit(limit).order_by(UserProfile.created_at.desc())
-    result = await db.execute(stmt)
-    users = result.scalars().all()
-    
-    # Get total count
-    count_stmt = select(func.count(UserProfile.id))
-    count_result = await db.execute(count_stmt)
-    total = count_result.scalar() or 0
-    
-    return {
-        "users": [
-            {
-                "id": user.id,
-                "username": user.username,
-                "email": user.email,
-                "full_name": user.full_name,
-                "role": user.role,
-                "account_status": user.account_status,
-                "created_at": user.created_at.isoformat() if user.created_at else None,
-                "referral_code": user.referral_code
-            }
-            for user in users
-        ],
-        "total": total,
-        "skip": skip,
-        "limit": limit
-    }
+    try:
+        stmt = select(UserProfile).offset(skip).limit(limit).order_by(UserProfile.created_at.desc())
+        result = await db.execute(stmt)
+        users = result.scalars().all()
+        
+        # Get total count
+        count_stmt = select(func.count(UserProfile.id))
+        count_result = await db.execute(count_stmt)
+        total = count_result.scalar() or 0
+        
+        return {
+            "users": [
+                {
+                    "id": user.id,
+                    "email": user.email,
+                    "full_name": user.full_name,
+                    "role": user.role,
+                    "account_status": user.account_status,
+                    "created_at": user.created_at.isoformat() if user.created_at else None,
+                    "referral_code": user.referral_code
+                }
+                for user in users
+            ],
+            "total": total,
+            "skip": skip,
+            "limit": limit
+        }
+    except Exception as e:
+        print(f"Error getting users: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "users": [],
+            "total": 0,
+            "skip": skip,
+            "limit": limit,
+            "error": str(e)
+        }
 
 
 @router.get("/servers")
