@@ -501,10 +501,12 @@ async def get_all_referrals(
         # Build query with optional status filter
         query = select(Referral)
         if status and status != 'all':
-            query = query.where(Referral.status == status)
+            query = query.where(Referral.is_active == (status == 'active'))
         
         # Add eager loading and pagination
-        query = query.options(selectinload(Referral.user), selectinload(Referral.referred_user))
+        query = query.options(
+            selectinload(Referral.referrer).selectinload(AffiliateSubscription.user if hasattr(AffiliateSubscription, 'user') else None)
+        )
         query = query.offset(skip).limit(limit).order_by(Referral.created_at.desc())
         
         result = await db.execute(query)
@@ -513,27 +515,46 @@ async def get_all_referrals(
         # Get total count
         count_query = select(func.count(Referral.id))
         if status and status != 'all':
-            count_query = count_query.where(Referral.status == status)
+            count_query = count_query.where(Referral.is_active == (status == 'active'))
         count_result = await db.execute(count_query)
         total = count_result.scalar() or 0
+        
+        # Get user data for referrer and referred user
+        referrer_ids = [r.referrer_id for r in referrals if r.referrer_id]
+        referred_ids = [r.referred_user_id for r in referrals if r.referred_user_id]
+        
+        users_map = {}
+        if referrer_ids:
+            user_result = await db.execute(select(UserProfile).where(UserProfile.id.in_(referrer_ids)))
+            for user in user_result.scalars().all():
+                users_map[user.id] = user
+        
+        if referred_ids:
+            user_result = await db.execute(select(UserProfile).where(UserProfile.id.in_(referred_ids)))
+            for user in user_result.scalars().all():
+                users_map[user.id] = user
         
         return {
             "referrals": [
                 {
                     "id": referral.id,
-                    "user_id": referral.user_id,
-                    "referred_user_id": getattr(referral, 'referred_user_id', None),
-                    "referral_code": getattr(referral, 'referral_code', ''),
-                    "status": getattr(referral, 'status', 'active'),
-                    "is_active": getattr(referral, 'is_active', True),
-                    "total_referrals": getattr(referral, 'total_referrals', 0),
-                    "total_commission": float(getattr(referral, 'total_commission', 0)) or 0,
-                    "available_balance": float(getattr(referral, 'available_balance', 0)) or 0,
+                    "referrer_id": referral.referrer_id,
+                    "referred_user_id": referral.referred_user_id,
+                    "referral_code_used": referral.referral_code_used,
+                    "level": referral.level,
+                    "is_active": referral.is_active,
+                    "has_purchased": referral.has_purchased,
+                    "first_purchase_amount": float(referral.first_purchase_amount) if referral.first_purchase_amount else 0,
                     "created_at": referral.created_at.isoformat() if referral.created_at else None,
-                    "user": {
-                        "id": referral.user.id if referral.user else None,
-                        "email": referral.user.email if referral.user else "N/A",
-                        "full_name": referral.user.full_name if referral.user else "N/A"
+                    "referrer": {
+                        "id": users_map.get(referral.referrer_id).id if referral.referrer_id and users_map.get(referral.referrer_id) else None,
+                        "email": users_map.get(referral.referrer_id).email if referral.referrer_id and users_map.get(referral.referrer_id) else "N/A",
+                        "full_name": users_map.get(referral.referrer_id).full_name if referral.referrer_id and users_map.get(referral.referrer_id) else "N/A"
+                    },
+                    "referred_user": {
+                        "id": users_map.get(referral.referred_user_id).id if referral.referred_user_id and users_map.get(referral.referred_user_id) else None,
+                        "email": users_map.get(referral.referred_user_id).email if referral.referred_user_id and users_map.get(referral.referred_user_id) else "N/A",
+                        "full_name": users_map.get(referral.referred_user_id).full_name if referral.referred_user_id and users_map.get(referral.referred_user_id) else "N/A"
                     }
                 }
                 for referral in referrals
