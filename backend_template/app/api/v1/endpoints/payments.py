@@ -349,90 +349,39 @@ async def verify_payment(
                 }
             }
         
-        # For server/subscription payments, create order
-        # Create order record
-        from app.schemas.order import OrderCreate
-        
-        # For ₹499 premium subscription, plan_id is None
+        # Check payment type and handle accordingly
         plan_id = payment_transaction.payment_metadata.get('plan_id')
+        order_data = None
+        order_id = None
         
-        t2 = time.time()
-        order_create = OrderCreate(
-            plan_id=plan_id,
-            billing_cycle=payment_transaction.payment_metadata.get('billing_cycle', 'one_time'),
-            total_amount=payment_transaction.total_amount,
-            status='active',
-            payment_method='razorpay',
-            payment_status='paid'
-        )
-
-        order = await order_service.create_order(db, current_user.id, order_create)
-        print(f"⏱️  Order creation took {time.time() - t2:.2f}s")
-
-        # Extract order details from the returned dictionary
-        order_data = order.get('order', {}) if isinstance(order, dict) else order
-        order_id = order_data.get('id') if isinstance(order_data, dict) else order_data.id
-
-        # Link payment to order
-        t3 = time.time()
-        await payment_service.link_payment_to_order(
-            db=db,
-            payment_transaction_id=payment_transaction.id,
-            order_id=order_id
-        )
-        print(f"⏱️  Payment linking took {time.time() - t3:.2f}s")
-
-        # Update order with payment details - fetch the actual order object
-        from sqlalchemy import select
-        from app.models.order import Order as OrderModel
-        from app.models.invoice import Invoice as InvoiceModel
-        
-        result = await db.execute(
-            select(OrderModel).where(OrderModel.id == order_id)
-        )
-        order_obj = result.scalars().first()
-        
-        if order_obj:
-            order_obj.payment_type = payment_transaction.payment_type.value
-            order_obj.activation_type = payment_transaction.activation_type.value
-            order_obj.razorpay_order_id = payment_data.razorpay_order_id
-            order_obj.razorpay_payment_id = payment_data.razorpay_payment_id
-            order_obj.paid_at = payment_transaction.paid_at
-            order_obj.order_status = 'completed'
-            order_obj.payment_status = 'paid'
-            
-            # Update associated invoice
-            invoice_result = await db.execute(
-                select(InvoiceModel).where(InvoiceModel.order_id == order_id)
-            )
-            invoice_obj = invoice_result.scalars().first()
-            if invoice_obj:
-                invoice_obj.payment_status = 'paid'
-                invoice_obj.status = 'paid'
-                invoice_obj.amount_paid = invoice_obj.total_amount
-                invoice_obj.balance_due = 0
-                invoice_obj.payment_date = payment_transaction.paid_at
-                invoice_obj.paid_at = payment_transaction.paid_at
-                invoice_obj.payment_method = 'razorpay'
-                invoice_obj.payment_reference = payment_data.razorpay_payment_id
-            
-            await db.commit()
-
-        # Distribute commission if applicable
-        commission_earnings = []
-        if payment_transaction.requires_commission():
-            t4 = time.time()
-            commission_earnings = await commission_service.distribute_commission(
-                db=db,
-                payment_transaction_id=payment_transaction.id
-            )
-            print(f"⏱️  Commission distribution took {time.time() - t4:.2f}s")
-
-        # Update user subscription status for subscription payments
+        # Handle subscription payment (₹499 premium)
         if payment_transaction.payment_type == PaymentType.SUBSCRIPTION:
+            t2 = time.time()
+            # Create affiliate subscription instead of order
+            from app.services.affiliate_service import AffiliateService
+            affiliate_service = AffiliateService()
+            
+            # Create affiliate subscription with payment details
+            from app.schemas.affiliate import AffiliateSubscriptionCreate
+            subscription_data = AffiliateSubscriptionCreate(
+                subscription_type='premium',
+                payment_method='razorpay',
+                payment_id=payment_data.razorpay_payment_id,
+                transaction_id=str(payment_transaction.id),
+                amount_paid=float(payment_transaction.total_amount)
+            )
+            
+            affiliate_sub = await affiliate_service.create_affiliate_subscription(
+                db=db,
+                user_id=current_user.id,
+                subscription_data=subscription_data
+            )
+            print(f"⏱️  Affiliate subscription creation took {time.time() - t2:.2f}s")
+            print(f"✅ Affiliate subscription created: {affiliate_sub.id}")
+            
+            # Update user profile subscription status
             from sqlalchemy import select
             from app.models.users import UserProfile
-
             result = await db.execute(
                 select(UserProfile).where(UserProfile.id == current_user.id)
             )
@@ -440,9 +389,91 @@ async def verify_payment(
             if user:
                 user.subscription_status = 'active'
                 user.subscription_start = datetime.utcnow()
-                # Calculate end date based on billing cycle
-                # You can implement this based on billing cycle
                 await db.commit()
+            
+            # Set order data for response (subscription doesn't create order)
+            order_data = {
+                'id': None,
+                'order_number': f'SUB-{affiliate_sub.id}',
+                'order_status': 'active',
+                'is_subscription': True
+            }
+            
+        else:
+            # For server payments, create order
+            from app.schemas.order import OrderCreate
+            
+            t2 = time.time()
+            order_create = OrderCreate(
+                plan_id=plan_id,
+                billing_cycle=payment_transaction.payment_metadata.get('billing_cycle', 'one_time'),
+                total_amount=payment_transaction.total_amount,
+                status='active',
+                payment_method='razorpay',
+                payment_status='paid'
+            )
+
+            order = await order_service.create_order(db, current_user.id, order_create)
+            print(f"⏱️  Order creation took {time.time() - t2:.2f}s")
+
+            # Extract order details from the returned dictionary
+            order_data = order.get('order', {}) if isinstance(order, dict) else order
+            order_id = order_data.get('id') if isinstance(order_data, dict) else order_data.id
+
+            # Link payment to order
+            t3 = time.time()
+            await payment_service.link_payment_to_order(
+                db=db,
+                payment_transaction_id=payment_transaction.id,
+                order_id=order_id
+            )
+            print(f"⏱️  Payment linking took {time.time() - t3:.2f}s")
+
+            # Update order with payment details - fetch the actual order object
+            from sqlalchemy import select
+            from app.models.order import Order as OrderModel
+            from app.models.invoice import Invoice as InvoiceModel
+            
+            result = await db.execute(
+                select(OrderModel).where(OrderModel.id == order_id)
+            )
+            order_obj = result.scalars().first()
+            
+            if order_obj:
+                order_obj.payment_type = payment_transaction.payment_type.value
+                order_obj.activation_type = payment_transaction.activation_type.value
+                order_obj.razorpay_order_id = payment_data.razorpay_order_id
+                order_obj.razorpay_payment_id = payment_data.razorpay_payment_id
+                order_obj.paid_at = payment_transaction.paid_at
+                order_obj.order_status = 'completed'
+                order_obj.payment_status = 'paid'
+                
+                # Update associated invoice
+                invoice_result = await db.execute(
+                    select(InvoiceModel).where(InvoiceModel.order_id == order_id)
+                )
+                invoice_obj = invoice_result.scalars().first()
+                if invoice_obj:
+                    invoice_obj.payment_status = 'paid'
+                    invoice_obj.status = 'paid'
+                    invoice_obj.amount_paid = invoice_obj.total_amount
+                    invoice_obj.balance_due = 0
+                    invoice_obj.payment_date = payment_transaction.paid_at
+                    invoice_obj.paid_at = payment_transaction.paid_at
+                    invoice_obj.payment_method = 'razorpay'
+                    invoice_obj.payment_reference = payment_data.razorpay_payment_id
+                
+                await db.commit()
+
+        # Distribute commission if applicable (skip for subscription payments)
+        commission_earnings = []
+        if payment_transaction.requires_commission() and payment_transaction.payment_type != PaymentType.SUBSCRIPTION:
+            t4 = time.time()
+            commission_earnings = await commission_service.distribute_commission(
+                db=db,
+                payment_transaction_id=payment_transaction.id
+            )
+            print(f"⏱️  Commission distribution took {time.time() - t4:.2f}s")
 
         # 🆕 Auto-create server if this is a server purchase
         server_created = None
@@ -496,9 +527,10 @@ async def verify_payment(
                 affiliate_service = AffiliateService()
 
                 # Activate affiliate subscription (free with server purchase)
-                await affiliate_service.activate_subscription_from_server_purchase(db, current_user.id)
-                affiliate_activated = True
-                print(f"✅ Affiliate subscription activated for user {current_user.id}")
+                affiliate_sub = await affiliate_service.check_and_activate_from_server_purchase(db, current_user.id)
+                affiliate_activated = affiliate_sub is not None
+                if affiliate_activated:
+                    print(f"✅ Affiliate subscription activated for user {current_user.id}")
                 print(f"⏱️  Affiliate activation took {time.time() - t6:.2f}s")
             except Exception as e:
                 print(f"❌ Affiliate activation failed: {str(e)}")
@@ -507,9 +539,10 @@ async def verify_payment(
 
         print(f"✅ Total payment verification took {time.time() - start_time:.2f}s")
 
-        return {
+        # Build response based on payment type
+        response = {
             "success": True,
-            "message": "Payment verified and processed successfully",
+            "message": "Payment verified successfully! Welcome to BIDUA Hosting Affiliate Program!" if payment_transaction.payment_type == PaymentType.SUBSCRIPTION else "Payment verified and processed successfully",
             "payment": {
                 "transaction_id": payment_transaction.id,
                 "payment_id": payment_data.razorpay_payment_id,
@@ -517,26 +550,46 @@ async def verify_payment(
                 "status": payment_transaction.payment_status.value,
                 "payment_type": payment_transaction.payment_type.value,
                 "payment_method": payment_transaction.payment_method
-            },
-            "order": {
+            }
+        }
+        
+        # Add order info if available
+        if order_data:
+            response["order"] = {
                 "id": order_data.get('id') if isinstance(order_data, dict) else order_data.id,
                 "order_number": order_data.get('order_number') if isinstance(order_data, dict) else order_data.order_number,
-                "status": order_data.get('order_status') if isinstance(order_data, dict) else order_data.order_status
-            },
-            "commission": {
+                "status": order_data.get('order_status') if isinstance(order_data, dict) else order_data.order_status,
+                "is_subscription": order_data.get('is_subscription', False)
+            }
+        
+        # Add commission info for server payments
+        if payment_transaction.payment_type != PaymentType.SUBSCRIPTION:
+            response["commission"] = {
                 "distributed": payment_transaction.commission_distributed,
                 "earnings_count": len(commission_earnings),
                 "total_distributed": sum(float(e.commission_amount) for e in commission_earnings)
-            },
-            "server": {
+            }
+        
+        # Add server info for server payments
+        if payment_transaction.payment_type == PaymentType.SERVER:
+            response["server"] = {
                 "created": server_created is not None,
                 "server_id": server_created.id if server_created else None,
                 "hostname": server_created.hostname if server_created else None
-            } if payment_transaction.payment_type == PaymentType.SERVER else None,
-            "affiliate": {
+            }
+            response["affiliate"] = {
                 "activated": affiliate_activated
-            } if payment_transaction.payment_type == PaymentType.SERVER else None
-        }
+            }
+        
+        # Add affiliate info for subscription payments
+        if payment_transaction.payment_type == PaymentType.SUBSCRIPTION:
+            response["affiliate"] = {
+                "activated": True,
+                "subscription_type": "premium",
+                "message": "🎉 Your affiliate account is now active! Start referring and earning today!"
+            }
+        
+        return response
 
     except HTTPException as e:
         raise e

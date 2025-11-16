@@ -1,4 +1,4 @@
-import { Server, CreditCard, AlertCircle, TrendingUp } from 'lucide-react';
+import { Server, CreditCard, AlertCircle, TrendingUp, CheckCircle, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import api, { DashboardStats } from '../../lib/api';
@@ -22,6 +22,8 @@ export function Overview() {
   });
   const [recentServers, setRecentServers] = useState<Server[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(false);
+  const [welcomeMessage, setWelcomeMessage] = useState('');
   
   // Helpers for readable formatting
   const formatINR = (amount: number) =>
@@ -69,6 +71,22 @@ export function Overview() {
 
   useEffect(() => {
     loadDashboardData();
+    
+    // Check if user just registered
+    const justRegistered = sessionStorage.getItem('registration_success');
+    const storedMessage = sessionStorage.getItem('registration_message');
+    
+    if (justRegistered === 'true') {
+      setShowWelcomeBanner(true);
+      setWelcomeMessage(storedMessage || '🎉 Welcome to BIDUA Hosting!');
+      
+      // Clear the flags
+      sessionStorage.removeItem('registration_success');
+      sessionStorage.removeItem('registration_message');
+      
+      // Auto-hide banner after 10 seconds
+      setTimeout(() => setShowWelcomeBanner(false), 10000);
+    }
   }, [loadDashboardData]);
 
   const statCards = [
@@ -111,6 +129,36 @@ export function Overview() {
 
   return (
     <div className="space-y-6 w-full h-full overflow-y-auto pb-6">
+      {/* Welcome Banner - Show after successful registration */}
+      {showWelcomeBanner && (
+        <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-4 sm:p-6 border-2 border-green-400 shadow-xl mx-2 sm:mx-0">
+          <div className="flex items-start gap-4">
+            <CheckCircle className="h-8 w-8 sm:h-12 sm:w-12 text-white flex-shrink-0 animate-bounce" />
+            <div className="flex-1">
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">
+                Registration Successful! 🎉
+              </h3>
+              <p className="text-white/90 mb-3 text-sm sm:text-base">
+                {welcomeMessage}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2 text-xs sm:text-sm text-white/80">
+                <span>✅ Your account is ready</span>
+                <span className="hidden sm:inline">•</span>
+                <span>✅ Start deploying servers today</span>
+                <span className="hidden sm:inline">•</span>
+                <span>✅ Explore our affiliate program</span>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowWelcomeBanner(false)}
+              className="text-white/80 hover:text-white transition flex-shrink-0"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+        </div>
+      )}
+      
       <div className="px-2 sm:px-0">
         <h2 className="text-xl sm:text-2xl font-bold text-white">Welcome Back!</h2>
         <p className="text-sm sm:text-base text-slate-400">Here's what's happening with your servers</p>

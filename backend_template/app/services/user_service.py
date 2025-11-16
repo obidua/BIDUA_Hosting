@@ -328,38 +328,47 @@ class UserService:
 
     async def create_user(self, db: AsyncSession, user_data: UserCreate) -> UserProfile:
         try:
+            print(f"  Create_user: Generating referral code")
             referral_code = await self._generate_referral_code(db)
-            referred_by_user = None
-
-            # Validate referral code if provided
-            if user_data.referral_code:
-                referred_by_user = await self.get_user_by_referral_code(db, user_data.referral_code)
-                if not referred_by_user:
-                    raise ValueError("Invalid referral code")
-
+            # Note: affiliate referral tracking is now handled in auth endpoint via AffiliateService
+            # No need to validate user_data.referral_code here (it's for affiliate codes, not legacy user codes)
+            
+            # Hash password asynchronously to avoid blocking the event loop
+            print(f"  Create_user: Hashing password")
+            hashed_password = await get_password_hash(user_data.password)
+            print(f"  Create_user: Password hashed, creating UserProfile object")
+            
             db_user = UserProfile(
                 email=user_data.email,
                 full_name=user_data.full_name,
                 role=user_data.role,
                 account_status=user_data.account_status,
-                hashed_password=get_password_hash(user_data.password),
+                hashed_password=hashed_password,
                 referral_code=referral_code,
-                referred_by=referred_by_user.id if referred_by_user else None,
+                referred_by=None,  # Set via AffiliateService.track_referral post-creation
                 phone=user_data.phone,
                 company=user_data.company,
             )
 
+            print(f"  Create_user: Adding to session and committing")
             db.add(db_user)
             await db.commit()
-            await db.refresh(db_user)
+            print(f"  Create_user: Commit successful, user ID: {db_user.id}")
+            
+            # Try refresh only if needed
+            try:
+                print(f"  Create_user: Refreshing user object")
+                await db.refresh(db_user)
+                print(f"  Create_user: Refresh successful")
+            except Exception as refresh_error:
+                print(f"  Create_user: Refresh error (non-fatal): {str(refresh_error)}")
+                # Refresh failed but user is already created, so we can continue
 
-            # Update referral hierarchy only if referred_by exists
-            if referred_by_user:
-                await self._update_referral_hierarchy(db, db_user, referred_by_user)
-
+            print(f"  Create_user: Returning user object")
             return db_user
             
         except Exception as e:
+            print(f"  Create_user: Exception occurred: {str(e)}")
             await db.rollback()
             raise e
 
@@ -395,7 +404,7 @@ class UserService:
         if not user:
             return False
 
-        user.hashed_password = get_password_hash(new_password)
+        user.hashed_password = await get_password_hash(new_password)
         await db.commit()
         return True
 
@@ -424,8 +433,8 @@ class UserService:
             if not user:
                 return None
             
-            # Verify password
-            if not verify_password(password, user.hashed_password):
+            # Verify password (now async)
+            if not await verify_password(password, user.hashed_password):
                 return None
             
             return user

@@ -11,6 +11,7 @@ export function Settings() {
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [inviter, setInviter] = useState<{ code: string; name: string } | null>(null);
 
   const [profileData, setProfileData] = useState({
     fullName: profile?.full_name || '',
@@ -29,47 +30,71 @@ export function Settings() {
     emailNotifications: true,
     serverAlerts: true,
     billingAlerts: true,
-    maintenanceAlerts: true,
-    marketingEmails: false,
-  });
-
-  const [billingData, setBillingData] = useState({
-    // Billing Address
-    street: '',
-    city: '',
-    state: '',
-    country: '',
-    postalCode: '',
-    // Company Info
-    companyName: '',
-    taxId: '',
-    // Contact
-    billingEmail: '',
-    billingPhone: '',
-    // Preferences
-    autoRenewal: true,
-    billingAlerts: true,
-    invoiceDelivery: 'email',
-  });
-  const { countries, loading: loadingCountries } = useCountryOptions();
-  const billingCountryLabel = useMemo(() => {
-    const normalized = (billingData.country || '').toLowerCase();
-    const countryMatch = countries.find(country => {
-      const code = country.code?.toLowerCase();
-      return (
-        country.value.toLowerCase() === normalized ||
-        country.label.toLowerCase() === normalized ||
-        (code && code === normalized)
-      );
+      maintenanceAlerts: true,
+      marketingEmails: false,
     });
-    return countryMatch?.value || billingData.country;
-  }, [countries, billingData.country]);
-  const billingCurrencyCode = useMemo(() => {
-    if (!billingCountryLabel) return 'INR';
-    return countries.find(country => country.value === billingCountryLabel)?.currency || 'INR';
-  }, [countries, billingCountryLabel]);
 
-  // Load billing settings on component mount
+    const [billingData, setBillingData] = useState({
+      // Billing Address
+      street: '',
+      city: '',
+      state: '',
+      country: '',
+      postalCode: '',
+      // Company Info
+      companyName: '',
+      taxId: '',
+      // Contact
+      billingEmail: '',
+      billingPhone: '',
+      // Preferences
+      autoRenewal: true,
+      billingAlerts: true,
+      invoiceDelivery: 'email',
+    });
+    const { countries, loading: loadingCountries } = useCountryOptions();
+    const billingCountryLabel = useMemo(() => {
+      const normalized = (billingData.country || '').toLowerCase();
+      const countryMatch = countries.find(country => {
+        const code = country.code?.toLowerCase();
+        return (
+          country.value.toLowerCase() === normalized ||
+          country.label.toLowerCase() === normalized ||
+          (code && code === normalized)
+        );
+      });
+      return countryMatch?.value || billingData.country;
+    }, [countries, billingData.country]);
+    const billingCurrencyCode = useMemo(() => {
+      if (!billingCountryLabel) return 'INR';
+      return countries.find(country => country.value === billingCountryLabel)?.currency || 'INR';
+    }, [countries, billingCountryLabel]);
+
+  // Fetch inviter info if user was referred
+  useEffect(() => {
+    const fetchInviter = async () => {
+      if (profile?.referred_by) {
+        try {
+          // Use the new /auth/me/inviter endpoint that doesn't require admin access
+          const response = await api.get('/api/v1/auth/me/inviter') as any;
+          if (response?.inviter) {
+            setInviter({
+              code: response.inviter.referral_code || '',
+              name: response.inviter.full_name || response.inviter.email || 'Unknown',
+            });
+          } else {
+            setInviter(null);
+          }
+        } catch (error) {
+          console.error('Failed to fetch inviter info:', error);
+          setInviter(null);
+        }
+      } else {
+        setInviter(null);
+      }
+    };
+    fetchInviter();
+  }, [profile?.referred_by]);  // Load billing settings on component mount
   useEffect(() => {
     const loadBillingSettings = async () => {
       try {
@@ -98,9 +123,7 @@ export function Settings() {
     if (activeTab === 'billing') {
       loadBillingSettings();
     }
-  }, [activeTab]);
-
-  const handleProfileSubmit = async (e: React.FormEvent) => {
+  }, [activeTab]);  const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     
@@ -126,11 +149,16 @@ export function Settings() {
       alert('Passwords do not match');
       return;
     }
+
+    if (securityData.newPassword.length < 6) {
+      alert('New password must be at least 6 characters long');
+      return;
+    }
+
     setIsSaving(true);
     
     try {
-      // TODO: Add actual API call to update password
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await api.changePassword(securityData.currentPassword, securityData.newPassword);
       
       // Show success message
       setSuccessMessage('Your password has been updated successfully');
@@ -138,9 +166,10 @@ export function Settings() {
       setTimeout(() => setShowSuccessMessage(false), 3000);
       
       setSecurityData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update password:', error);
-      alert('Failed to update password. Please try again.');
+      const errorMessage = error?.message || 'Failed to update password. Please try again.';
+      alert(errorMessage);
     } finally {
       setIsSaving(false);
     }
@@ -287,6 +316,11 @@ export function Settings() {
                 <div>
                   <h3 className="text-lg font-semibold text-white">{profile?.full_name}</h3>
                   <p className="text-sm text-slate-400 capitalize">{profile?.role?.replace('_', ' ')}</p>
+                  {inviter && (
+                    <div className="mt-2 text-xs text-cyan-300 bg-cyan-900/30 rounded px-3 py-1 inline-block">
+                      <span className="font-semibold">Invited by:</span> {inviter.name} <span className="text-cyan-400">({inviter.code})</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -340,6 +374,25 @@ export function Settings() {
                     className="w-full px-4 py-3 bg-slate-950 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-slate-400"
                   />
                 </div>
+
+                {inviter && (
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold text-slate-200 mb-2">
+                      Invited By
+                    </label>
+                    <div className="w-full px-4 py-3 bg-slate-900 border border-cyan-500/30 rounded-lg text-slate-300 flex items-center justify-between">
+                      <div>
+                        <span className="font-semibold text-cyan-300">{inviter.name}</span>
+                        <span className="text-slate-500 mx-2">•</span>
+                        <span className="text-slate-400">Referral Code: </span>
+                        <span className="font-mono text-cyan-400">{inviter.code}</span>
+                      </div>
+                      <div className="px-3 py-1 bg-cyan-500/10 border border-cyan-500/30 rounded text-xs text-cyan-400 font-semibold">
+                        Referred User
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end">

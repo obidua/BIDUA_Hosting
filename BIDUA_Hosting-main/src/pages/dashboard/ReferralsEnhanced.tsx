@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
-  Users, DollarSign, TrendingUp, Gift, Copy, Check, CreditCard, 
-  Award, CheckCircle, Download, ShoppingCart
+  Users, DollarSign, TrendingUp, Gift, Copy, Check,
+  Award, Download, CheckCircle
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -13,6 +13,7 @@ import {
   formatCurrency,
   getStatusColor
 } from '../../lib/referral';
+import { ReferralLandingPage } from '../../components/referrals/ReferralLandingPage';
 // Types from referral adapters
 import type { ReferralEarning as AdapterReferralEarning, ReferralPayout as AdapterReferralPayout } from '../../types';
 
@@ -103,6 +104,8 @@ export function ReferralsEnhanced() {
   const [autoActivated, setAutoActivated] = useState(false);
   const [legacyStats, setLegacyStats] = useState<LegacyReferralStats | null>(null);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(false);
+  const [welcomeMessage, setWelcomeMessage] = useState('');
   // Use relaxed ID typing (string | number) due to backend returning string IDs
   type UIReferralEarning = Omit<AdapterReferralEarning, 'id'> & { id: string | number };
   type UIReferralPayout = Omit<AdapterReferralPayout, 'id'> & { id: string | number };
@@ -111,6 +114,22 @@ export function ReferralsEnhanced() {
 
   useEffect(() => {
     loadData();
+    
+    // Check if user just activated affiliate subscription
+    const justActivated = sessionStorage.getItem('affiliate_just_activated');
+    const storedMessage = sessionStorage.getItem('affiliate_welcome_message');
+    
+    if (justActivated === 'true') {
+      setShowWelcomeBanner(true);
+      setWelcomeMessage(storedMessage || '🎉 Welcome to BIDUA Hosting Affiliate Program!');
+      
+      // Clear the flags
+      sessionStorage.removeItem('affiliate_just_activated');
+      sessionStorage.removeItem('affiliate_welcome_message');
+      
+      // Auto-hide banner after 10 seconds
+      setTimeout(() => setShowWelcomeBanner(false), 10000);
+    }
   }, []);
 
   // Load Razorpay script once
@@ -293,19 +312,20 @@ export function ReferralsEnhanced() {
               throw new Error('Payment verification failed');
             }
 
-            // Create affiliate subscription record
-            const subResp = await api.post('/api/v1/affiliate/subscription/create', {
-              payment_method: 'razorpay',
-              payment_id: response.razorpay_payment_id,
-              transaction_id: payment.transaction_id
-            }) as AffiliateSubscription;
-
-            setSubscription(subResp);
-            setShowSubscriptionModal(false);
-            await loadData();
+            // Show success message
+            const welcomeMessage = verificationResponse.affiliate?.message || 
+              '🎉 Payment successful! Welcome to BIDUA Hosting Affiliate Program!';
+            
+            // Store success state in sessionStorage to show welcome banner
+            sessionStorage.setItem('affiliate_just_activated', 'true');
+            sessionStorage.setItem('affiliate_welcome_message', welcomeMessage);
+            
+            // Reload the page to show the affiliate dashboard
+            window.location.reload();
           } catch (err: any) {
             console.error('Payment verification/subscription error:', err);
-            alert(`Payment verification failed: ${err?.message || 'Unknown error'}`);
+            const errorMsg = err?.message || 'Payment verification failed';
+            alert(`❌ ${errorMsg}\n\nPlease contact support if the payment was deducted.`);
           }
         },
         modal: {
@@ -396,85 +416,49 @@ export function ReferralsEnhanced() {
     );
   }
 
-  // Subscription Required Modal
+  // Show Landing Page for Non-Subscribers
   if (showSubscriptionModal && !subscription) {
     return (
-      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
-        <div className="bg-slate-900 rounded-xl max-w-xl w-full border-2 border-cyan-500 p-4 sm:p-6 my-8">
-          <div className="text-center mb-4 sm:mb-6">
-            <Award className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 mx-auto mb-3" />
-            <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">Join Our Affiliate Program</h2>
-            <p className="text-slate-300 text-sm sm:text-base mb-3 sm:mb-4">
-              Start earning unlimited income by referring our hosting services!
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
-            <div className="bg-gradient-to-br from-cyan-600 to-teal-600 rounded-lg p-3 sm:p-4 text-white">
-              <ShoppingCart className="h-8 w-8 sm:h-10 sm:w-10 mb-2 sm:mb-3" />
-              <h3 className="text-base sm:text-lg font-bold mb-1 sm:mb-2">Buy a Server</h3>
-              <p className="text-cyan-100 mb-2 text-xs sm:text-sm">Get FREE lifetime affiliate access</p>
-              <div className="text-xl sm:text-2xl font-bold">₹0</div>
-              <p className="text-xs text-cyan-100 mt-1">With any server purchase</p>
-            </div>
-
-            <div className="bg-gradient-to-br from-green-600 to-emerald-600 rounded-lg p-3 sm:p-4 text-white">
-              <CreditCard className="h-8 w-8 sm:h-10 sm:w-10 mb-2 sm:mb-3" />
-              <h3 className="text-base sm:text-lg font-bold mb-1 sm:mb-2">Direct Subscribe</h3>
-              <p className="text-green-100 mb-2 text-xs sm:text-sm">One-time lifetime payment</p>
-              <div className="text-xl sm:text-2xl font-bold">₹499</div>
-              <p className="text-xs text-green-100 mt-1">Lifetime access</p>
-            </div>
-          </div>
-
-          <div className="bg-slate-800 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
-            <h3 className="text-white font-bold mb-2 sm:mb-3 text-sm sm:text-base">What You Get:</h3>
-            <ul className="space-y-1.5 sm:space-y-2 text-slate-300 text-xs sm:text-sm">
-              <li className="flex items-start">
-                <CheckCircle className="h-4 w-4 text-green-400 mr-2 flex-shrink-0 mt-0.5" />
-                <span>Lifetime affiliate account with unique referral code</span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircle className="h-4 w-4 text-green-400 mr-2 flex-shrink-0 mt-0.5" />
-                <span>Earn commissions from 3 levels of referrals (L1, L2, L3)</span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircle className="h-4 w-4 text-green-400 mr-2 flex-shrink-0 mt-0.5" />
-                <span>Up to 15% commission on direct referrals</span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircle className="h-4 w-4 text-green-400 mr-2 flex-shrink-0 mt-0.5" />
-                <span>Earn on every renewal and purchase from your team</span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircle className="h-4 w-4 text-green-400 mr-2 flex-shrink-0 mt-0.5" />
-                <span>Track all team members and earnings in real-time</span>
-              </li>
-            </ul>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-            <button
-              onClick={() => window.location.href = '/dashboard/servers'}
-              className="w-full px-4 py-2.5 sm:py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-bold transition text-sm"
-            >
-              Buy Server (Free Access)
-            </button>
-            <button
-              onClick={handleSubscribe}
-              className="w-full px-4 py-2.5 sm:py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold transition text-sm"
-            >
-              Pay ₹499 & Subscribe
-            </button>
-          </div>
-        </div>
-      </div>
+      <ReferralLandingPage
+        onSubscribe={handleSubscribe}
+        onBuyServer={() => window.location.href = '/dashboard/servers'}
+      />
     );
   }
 
   return (
     <div className="w-full h-full overflow-y-auto pb-6">
       <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+        {/* Welcome Banner - Show after successful activation */}
+        {showWelcomeBanner && (
+          <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-4 sm:p-6 border-2 border-green-400 shadow-xl animate-pulse">
+            <div className="flex items-start gap-4">
+              <Award className="h-8 w-8 sm:h-12 sm:w-12 text-white flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">
+                  Welcome to the Affiliate Program! 🎉
+                </h3>
+                <p className="text-white/90 mb-3 text-sm sm:text-base">
+                  {welcomeMessage}
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2 text-xs sm:text-sm text-white/80">
+                  <span>✅ Your referral code is ready</span>
+                  <span className="hidden sm:inline">•</span>
+                  <span>✅ Start sharing and earning today</span>
+                  <span className="hidden sm:inline">•</span>
+                  <span>✅ Track all earnings in real-time</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowWelcomeBanner(false)}
+                className="text-white/80 hover:text-white transition flex-shrink-0"
+              >
+                <Check className="h-6 w-6" />
+              </button>
+            </div>
+          </div>
+        )}
+        
         {/* Header */}
         <div className="mb-4 sm:mb-6">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2">Affiliate Dashboard</h1>

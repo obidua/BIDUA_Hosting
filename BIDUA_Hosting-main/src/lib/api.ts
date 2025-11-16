@@ -44,8 +44,10 @@ class ApiClient {
       });
     }
 
-    // Only add authorization for endpoints that need it (not login/register)
-    const isPublicEndpoint = endpoint === '/api/v1/auth/login' || endpoint === '/api/v1/auth/register';
+    // Only add authorization for endpoints that need it (not login/register/validate-code)
+    const isPublicEndpoint = endpoint === '/api/v1/auth/login' || 
+                            endpoint === '/api/v1/auth/register' ||
+                            endpoint.includes('/api/v1/affiliate/validate-code');
     
     if (!isPublicEndpoint) {
       const token = localStorage.getItem('access_token');
@@ -145,7 +147,6 @@ class ApiClient {
       body: JSON.stringify({
         email,
         password,
-        username,
         full_name: fullName,
         referral_code: referralCode
       }),
@@ -184,6 +185,16 @@ class ApiClient {
   async refreshToken() {
     return this.request<{ access_token: string }>('/api/v1/auth/refresh', {
       method: 'POST',
+    });
+  }
+
+  async changePassword(currentPassword: string, newPassword: string) {
+    return this.request('/api/v1/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+      }),
     });
   }
 

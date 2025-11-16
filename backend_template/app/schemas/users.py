@@ -259,9 +259,6 @@ class User(UserBase):
     phone: Optional[str] = None
     company: Optional[str] = None
     
-    # Authentication field
-    hashed_password: str
-    
     # Referral fields
     referral_code: Optional[str] = None
     referred_by: Optional[int] = None

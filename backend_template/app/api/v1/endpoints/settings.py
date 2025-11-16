@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import get_current_user, verify_password, get_password_hash
+from app.core.security import get_current_user
+from app.utils.security_utils import verify_password
 from app.services.settings_service import SettingsService
 from app.schemas.settings import UserSettings, UserSettingsUpdate, SecuritySettings, ProfileUpdate
 from app.schemas.users import User
@@ -12,17 +13,17 @@ router = APIRouter()
 
 @router.get("/profile", response_model=UserSettings)
 async def get_user_settings(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     settings_service: SettingsService = Depends()
 ):
     """
     Get user settings
     """
-    settings = settings_service.get_user_settings(db, current_user.id)
+    settings = await settings_service.get_user_settings(db, current_user.id)
     if not settings:
         # Create default settings if not exists
-        settings = settings_service.create_default_settings(db, current_user.id)
+        settings = await settings_service.create_default_settings(db, current_user.id)
     return settings
 
 @router.put("/profile", response_model=UserSettings)
@@ -35,7 +36,7 @@ async def update_profile_settings(
     """
     Update profile settings
     """
-    return settings_service.update_user_settings(db, current_user.id, settings_update)
+    return await settings_service.update_user_settings(db, current_user.id, settings_update)
 
 @router.put("/profile/info")
 async def update_profile_info(
@@ -50,7 +51,7 @@ async def update_profile_info(
     from app.services.user_service import UserService
     user_service = UserService()
     
-    user = user_service.update_user_profile(db, current_user.id, profile_update)
+    user = await user_service.update_user_profile(db, current_user.id, profile_update)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return {"message": "Profile updated successfully", "user": user}
@@ -67,15 +68,15 @@ async def change_password(
     from app.services.user_service import UserService
     user_service = UserService()
     
-    # Verify current password
-    if not verify_password(security_data.current_password, current_user.hashed_password):
+    # Verify current password (now async)
+    if not await verify_password(security_data.current_password, current_user.hashed_password):
         raise HTTPException(
             status_code=400,
             detail="Current password is incorrect"
         )
     
     # Update password
-    success = user_service.update_password(
+    success = await user_service.update_password(
         db, current_user.id, security_data.new_password
     )
     
@@ -97,7 +98,7 @@ async def toggle_two_factor(
     """
     Toggle two-factor authentication
     """
-    settings = settings_service.toggle_two_factor(db, current_user.id, enable)
+    settings = await settings_service.toggle_two_factor(db, current_user.id, enable)
     return {
         "message": f"Two-factor authentication {'enabled' if enable else 'disabled'}",
         "two_factor_enabled": settings.two_factor_enabled
@@ -112,9 +113,9 @@ async def get_notification_settings(
     """
     Get notification settings
     """
-    settings = settings_service.get_user_settings(db, current_user.id)
+    settings = await settings_service.get_user_settings(db, current_user.id)
     if not settings:
-        settings = settings_service.create_default_settings(db, current_user.id)
+        settings = await settings_service.create_default_settings(db, current_user.id)
     
     return {
         "email_notifications": settings.email_notifications,
@@ -135,25 +136,25 @@ async def update_notification_settings(
     """
     Update notification settings
     """
-    settings = settings_service.update_notification_settings(db, current_user.id, notification_settings)
+    settings = await settings_service.update_notification_settings(db, current_user.id, notification_settings)
     return {"message": "Notification settings updated successfully", "settings": settings}
 
 @router.get("/preferences")
 async def get_user_preferences(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     settings_service: SettingsService = Depends()
 ):
     """
     Get all user preferences and settings
     """
-    settings = settings_service.get_user_settings(db, current_user.id)
+    settings = await settings_service.get_user_settings(db, current_user.id)
     if not settings:
-        settings = settings_service.create_default_settings(db, current_user.id)
+        settings = await settings_service.create_default_settings(db, current_user.id)
     
     from app.services.billing_service import BillingService
     billing_service = BillingService()
-    billing_settings = billing_service.get_user_billing_settings(db, current_user.id)
+    billing_settings = await billing_service.get_user_billing_settings(db, current_user.id)
     
     return {
         "profile_settings": {

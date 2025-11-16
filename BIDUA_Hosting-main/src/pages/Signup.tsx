@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { Server } from 'lucide-react';
+import { Server, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
 
@@ -94,6 +94,15 @@ export function Signup() {
     try {
       await signUp(email, password, fullName, referralCode);
 
+      // Show success message
+      const successMessage = referralCode && referralValid 
+        ? `🎉 Account created successfully! Welcome to BIDUA Hosting! You were referred by ${referralInviter || 'a member'}.`
+        : '🎉 Account created successfully! Welcome to BIDUA Hosting!';
+      
+      // Store success message in sessionStorage
+      sessionStorage.setItem('registration_success', 'true');
+      sessionStorage.setItem('registration_message', successMessage);
+
       // Check if there's a pending server configuration from checkout flow
       const serverConfig = location.state?.serverConfig;
       const redirectUrl = searchParams.get('redirect');
@@ -108,8 +117,14 @@ export function Signup() {
         // Default to dashboard
         navigate('/dashboard');
       }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create account';
+    } catch (err: any) {
+      // Try to extract API error message for already registered user
+      let message = 'Failed to create account';
+      if (err?.message?.includes('User with this email already exists')) {
+        message = 'An account with this email already exists. Please log in or use a different email.';
+      } else if (err?.message) {
+        message = err.message;
+      }
       setError(message);
     } finally {
       setLoading(false);
@@ -196,24 +211,47 @@ export function Signup() {
               <label className="block text-sm font-semibold text-slate-200 mb-2">
                 Referral Code (Optional)
               </label>
-              <input
-                type="text"
-                value={referralCode}
-                onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                className="w-full px-4 py-3 bg-slate-800 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-slate-400 uppercase"
-                placeholder="Enter referral code"
-              />
-              {referralCode && (
-                <div className="mt-1 text-xs">
-                  {referralCheckLoading && (
-                    <span className="text-slate-400">Checking code…</span>
-                  )}
-                  {!referralCheckLoading && referralValid === true && (
-                    <span className="text-green-400">Valid referral code{referralInviter ? ` from ${referralInviter}` : ''}</span>
-                  )}
-                  {!referralCheckLoading && referralValid === false && (
-                    <span className="text-red-400">Invalid or inactive referral code. You can still sign up without it.</span>
-                  )}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                  className="w-full px-4 py-3 pr-12 bg-slate-800 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-slate-400 uppercase"
+                  placeholder="Enter referral code"
+                />
+                {referralCode && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {referralCheckLoading && (
+                      <Loader2 className="h-5 w-5 text-slate-400 animate-spin" />
+                    )}
+                    {!referralCheckLoading && referralValid === true && (
+                      <CheckCircle className="h-5 w-5 text-green-400" />
+                    )}
+                    {!referralCheckLoading && referralValid === false && (
+                      <XCircle className="h-5 w-5 text-red-400" />
+                    )}
+                  </div>
+                )}
+              </div>
+              {/* Referrer name and validation status below the input */}
+              {referralCode && referralValid === true && referralInviter && (
+                <div className="mt-2 flex items-center space-x-2 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                  <CheckCircle className="h-4 w-4 text-green-400 flex-shrink-0" />
+                  <div className="text-sm text-green-300">
+                    <span className="font-semibold">Valid referral code</span>
+                    <span className="text-green-400"> • </span>
+                    <span>You'll be referred by </span>
+                    <span className="font-semibold text-green-200">{referralInviter}</span>
+                  </div>
+                </div>
+              )}
+              {referralCode && !referralCheckLoading && referralValid === false && (
+                <div className="mt-2 flex items-center space-x-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                  <XCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
+                  <div className="text-sm text-red-300">
+                    <span className="font-semibold">Invalid or inactive referral code.</span>
+                    <span className="text-red-400"> You can still sign up without it.</span>
+                  </div>
                 </div>
               )}
             </div>

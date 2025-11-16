@@ -621,7 +621,7 @@ async def create_employee(
     current_user: UserProfile = Depends(require_admin)
 ):
     """Create a new employee"""
-    from app.core.security import get_password_hash
+    from app.utils.security_utils import get_password_hash
 
     # Check if email already exists
     existing = await db.execute(select(UserProfile).where(UserProfile.email == data.email))
@@ -632,7 +632,7 @@ async def create_employee(
     employee = UserProfile(
         email=data.email,
         full_name=data.full_name,
-        hashed_password=get_password_hash(data.password),
+        hashed_password=await get_password_hash(data.password),
         role=data.role,
         account_status="active"
     )

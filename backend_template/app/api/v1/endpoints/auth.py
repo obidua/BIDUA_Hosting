@@ -127,12 +127,38 @@ async def register(
                     # Invalid code provided; do not block signup, just ignore
                     referrer_code_to_track = None
         
-        # Create new user
-        # Important: Avoid passing affiliate code into create_user, since it validates only legacy UserProfile codes
-        create_payload = user_data.copy(update={"referral_code": None}) if hasattr(user_data, "copy") else user_data
-        user = await user_service.create_user(db, create_payload)
+        # Create new user without referral_code (we'll track via AffiliateService separately)
+        user = await user_service.create_user(db, user_data)
+        
+        # ⚠️ IMPORTANT: Capture all user attributes NOW while session is active
+        # before doing any other operations that might change session context
+        from datetime import datetime
+        user_dict_base = {
+            "id": user.id,
+            "email": user.email,
+            "full_name": user.full_name,
+            "role": user.role,
+            "account_status": user.account_status,
+            "phone": user.phone if hasattr(user, 'phone') else "",
+            "company": user.company if hasattr(user, 'company') else "",
+            "referral_code": user.referral_code,
+            "referred_by": user.referred_by,  # Will be None initially
+            "subscription_status": user.subscription_status,
+            "subscription_start": user.subscription_start,
+            "subscription_end": user.subscription_end,
+            "created_at": user.created_at,
+            "updated_at": user.updated_at,
+            "total_referrals": user.total_referrals if hasattr(user, 'total_referrals') else 0,
+            "l1_referrals": user.l1_referrals if hasattr(user, 'l1_referrals') else 0,
+            "l2_referrals": user.l2_referrals if hasattr(user, 'l2_referrals') else 0,
+            "l3_referrals": user.l3_referrals if hasattr(user, 'l3_referrals') else 0,
+            "total_earnings": float(user.total_earnings) if user.total_earnings else 0.00,
+            "available_balance": float(user.available_balance) if user.available_balance else 0.00,
+            "total_withdrawn": float(user.total_withdrawn) if user.total_withdrawn else 0.00,
+        }
         
         # 🆕 Track affiliate referral if a valid code was provided/mapped
+        # This happens AFTER we've captured all attributes
         if referrer_code_to_track:
             try:
                 from app.services.affiliate_service import AffiliateService
@@ -140,6 +166,8 @@ async def register(
                 await affiliate_service.track_referral(
                     db, referrer_code_to_track, user.id, signup_ip=None
                 )
+                # Update the referred_by in our captured dict
+                user_dict_base["referred_by"] = (await user_service.get_user_by_id(db, user.id)).referred_by if await user_service.get_user_by_id(db, user.id) else None
             except Exception as aff_error:
                 # Log error but don't fail registration
                 print(f"⚠️ Affiliate referral tracking error: {str(aff_error)}")
@@ -150,10 +178,18 @@ async def register(
             expires_delta=timedelta(minutes=30)
         )
         
+        # Ensure all required fields are present for response validation
+        from datetime import datetime as dt
+        user_dict = {
+            **user_dict_base,
+            "created_at": user_dict_base["created_at"] or dt.utcnow(),
+            "updated_at": user_dict_base["updated_at"] or dt.utcnow(),
+        }
+        # Return minimal user info (don't include hashed_password or other sensitive fields)
         return {
             "access_token": access_token,
             "token_type": "bearer",
-            "user": user
+            "user": user_dict
         }
         
     except HTTPException:
@@ -196,10 +232,35 @@ async def login(
         expires_delta=timedelta(minutes=30)
     )
     
+    # Build response dict IMMEDIATELY while user object is still attached to session
+    user_dict = {
+        "id": user.id,
+        "email": user.email,
+        "full_name": user.full_name,
+        "role": user.role,
+        "account_status": user.account_status,
+        "phone": user.phone,
+        "company": user.company,
+        "referral_code": user.referral_code,
+        "referred_by": user.referred_by,
+        "subscription_status": user.subscription_status,
+        "subscription_start": user.subscription_start,
+        "subscription_end": user.subscription_end,
+        "created_at": user.created_at,
+        "updated_at": user.updated_at,
+        "total_referrals": user.total_referrals,
+        "l1_referrals": user.l1_referrals,
+        "l2_referrals": user.l2_referrals,
+        "l3_referrals": user.l3_referrals,
+        "total_earnings": float(user.total_earnings) if user.total_earnings else 0.00,
+        "available_balance": float(user.available_balance) if user.available_balance else 0.00,
+        "total_withdrawn": float(user.total_withdrawn) if user.total_withdrawn else 0.00,
+    }
+    
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "user": user
+        "user": user_dict
     }
 
 
@@ -215,10 +276,35 @@ async def refresh_token(
         expires_delta=timedelta(minutes=30)
     )
     
+    # Build response dict IMMEDIATELY while user object is still attached to session
+    user_dict = {
+        "id": current_user.id,
+        "email": current_user.email,
+        "full_name": current_user.full_name,
+        "role": current_user.role,
+        "account_status": current_user.account_status,
+        "phone": current_user.phone,
+        "company": current_user.company,
+        "referral_code": current_user.referral_code,
+        "referred_by": current_user.referred_by,
+        "subscription_status": current_user.subscription_status,
+        "subscription_start": current_user.subscription_start,
+        "subscription_end": current_user.subscription_end,
+        "created_at": current_user.created_at,
+        "updated_at": current_user.updated_at,
+        "total_referrals": current_user.total_referrals,
+        "l1_referrals": current_user.l1_referrals,
+        "l2_referrals": current_user.l2_referrals,
+        "l3_referrals": current_user.l3_referrals,
+        "total_earnings": float(current_user.total_earnings) if current_user.total_earnings else 0.00,
+        "available_balance": float(current_user.available_balance) if current_user.available_balance else 0.00,
+        "total_withdrawn": float(current_user.total_withdrawn) if current_user.total_withdrawn else 0.00,
+    }
+    
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "user": current_user
+        "user": user_dict
     }
 
 @router.post("/change-password")
@@ -265,6 +351,34 @@ async def get_current_user_info(
     Get current user information
     """
     return current_user
+
+
+@router.get("/me/inviter")
+async def get_my_inviter(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    user_service: UserService = Depends()
+):
+    """
+    Get current user's inviter information (if they were referred)
+    """
+    if not current_user.referred_by:
+        return {"referred_by": None, "inviter": None}
+    
+    # Fetch inviter's basic info
+    inviter = await user_service.get_user_by_id(db, current_user.referred_by)
+    if not inviter:
+        return {"referred_by": current_user.referred_by, "inviter": None}
+    
+    return {
+        "referred_by": current_user.referred_by,
+        "inviter": {
+            "id": inviter.id,
+            "full_name": inviter.full_name,
+            "email": inviter.email,
+            "referral_code": inviter.referral_code
+        }
+    }
 
 
 @router.post("/logout")
