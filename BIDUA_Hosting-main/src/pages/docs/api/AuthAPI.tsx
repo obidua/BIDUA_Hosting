@@ -56,14 +56,9 @@ export function AuthAPI() {
               <div className="bg-slate-50 rounded p-4 overflow-x-auto">
                 <pre className="text-slate-700 font-mono text-sm">{`{
   "email": "user@example.com",
-  "username": "johndoe",
   "password": "SecurePassword123",
-  "first_name": "John",
-  "last_name": "Doe",
-  "company_name": "ACME Corp",
-  "phone": "+1234567890",
-  "country_id": 1,
-  "referral_code": "REF123"  // Optional
+  "full_name": "John Doe",
+  "referral_code": "NFFK3NVU"  // Optional - validates referral code
 }`}</pre>
               </div>
             </div>
@@ -77,12 +72,17 @@ export function AuthAPI() {
   "user": {
     "id": 1,
     "email": "user@example.com",
-    "username": "johndoe",
-    "first_name": "John",
-    "last_name": "Doe",
-    "is_active": true,
-    "is_admin": false,
-    "referral_code": "USR_abc123"
+    "full_name": "John Doe",
+    "role": "customer",
+    "account_status": "active",
+    "referral_code": "USR_abc123",
+    "referred_by": null,
+    "total_referrals": 0,
+    "l1_referrals": 0,
+    "l2_referrals": 0,
+    "l3_referrals": 0,
+    "total_earnings": "0.0",
+    "created_at": "2025-11-16T14:03:44.965087Z"
   }
 }`}</pre>
               </div>
@@ -93,15 +93,15 @@ export function AuthAPI() {
               <div className="space-y-2">
                 <div className="bg-red-50 border border-red-200 rounded p-3">
                   <p className="font-semibold text-red-900 text-sm">400 Bad Request</p>
-                  <p className="text-red-800 text-sm">User with email already exists or validation error</p>
+                  <p className="text-red-800 text-sm">User with email already exists</p>
                 </div>
                 <div className="bg-red-50 border border-red-200 rounded p-3">
                   <p className="font-semibold text-red-900 text-sm">400 Bad Request</p>
-                  <p className="text-red-800 text-sm">Invalid referral code if provided</p>
+                  <p className="text-red-800 text-sm">Invalid referral code - code does not exist or is invalid</p>
                 </div>
                 <div className="bg-red-50 border border-red-200 rounded p-3">
                   <p className="font-semibold text-red-900 text-sm">422 Unprocessable Entity</p>
-                  <p className="text-red-800 text-sm">Required fields missing or invalid format</p>
+                  <p className="text-red-800 text-sm">Required fields missing or invalid format (email, password, full_name)</p>
                 </div>
               </div>
             </div>
@@ -287,15 +287,23 @@ export function AuthAPI() {
                   <CheckCircle className="h-5 w-5 mr-2 text-cyan-500" />
                   1. User Registration
                 </h3>
-                <p className="text-slate-700 text-sm">User submits registration form with email, password, and profile information</p>
+                <p className="text-slate-700 text-sm">User submits registration form with email, password, full name, and optional referral code</p>
+              </div>
+
+              <div className="bg-cyan-50 border-l-4 border-cyan-500 p-4 rounded-r-lg">
+                <h3 className="font-semibold text-slate-900 mb-2 flex items-center">
+                  <CheckCircle className="h-5 w-5 mr-2 text-cyan-500" />
+                  1.5 Referral Code Validation (Optional)
+                </h3>
+                <p className="text-slate-700 text-sm">If referral code provided, server validates against AffiliateSubscription and Referral records</p>
               </div>
 
               <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
                 <h3 className="font-semibold text-slate-900 mb-2 flex items-center">
                   <CheckCircle className="h-5 w-5 mr-2 text-blue-500" />
-                  2. Account Created
+                  2. Account Created & Referral Tracked
                 </h3>
-                <p className="text-slate-700 text-sm">Server creates user, hashes password, returns JWT access token and referral code</p>
+                <p className="text-slate-700 text-sm">Server hashes password async, creates user account, generates unique referral code, tracks referral relationship if code provided, returns JWT token</p>
               </div>
 
               <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">

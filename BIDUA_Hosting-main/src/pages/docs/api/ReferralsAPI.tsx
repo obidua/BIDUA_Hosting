@@ -15,12 +15,16 @@ export function ReferralsAPI() {
         <section>
           <h2 className="text-2xl font-bold text-slate-900 mb-4">Referrals API Overview</h2>
           <p className="text-slate-700 mb-4">
-            The Referrals API enables users to create unique referral links, track referrals, manage earnings, and process payouts. Earn commissions when referred customers purchase services.
+            The Referrals API enables users to track referrals across three levels (L1, L2, L3), earn commissions from referred customers, and manage payouts. Earn commissions when referred customers purchase services and on renewals.
           </p>
           <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-6 border border-slate-200 space-y-3">
             <div>
-              <h3 className="font-semibold text-slate-900">Commission Structure</h3>
-              <p className="text-slate-700 text-sm">10-30% commission on first payment from referred customer</p>
+              <h3 className="font-semibold text-slate-900">Multi-Level Commission Structure</h3>
+              <p className="text-slate-700 text-sm">L1 (Direct): 10-30% | L2 (Indirect): 5-15% | L3 (Third-level): 2-5%</p>
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-900">Commission Triggers</h3>
+              <p className="text-slate-700 text-sm">Commissions awarded on initial server purchase and on annual renewals (if service remains active)</p>
             </div>
             <div>
               <h3 className="font-semibold text-slate-900">Payment Statuses</h3>
@@ -503,38 +507,39 @@ export function ReferralsAPI() {
 
         {/* Referral Tiers */}
         <section>
-          <h2 className="text-2xl font-bold text-slate-900 mb-4">Commission Tiers</h2>
-          <div className="bg-white border border-slate-200 rounded-lg p-6">
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Multi-Level Commission Structure</h2>
+          <div className="bg-white border border-slate-200 rounded-lg p-6 mb-6">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Commission Levels</h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
                 <div>
-                  <h3 className="font-semibold text-slate-900">Tier 1: Starter</h3>
-                  <p className="text-slate-700 text-sm">0-5 active referrals</p>
+                  <h4 className="font-semibold text-slate-900">Level 1 (L1): Direct Referral</h4>
+                  <p className="text-slate-700 text-sm">Customer referred directly by you</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold text-blue-600">10%</p>
+                  <p className="text-2xl font-bold text-blue-600">10-30%</p>
                   <p className="text-slate-700 text-sm">commission rate</p>
                 </div>
               </div>
 
               <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg border border-purple-200">
                 <div>
-                  <h3 className="font-semibold text-slate-900">Tier 2: Professional</h3>
-                  <p className="text-slate-700 text-sm">6-15 active referrals</p>
+                  <h4 className="font-semibold text-slate-900">Level 2 (L2): Indirect Referral</h4>
+                  <p className="text-slate-700 text-sm">Customer referred by someone you referred</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold text-purple-600">15%</p>
+                  <p className="text-2xl font-bold text-purple-600">5-15%</p>
                   <p className="text-slate-700 text-sm">commission rate</p>
                 </div>
               </div>
 
               <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
                 <div>
-                  <h3 className="font-semibold text-slate-900">Tier 3: Elite</h3>
-                  <p className="text-slate-700 text-sm">16+ active referrals</p>
+                  <h4 className="font-semibold text-slate-900">Level 3 (L3): Third-Level Referral</h4>
+                  <p className="text-slate-700 text-sm">Customer referred by someone in your L2 network</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold text-green-600">20-30%</p>
+                  <p className="text-2xl font-bold text-green-600">2-5%</p>
                   <p className="text-slate-700 text-sm">commission rate</p>
                 </div>
               </div>
@@ -542,8 +547,19 @@ export function ReferralsAPI() {
 
             <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-yellow-800 text-sm">
-                <strong>Bonus:</strong> Earn additional 5% bonus on lifetime referral earnings when 10 referrals remain active for 12+ months.
+                <strong>Commission Timing:</strong> Commissions are calculated and awarded on initial purchase and on each annual renewal (if the service remains active). Each level earns independently based on their referral network.
               </p>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Example Scenario</h3>
+            <div className="space-y-3 text-slate-700">
+              <p>You refer <strong>Customer A</strong> (L1) who purchases a VPS for $100/year → You earn <strong>$15 (15% L1)</strong></p>
+              <p><strong>Customer A</strong> refers <strong>Customer B</strong> (your L2) who purchases for $100/year → You earn <strong>$10 (10% L2)</strong></p>
+              <p><strong>Customer B</strong> refers <strong>Customer C</strong> (your L3) who purchases for $100/year → You earn <strong>$3 (3% L3)</strong></p>
+              <p className="font-semibold pt-2">Total Annual Earnings: $28 from this referral chain</p>
+              <p className="text-sm">Next year: Same commissions again if all three customers renew their services</p>
             </div>
           </div>
         </section>
@@ -586,37 +602,47 @@ export function ReferralsAPI() {
 
         {/* Referral Flow */}
         <section>
-          <h2 className="text-2xl font-bold text-slate-900 mb-4">Referral Flow</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Referral & Commission Flow</h2>
           <div className="bg-white border border-slate-200 rounded-lg p-6">
             <div className="space-y-4">
               <div className="bg-gradient-to-r from-cyan-50 to-blue-50 rounded-lg p-4 border-l-4 border-cyan-500">
-                <h3 className="font-semibold text-slate-900 mb-2">1. Create Referral Link</h3>
-                <p className="text-slate-700 text-sm">Get your unique referral code and share the link</p>
+                <h3 className="font-semibold text-slate-900 mb-2">1. Get Referral Code</h3>
+                <p className="text-slate-700 text-sm">Upon signup, user receives unique referral code (e.g., NFFK3NVU). Share this code or use at signup with parameter ?ref=CODE</p>
               </div>
 
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border-l-4 border-blue-500">
-                <h3 className="font-semibold text-slate-900 mb-2">2. Customer Uses Your Link</h3>
-                <p className="text-slate-700 text-sm">Referred customer clicks link and signs up with tracking cookie</p>
+                <h3 className="font-semibold text-slate-900 mb-2">2. Prospect Signs Up with Code</h3>
+                <p className="text-slate-700 text-sm">New user signs up using your referral code - system validates code and tracks relationship (L1, L2, or L3)</p>
               </div>
 
               <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border-l-4 border-purple-500">
-                <h3 className="font-semibold text-slate-900 mb-2">3. Customer Makes Purchase</h3>
-                <p className="text-slate-700 text-sm">Customer creates order and completes payment</p>
+                <h3 className="font-semibold text-slate-900 mb-2">3. Referred Customer Makes Purchase</h3>
+                <p className="text-slate-700 text-sm">Customer purchases server, completes payment. Commission calculation is triggered automatically</p>
               </div>
 
               <div className="bg-gradient-to-r from-pink-50 to-green-50 rounded-lg p-4 border-l-4 border-pink-500">
-                <h3 className="font-semibold text-slate-900 mb-2">4. Commission Approved</h3>
-                <p className="text-slate-700 text-sm">Commission calculated and marked as pending for 30 days</p>
+                <h3 className="font-semibold text-slate-900 mb-2">4. Commissions Distributed Across Levels</h3>
+                <p className="text-slate-700 text-sm">L1 earner gets direct commission, L2 earner gets secondary commission, L3 earner gets tertiary commission (all simultaneously)</p>
               </div>
 
               <div className="bg-gradient-to-r from-green-50 to-yellow-50 rounded-lg p-4 border-l-4 border-green-500">
-                <h3 className="font-semibold text-slate-900 mb-2">5. Earnings Confirmed</h3>
-                <p className="text-slate-700 text-sm">After 30 days, commission moves to approved balance</p>
+                <h3 className="font-semibold text-slate-900 mb-2">5. Commissions Marked as Pending</h3>
+                <p className="text-slate-700 text-sm">All commissions enter pending status for 30-day verification period (fraud check)</p>
               </div>
 
               <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-4 border-l-4 border-yellow-500">
-                <h3 className="font-semibold text-slate-900 mb-2">6. Request & Receive Payout</h3>
-                <p className="text-slate-700 text-sm">Request payout via preferred method (Bank, PayPal, Crypto)</p>
+                <h3 className="font-semibold text-slate-900 mb-2">6. Commissions Approved & Confirmed</h3>
+                <p className="text-slate-700 text-sm">After 30 days, all commissions move to approved status. Appear in your available balance</p>
+              </div>
+
+              <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-lg p-4 border-l-4 border-orange-500">
+                <h3 className="font-semibold text-slate-900 mb-2">7. Request & Receive Payout</h3>
+                <p className="text-slate-700 text-sm">Request payout once you reach minimum ($50+). Funds arrive within 3-7 business days via your preferred method</p>
+              </div>
+
+              <div className="bg-gradient-to-r from-red-50 to-purple-50 rounded-lg p-4 border-l-4 border-red-500">
+                <h3 className="font-semibold text-slate-900 mb-2">8. Annual Renewal = More Commissions</h3>
+                <p className="text-slate-700 text-sm">When customer renews their service, same commission structure applies again. You earn commissions year after year!</p>
               </div>
             </div>
           </div>
