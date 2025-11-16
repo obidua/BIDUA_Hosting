@@ -254,36 +254,79 @@ async def get_all_users(
 async def get_all_servers(
     skip: int = 0,
     limit: int = 100,
+    status: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     current_user: UserProfile = Depends(require_admin)
 ):
-    """Get all servers with pagination"""
-    stmt = select(Server).offset(skip).limit(limit).order_by(Server.created_at.desc())
-    result = await db.execute(stmt)
-    servers = result.scalars().all()
-    
-    # Get total count
-    count_stmt = select(func.count(Server.id))
-    count_result = await db.execute(count_stmt)
-    total = count_result.scalar() or 0
-    
-    return {
-        "servers": [
-            {
-                "id": server.id,
-                "user_id": server.user_id,
-                "hostname": server.hostname,
-                "ip_address": server.ip_address,
-                "status": server.status,
-                "plan_id": server.plan_id,
-                "created_at": server.created_at.isoformat() if server.created_at else None,
-            }
-            for server in servers
-        ],
-        "total": total,
-        "skip": skip,
-        "limit": limit
-    }
+    """Get all servers with pagination and filtering"""
+    try:
+        # Build query with optional status filter
+        query = select(Server)
+        if status and status != 'all':
+            query = query.where(Server.server_status == status)
+        
+        # Add pagination and ordering
+        query = query.offset(skip).limit(limit).order_by(Server.created_at.desc())
+        
+        # Execute query with eager loading of user and plan
+        from sqlalchemy.orm import selectinload
+        query = query.options(
+            selectinload(Server.user),
+            selectinload(Server.plan)
+        )
+        
+        result = await db.execute(query)
+        servers = result.unique().scalars().all()
+        
+        # Get total count with optional filtering
+        count_query = select(func.count(Server.id))
+        if status and status != 'all':
+            count_query = count_query.where(Server.server_status == status)
+        count_result = await db.execute(count_query)
+        total = count_result.scalar() or 0
+        
+        return {
+            "servers": [
+                {
+                    "id": server.id,
+                    "user_id": server.user_id,
+                    "server_name": getattr(server, 'server_name', f'Server {server.id}'),
+                    "hostname": server.hostname,
+                    "ip_address": server.ip_address,
+                    "server_status": getattr(server, 'server_status', 'unknown'),
+                    "server_type": getattr(server, 'server_type', 'vps'),
+                    "plan_name": server.plan.name if server.plan else 'N/A',
+                    "monthly_cost": server.plan.base_price if server.plan else 0,
+                    "vcpu": server.plan.vcpu if server.plan else 0,
+                    "ram_gb": server.plan.ram_gb if server.plan else 0,
+                    "storage_gb": server.plan.storage_gb if server.plan else 0,
+                    "bandwidth_gb": server.plan.bandwidth_gb if server.plan else 0,
+                    "operating_system": getattr(server, 'operating_system', 'Unknown'),
+                    "created_at": server.created_at.isoformat() if server.created_at else None,
+                    "expiry_date": getattr(server, 'expiry_date', None),
+                    "user": {
+                        "id": server.user.id if server.user else None,
+                        "email": server.user.email if server.user else "N/A",
+                        "full_name": server.user.full_name if server.user else "N/A"
+                    }
+                }
+                for server in servers
+            ],
+            "total": total,
+            "skip": skip,
+            "limit": limit
+        }
+    except Exception as e:
+        print(f"Error getting admin servers: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "servers": [],
+            "total": 0,
+            "skip": skip,
+            "limit": limit,
+            "error": str(e)
+        }
 
 
 @router.get("/orders")
