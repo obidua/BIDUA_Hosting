@@ -13,6 +13,7 @@ from app.models.support import SupportTicket
 from app.models.affiliate import Referral
 from app.models.roles import Department, Role, Permission, UserDepartment, user_roles
 from app.models.plan import HostingPlan
+from app.models.invoice import Invoice
 from pydantic import BaseModel
 from typing import Optional
 
@@ -1162,3 +1163,167 @@ async def delete_plan(
     await db.commit()
 
     return {"message": "Plan deleted successfully"}
+
+
+# ========================================
+# BILL/INVOICE MANAGEMENT ENDPOINTS
+# ========================================
+
+@router.get("/invoices")
+async def get_all_invoices(
+    skip: int = 0,
+    limit: int = 100,
+    status: Optional[str] = None,
+    payment_status: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserProfile = Depends(require_admin)
+):
+    """Get all invoices with pagination and filtering"""
+    try:
+        from sqlalchemy.orm import selectinload
+        
+        # Build query with optional filters
+        query = select(Invoice)
+        if status and status != 'all':
+            query = query.where(Invoice.status == status)
+        if payment_status and payment_status != 'all':
+            query = query.where(Invoice.payment_status == payment_status)
+        
+        # Add eager loading and pagination
+        query = query.options(selectinload(Invoice.user), selectinload(Invoice.order))
+        query = query.offset(skip).limit(limit).order_by(Invoice.invoice_date.desc())
+        
+        result = await db.execute(query)
+        invoices = result.unique().scalars().all()
+        
+        # Get total count
+        count_query = select(func.count(Invoice.id))
+        if status and status != 'all':
+            count_query = count_query.where(Invoice.status == status)
+        if payment_status and payment_status != 'all':
+            count_query = count_query.where(Invoice.payment_status == payment_status)
+        count_result = await db.execute(count_query)
+        total = count_result.scalar() or 0
+        
+        return {
+            "invoices": [
+                {
+                    "id": invoice.id,
+                    "invoice_number": invoice.invoice_number,
+                    "user_id": invoice.user_id,
+                    "order_id": invoice.order_id,
+                    "invoice_date": invoice.invoice_date.isoformat() if invoice.invoice_date else None,
+                    "due_date": invoice.due_date.isoformat() if invoice.due_date else None,
+                    "subtotal": float(invoice.subtotal) if invoice.subtotal else 0,
+                    "tax_amount": float(invoice.tax_amount) if invoice.tax_amount else 0,
+                    "total_amount": float(invoice.total_amount) if invoice.total_amount else 0,
+                    "amount_paid": float(invoice.amount_paid) if invoice.amount_paid else 0,
+                    "balance_due": float(invoice.balance_due) if invoice.balance_due else 0,
+                    "status": invoice.status,
+                    "payment_status": invoice.payment_status,
+                    "payment_method": invoice.payment_method,
+                    "payment_date": invoice.payment_date.isoformat() if invoice.payment_date else None,
+                    "currency": getattr(invoice, 'currency', 'INR'),
+                    "items": invoice.items or [],
+                    "user": {
+                        "id": invoice.user.id if invoice.user else None,
+                        "email": invoice.user.email if invoice.user else "N/A",
+                        "full_name": invoice.user.full_name if invoice.user else "N/A"
+                    },
+                    "order": {
+                        "id": invoice.order.id if invoice.order else None,
+                        "order_number": invoice.order.order_number if invoice.order else "N/A"
+                    } if invoice.order else None
+                }
+                for invoice in invoices
+            ],
+            "total": total,
+            "skip": skip,
+            "limit": limit
+        }
+    except Exception as e:
+        print(f"Error getting invoices: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "invoices": [],
+            "total": 0,
+            "skip": skip,
+            "limit": limit,
+            "error": str(e)
+        }
+
+
+@router.get("/invoices/stats")
+async def get_invoice_stats(
+    db: AsyncSession = Depends(get_db),
+    current_user: UserProfile = Depends(require_admin)
+):
+    """Get invoice statistics"""
+    try:
+        # Total invoices
+        total_invoices_result = await db.execute(select(func.count(Invoice.id)))
+        total_invoices = total_invoices_result.scalar() or 0
+        
+        # Paid invoices
+        paid_invoices_result = await db.execute(
+            select(func.count(Invoice.id)).where(Invoice.payment_status == 'paid')
+        )
+        paid_invoices = paid_invoices_result.scalar() or 0
+        
+        # Pending invoices
+        pending_invoices_result = await db.execute(
+            select(func.count(Invoice.id)).where(
+                Invoice.payment_status.in_(['pending', 'partially_paid'])
+            )
+        )
+        pending_invoices = pending_invoices_result.scalar() or 0
+        
+        # Total revenue from paid invoices
+        total_revenue_result = await db.execute(
+            select(func.sum(Invoice.total_amount)).where(Invoice.payment_status == 'paid')
+        )
+        total_revenue = float(total_revenue_result.scalar() or 0)
+        
+        # Overdue invoices
+        overdue_invoices_result = await db.execute(
+            select(func.count(Invoice.id)).where(
+                and_(
+                    Invoice.due_date < datetime.now(Invoice.due_date.tzinfo if hasattr(Invoice.due_date, 'tzinfo') else None),
+                    Invoice.payment_status.in_(['pending', 'partially_paid'])
+                )
+            )
+        )
+        overdue_invoices = overdue_invoices_result.scalar() or 0
+        
+        # Outstanding amount
+        outstanding_result = await db.execute(
+            select(func.sum(Invoice.balance_due)).where(
+                Invoice.payment_status.in_(['pending', 'partially_paid'])
+            )
+        )
+        outstanding_amount = float(outstanding_result.scalar() or 0)
+        
+        return {
+            "total_invoices": total_invoices,
+            "paid_invoices": paid_invoices,
+            "pending_invoices": pending_invoices,
+            "overdue_invoices": overdue_invoices,
+            "total_revenue": total_revenue,
+            "outstanding_amount": outstanding_amount,
+            "paid_percentage": (paid_invoices / total_invoices * 100) if total_invoices > 0 else 0
+        }
+    except Exception as e:
+        print(f"Error getting invoice stats: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "total_invoices": 0,
+            "paid_invoices": 0,
+            "pending_invoices": 0,
+            "overdue_invoices": 0,
+            "total_revenue": 0,
+            "outstanding_amount": 0,
+            "paid_percentage": 0,
+            "error": str(e)
+        }

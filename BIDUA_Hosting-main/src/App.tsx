@@ -38,6 +38,7 @@ import { UserManagement } from './pages/admin/UserManagement';
 import { ServerManagement as AdminServerManagement } from './pages/admin/ServerManagement';
 import { PlansManagement } from './pages/admin/PlansManagement';
 import { OrdersManagement } from './pages/admin/OrdersManagement';
+import { BillManagement } from './pages/admin/BillManagement';
 import { SupportManagementEnhanced as SupportManagement } from './pages/admin/SupportManagementEnhanced';
 import { EmployeeManagement } from './pages/admin/EmployeeManagement';
 import SplashCursor from './components/SplashCurser';
@@ -208,6 +209,7 @@ function App() {
             <Route path="servers" element={<AdminServerManagement />} />
             <Route path="plans" element={<PlansManagement />} />
             <Route path="orders" element={<OrdersManagement />} />
+            <Route path="bills" element={<BillManagement />} />
             <Route path="referrals" element={<ReferralManagement />} />
             <Route path="support" element={<SupportManagement />} />
             <Route path="employees" element={<EmployeeManagement />} />

@@ -11,7 +11,8 @@ import {
   ShoppingCart,
   Gift,
   Package,
-  Briefcase
+  Briefcase,
+  FileText
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -32,6 +33,7 @@ export function AdminLayout() {
     { to: '/admin/servers', icon: Server, label: 'Server Management' },
     { to: '/admin/plans', icon: Package, label: 'Plans Management' },
     { to: '/admin/orders', icon: ShoppingCart, label: 'Orders Management' },
+    { to: '/admin/bills', icon: FileText, label: 'Bill Management' },
     { to: '/admin/referrals', icon: Gift, label: 'Referral Management' },
     { to: '/admin/support', icon: MessageSquare, label: 'Support Management' },
     { to: '/admin/employees', icon: Briefcase, label: 'Employee Management' },
