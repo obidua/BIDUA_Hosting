@@ -18,7 +18,14 @@ export function AuthAPI() {
             <div className="space-y-4">
               <div>
                 <h3 className="font-semibold text-slate-900 mb-2">Security Method</h3>
-                <p className="text-slate-700">JWT (JSON Web Token) based authentication with Bearer token in Authorization header</p>
+                <p className="text-slate-700">JWT (JSON Web Token) based authentication with Bearer token in Authorization header. All passwords are hashed asynchronously using bcrypt with run_in_threadpool to prevent event loop blocking.</p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-900 mb-2">Password Hashing</h3>
+                <div className="bg-green-50 border border-green-200 rounded p-3 text-sm text-green-900">
+                  <p className="font-semibold mb-1">✓ Async Password Hashing with bcrypt</p>
+                  <p>Non-blocking password hashing using asyncio run_in_threadpool. Passwords are never stored in plain text. Each password is salted and hashed before database storage.</p>
+                </div>
               </div>
               <div>
                 <h3 className="font-semibold text-slate-900 mb-2">Token Format</h3>
@@ -29,6 +36,10 @@ export function AuthAPI() {
               <div>
                 <h3 className="font-semibold text-slate-900 mb-2">Token Expiration</h3>
                 <p className="text-slate-700">Access tokens expire after 30 minutes. Use refresh endpoint to get new token.</p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-900 mb-2">Referral Integration</h3>
+                <p className="text-slate-700">Registration supports optional referral code parameter. If provided, system validates the code and establishes referral relationship (L1, L2, or L3 based on network depth).</p>
               </div>
             </div>
           </div>
@@ -295,29 +306,39 @@ export function AuthAPI() {
                   <CheckCircle className="h-5 w-5 mr-2 text-cyan-500" />
                   1.5 Referral Code Validation (Optional)
                 </h3>
-                <p className="text-slate-700 text-sm">If referral code provided, server validates against AffiliateSubscription and Referral records</p>
+                <p className="text-slate-700 text-sm mb-2">If referral code provided, server validates against AffiliateSubscription and Referral records</p>
+                <p className="text-slate-600 text-xs bg-white px-3 py-2 rounded">Real-time validation: Frontend validates with 250ms debounce for instant feedback. Backend performs final validation at registration.</p>
               </div>
 
               <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
                 <h3 className="font-semibold text-slate-900 mb-2 flex items-center">
                   <CheckCircle className="h-5 w-5 mr-2 text-blue-500" />
-                  2. Account Created & Referral Tracked
+                  2. Async Password Hashing & Account Creation
                 </h3>
-                <p className="text-slate-700 text-sm">Server hashes password async, creates user account, generates unique referral code, tracks referral relationship if code provided, returns JWT token</p>
+                <p className="text-slate-700 text-sm mb-2">Server hashes password asynchronously (non-blocking), creates user account, generates unique referral code, tracks referral relationship if code provided, returns JWT token</p>
+                <p className="text-slate-600 text-xs bg-white px-3 py-2 rounded">Password hashing uses bcrypt via run_in_threadpool. Prevents event loop blocking during computation-intensive hashing.</p>
               </div>
 
               <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
                 <h3 className="font-semibold text-slate-900 mb-2 flex items-center">
                   <CheckCircle className="h-5 w-5 mr-2 text-purple-500" />
-                  3. Login
+                  3. User Data Stored with Referral Info
                 </h3>
-                <p className="text-slate-700 text-sm">User submits email and password credentials to login endpoint</p>
+                <p className="text-slate-700 text-sm">User record includes: referral_code (auto-generated), referred_by (if code provided), l1/l2/l3_referrals counters, total_earnings, created_at timestamp</p>
+              </div>
+
+              <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
+                <h3 className="font-semibold text-slate-900 mb-2 flex items-center">
+                  <CheckCircle className="h-5 w-5 mr-2 text-purple-500" />
+                  4. Login
+                </h3>
+                <p className="text-slate-700 text-sm">User submits email and password credentials to login endpoint. Password is verified against bcrypt hash.</p>
               </div>
 
               <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
                 <h3 className="font-semibold text-slate-900 mb-2 flex items-center">
                   <CheckCircle className="h-5 w-5 mr-2 text-green-500" />
-                  4. Token Issued
+                  5. Token Issued
                 </h3>
                 <p className="text-slate-700 text-sm">Server verifies credentials and returns new JWT token valid for 30 minutes</p>
               </div>
@@ -325,7 +346,7 @@ export function AuthAPI() {
               <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg">
                 <h3 className="font-semibold text-slate-900 mb-2 flex items-center">
                   <CheckCircle className="h-5 w-5 mr-2 text-amber-500" />
-                  5. Authenticated Requests
+                  6. Authenticated Requests
                 </h3>
                 <p className="text-slate-700 text-sm">Frontend stores token and includes it in Authorization header for all API requests</p>
               </div>
@@ -333,7 +354,7 @@ export function AuthAPI() {
               <div className="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-r-lg">
                 <h3 className="font-semibold text-slate-900 mb-2 flex items-center">
                   <CheckCircle className="h-5 w-5 mr-2 text-indigo-500" />
-                  6. Token Refresh
+                  7. Token Refresh
                 </h3>
                 <p className="text-slate-700 text-sm">When token expires, use refresh endpoint to get new token without re-login</p>
               </div>

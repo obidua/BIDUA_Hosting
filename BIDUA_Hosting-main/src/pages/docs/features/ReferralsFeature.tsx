@@ -1,5 +1,6 @@
 import { DocLayout } from '../../../components/docs/DocLayout';
-import { Users, TrendingUp, Gift, DollarSign, Award, Share2 } from 'lucide-react';
+import { Users, TrendingUp, Gift, DollarSign, Award, Share2, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export function ReferralsFeature() {
   return (
@@ -13,6 +14,44 @@ export function ReferralsFeature() {
       prevPage={{ title: 'Support System', path: '/docs/features/support' }}
     >
       <div className="space-y-8">
+        {/* Quick Navigation to Subsections */}
+        <div className="bg-gradient-to-r from-cyan-50 to-blue-50 rounded-xl p-6 border border-cyan-200 mb-8">
+          <h2 className="text-lg font-bold text-slate-900 mb-4">📚 Referral Program Documentation</h2>
+          <div className="grid md:grid-cols-3 gap-4">
+            <Link
+              to="/docs/features/referrals-registration"
+              className="p-4 bg-white rounded-lg border border-slate-200 hover:border-cyan-400 hover:shadow transition group"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-slate-900">Registration Guide</h3>
+                <ArrowRight className="h-4 w-4 text-cyan-500 group-hover:translate-x-1 transition" />
+              </div>
+              <p className="text-slate-600 text-sm">Learn how signup with referral codes works and real-time validation</p>
+            </Link>
+
+            <Link
+              to="/docs/features/referrals-commission"
+              className="p-4 bg-white rounded-lg border border-slate-200 hover:border-cyan-400 hover:shadow transition group"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-slate-900">Commission Structure</h3>
+                <ArrowRight className="h-4 w-4 text-cyan-500 group-hover:translate-x-1 transition" />
+              </div>
+              <p className="text-slate-600 text-sm">Deep dive into 3-level commission system (L1, L2, L3) and calculations</p>
+            </Link>
+
+            <Link
+              to="/docs/features/referrals-payouts"
+              className="p-4 bg-white rounded-lg border border-slate-200 hover:border-cyan-400 hover:shadow transition group"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-slate-900">Payout Management</h3>
+                <ArrowRight className="h-4 w-4 text-cyan-500 group-hover:translate-x-1 transition" />
+              </div>
+              <p className="text-slate-600 text-sm">Request payouts, payout methods, tracking, and withdrawals</p>
+            </Link>
+          </div>
+        </div>
         {/* Overview */}
         <section>
           <h2 className="text-2xl font-bold text-slate-900 mb-4">Overview</h2>
@@ -59,53 +98,91 @@ export function ReferralsFeature() {
 
         {/* Commission Structure */}
         <section>
-          <h2 className="text-2xl font-bold text-slate-900 mb-4">Commission Structure</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Multi-Level Commission Structure</h2>
 
           <p className="text-slate-600 mb-6">
-            Earn competitive commissions based on your referrals' purchases:
+            Earn competitive commissions across three levels based on your referral network:
           </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-6">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-400 rounded-lg p-6">
+              <h3 className="text-lg font-bold text-blue-900 mb-2">Level 1 (Direct)</h3>
+              <p className="text-blue-800 text-sm mb-4">Your direct referrals</p>
+              <div className="text-3xl font-bold text-blue-600 mb-2">10-30%</div>
+              <p className="text-blue-700 text-sm">Commission rate per purchase</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-400 rounded-lg p-6">
+              <h3 className="text-lg font-bold text-purple-900 mb-2">Level 2 (Indirect)</h3>
+              <p className="text-purple-800 text-sm mb-4">Referrals of your referrals</p>
+              <div className="text-3xl font-bold text-purple-600 mb-2">5-15%</div>
+              <p className="text-purple-700 text-sm">Commission rate per purchase</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-400 rounded-lg p-6">
+              <h3 className="text-lg font-bold text-green-900 mb-2">Level 3 (Third-tier)</h3>
+              <p className="text-green-800 text-sm mb-4">Referrals in your L2 network</p>
+              <div className="text-3xl font-bold text-green-600 mb-2">2-5%</div>
+              <p className="text-green-700 text-sm">Commission rate per purchase</p>
+            </div>
+          </div>
+
+          <h3 className="text-lg font-semibold text-slate-900 mb-4 mt-8">Commission Details</h3>
 
           <div className="overflow-x-auto my-6">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b-2 border-slate-200">
-                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Referral Type</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Commission</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Duration</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Bonus</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Commission Level</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Range</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Trigger Event</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-900">Recurring</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 <tr>
-                  <td className="px-4 py-3 font-medium text-slate-900">First Purchase</td>
-                  <td className="px-4 py-3 text-slate-600">$10 credit</td>
-                  <td className="px-4 py-3 text-slate-600">One-time</td>
-                  <td className="px-4 py-3 text-slate-600">-</td>
+                  <td className="px-4 py-3 font-medium text-slate-900">L1 (Direct Referral)</td>
+                  <td className="px-4 py-3 text-slate-600 font-semibold">10-30%</td>
+                  <td className="px-4 py-3 text-slate-600">First purchase + renewals</td>
+                  <td className="px-4 py-3"><span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">Annual</span></td>
                 </tr>
                 <tr className="bg-slate-50">
-                  <td className="px-4 py-3 font-medium text-slate-900">Ongoing Renewals</td>
-                  <td className="px-4 py-3 text-slate-600">20% commission</td>
-                  <td className="px-4 py-3 text-slate-600">Lifetime</td>
-                  <td className="px-4 py-3 text-cyan-500 font-semibold">Recurring</td>
+                  <td className="px-4 py-3 font-medium text-slate-900">L2 (Indirect Referral)</td>
+                  <td className="px-4 py-3 text-slate-600 font-semibold">5-15%</td>
+                  <td className="px-4 py-3 text-slate-600">First purchase + renewals</td>
+                  <td className="px-4 py-3"><span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">Annual</span></td>
                 </tr>
                 <tr>
-                  <td className="px-4 py-3 font-medium text-slate-900">Premium Add-ons</td>
-                  <td className="px-4 py-3 text-slate-600">15% commission</td>
-                  <td className="px-4 py-3 text-slate-600">Per renewal</td>
-                  <td className="px-4 py-3 text-slate-600">-</td>
-                </tr>
-                <tr className="bg-slate-50">
-                  <td className="px-4 py-3 font-medium text-slate-900">Bulk Purchase</td>
-                  <td className="px-4 py-3 text-slate-600">$50 or 15%</td>
-                  <td className="px-4 py-3 text-slate-600">Per order</td>
-                  <td className="px-4 py-3 text-green-600 font-semibold">Higher</td>
+                  <td className="px-4 py-3 font-medium text-slate-900">L3 (Third-Level Referral)</td>
+                  <td className="px-4 py-3 text-slate-600 font-semibold">2-5%</td>
+                  <td className="px-4 py-3 text-slate-600">First purchase + renewals</td>
+                  <td className="px-4 py-3"><span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">Annual</span></td>
                 </tr>
               </tbody>
             </table>
           </div>
 
           <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4 my-6">
-            <p className="text-slate-700"><strong>Pro Tip:</strong> You earn 20% commission on every renewal of your referrals' plans, indefinitely! That means the longer they stay with us, the more you earn.</p>
+            <p className="text-slate-700 mb-2"><strong>How Multi-Level Works:</strong> When your referral purchases a service, you earn L1 commission. When they refer someone, you earn L2 on their referral's purchase. When their referral refers someone, you earn L3. All commissions are applied simultaneously.</p>
+            <p className="text-slate-700 mt-2"><strong>Pro Tip:</strong> Build your referral network strategically! Commissions repeat annually when customers renew their services, creating passive income streams.</p>
+          </div>
+
+          <h3 className="text-lg font-semibold text-slate-900 mb-4 mt-8">Example Commission Scenario</h3>
+
+          <div className="bg-gradient-to-r from-slate-50 to-cyan-50 border border-cyan-200 rounded-lg p-6">
+            <p className="text-slate-700 mb-4"><strong>You refer Customer A ($100/year VPS)</strong></p>
+            <p className="text-green-700 font-semibold mb-4">💰 Your L1 Commission: $15 (15% of $100)</p>
+
+            <p className="text-slate-700 mb-4"><strong>Customer A refers Customer B ($100/year VPS)</strong></p>
+            <p className="text-blue-700 font-semibold mb-4">💰 Your L2 Commission: $10 (10% of $100)</p>
+
+            <p className="text-slate-700 mb-4"><strong>Customer B refers Customer C ($100/year VPS)</strong></p>
+            <p className="text-purple-700 font-semibold mb-4">💰 Your L3 Commission: $3 (3% of $100)</p>
+
+            <div className="border-t border-cyan-200 pt-4 mt-4">
+              <p className="text-slate-900 font-bold text-lg">Total First Year: $28</p>
+              <p className="text-slate-600 text-sm">Next Year (if all renew): $28 again... and every year after!</p>
+            </div>
           </div>
         </section>
 

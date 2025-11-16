@@ -65,6 +65,9 @@ import { BillingFeature } from './pages/docs/features/BillingFeature';
 import { PaymentsFeature } from './pages/docs/features/PaymentsFeature';
 import { SupportFeature } from './pages/docs/features/SupportFeature';
 import { ReferralsFeature } from './pages/docs/features/ReferralsFeature';
+import { ReferralsRegistration } from './pages/docs/features/ReferralsRegistration';
+import { ReferralsCommission } from './pages/docs/features/ReferralsCommission';
+import { ReferralsPayouts } from './pages/docs/features/ReferralsPayouts';
 import { UserAccount } from './pages/docs/user/UserAccount';
 import { UserPurchase } from './pages/docs/user/UserPurchase';
 import { UserServers } from './pages/docs/user/UserServers';
@@ -143,6 +146,9 @@ function App() {
               <Route path="features/payments" element={<PaymentsFeature />} />
               <Route path="features/support" element={<SupportFeature />} />
               <Route path="features/referrals" element={<ReferralsFeature />} />
+              <Route path="features/referrals-registration" element={<ReferralsRegistration />} />
+              <Route path="features/referrals-commission" element={<ReferralsCommission />} />
+              <Route path="features/referrals-payouts" element={<ReferralsPayouts />} />
 
               {/* User Guides */}
               <Route path="user/account" element={<UserAccount />} />
