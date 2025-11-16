@@ -41,6 +41,8 @@ import { OrdersManagement } from './pages/admin/OrdersManagement';
 import { BillManagement } from './pages/admin/BillManagement';
 import { SupportManagementEnhanced as SupportManagement } from './pages/admin/SupportManagementEnhanced';
 import { EmployeeManagement } from './pages/admin/EmployeeManagement';
+import { SubscriptionManagement } from './pages/admin/SubscriptionManagement';
+import { UserAnalytics } from './pages/admin/UserAnalytics';
 import SplashCursor from './components/SplashCurser';
 import { DocsLayout } from './components/docs/DocsLayout';
 
@@ -206,8 +208,10 @@ function App() {
           >
             <Route index element={<AdminDashboard />} />
             <Route path="users" element={<UserManagement />} />
+            <Route path="analytics" element={<UserAnalytics />} />
             <Route path="servers" element={<AdminServerManagement />} />
             <Route path="plans" element={<PlansManagement />} />
+            <Route path="subscriptions" element={<SubscriptionManagement />} />
             <Route path="orders" element={<OrdersManagement />} />
             <Route path="bills" element={<BillManagement />} />
             <Route path="referrals" element={<ReferralManagement />} />

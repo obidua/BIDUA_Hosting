@@ -12,7 +12,9 @@ import {
   Gift,
   Package,
   Briefcase,
-  FileText
+  FileText,
+  CreditCard,
+  BarChart3
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -30,8 +32,10 @@ export function AdminLayout() {
   const adminLinks = [
     { to: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/admin/users', icon: Users, label: 'User Management' },
+    { to: '/admin/analytics', icon: BarChart3, label: 'User Analytics' },
     { to: '/admin/servers', icon: Server, label: 'Server Management' },
-    { to: '/admin/plans', icon: Package, label: 'Plans Management' },
+    { to: '/admin/plans', icon: Package, label: 'Plans & Addons' },
+    { to: '/admin/subscriptions', icon: CreditCard, label: 'Subscriptions' },
     { to: '/admin/orders', icon: ShoppingCart, label: 'Orders Management' },
     { to: '/admin/bills', icon: FileText, label: 'Bill Management' },
     { to: '/admin/referrals', icon: Gift, label: 'Referral Management' },
