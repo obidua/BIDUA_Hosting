@@ -1,17 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Users,
   Search,
   RefreshCw,
-  Eye,
   Mail,
-  Phone,
-  MapPin,
-  CreditCard,
-  BarChart3,
+  DollarSign,
   AlertCircle,
   CheckCircle,
-  Globe
+  Globe,
+  X
 } from 'lucide-react';
 import api from '../../lib/api';
 import { AdminPageHeader } from '../../components/admin/AdminPageHeader';
@@ -25,109 +22,97 @@ interface User {
   city?: string;
   account_status: string;
   is_affiliate: boolean;
-  affiliate_earnings: number;
-  total_spent: number;
-  active_subscriptions: number;
-  total_servers: number;
+  affiliate_earnings?: number;
+  total_spent?: number;
+  active_subscriptions?: number;
+  total_servers?: number;
   created_at: string;
   last_login?: string;
 }
 
-interface UserDetailData {
-  user: User;
-  subscriptions: any[];
-  servers: any[];
-  orders: any[];
-  invoices: any[];
-  affiliate_stats?: {
-    referrals_count: number;
-    earned_commission: number;
-    pending_payout: number;
-  };
+interface UserProfile {
+  id: number;
+  email: string;
+  full_name: string;
+  phone?: string;
+  country?: string;
+  city?: string;
+  account_status: string;
+  is_affiliate: boolean;
+  created_at: string;
 }
 
-export function UserAnalytics() {
+interface UserStats {
+  total_users: number;
+  active_users: number;
+  affiliate_users: number;
+  total_revenue: number;
+}
+
+export const UserAnalytics = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedUser, setSelectedUser] = useState<UserDetailData | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showDetails, setShowDetails] = useState(false);
 
-  useEffect(() => {
-    fetchUsers();
-  }, [statusFilter]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      if (statusFilter !== 'all') params.append('status', statusFilter);
-
-      const response = await api.request(`/api/v1/admin/users?${params}`, { method: 'GET' });
-      setUsers(Array.isArray(response) ? response : []);
+      const response = await api.get('/api/v1/admin/users?skip=0&limit=500');
+      setUsers(response.users || response.items || []);
     } catch (error) {
       console.error('Error fetching users:', error);
-      setUsers([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const loadUserDetails = async (userId: number) => {
     try {
-      const response = await api.request(`/api/v1/admin/users/${userId}/full-profile`, {
-        method: 'GET'
-      });
-      setSelectedUser(response);
-      setShowDetails(true);
+      const response = await api.get(`/api/v1/admin/users/${userId}`);
+      if (response) {
+        setSelectedUser(response);
+      }
     } catch (error) {
       console.error('Error loading user details:', error);
-      alert('Failed to load user details');
     }
   };
 
-  const handleStatusChange = async (userId: number, newStatus: string) => {
-    if (!confirm(`Change user account status to ${newStatus}?`)) return;
-    try {
-      await api.request(`/api/v1/admin/users/${userId}`, {
-        method: 'PUT',
-        body: JSON.stringify({ account_status: newStatus }),
-      });
-      alert('User status updated');
-      await fetchUsers();
-    } catch (error) {
-      console.error('Error updating user status:', error);
-      alert('Failed to update user status');
-    }
-  };
-
-  const filteredUsers = users.filter(user =>
-    (user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     user.email.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (statusFilter === 'all' || user.account_status === statusFilter)
-  );
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
-  };
-
-  const formatDate = (date: string | undefined) => {
-    if (!date) return 'Never';
-    return new Date(date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
-  };
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = 
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.full_name.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || user.account_status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
         return 'bg-emerald-500/15 text-emerald-200 border-emerald-500/40';
       case 'suspended':
-        return 'bg-rose-500/15 text-rose-200 border-rose-500/40';
-      case 'pending':
         return 'bg-amber-500/15 text-amber-200 border-amber-500/40';
+      case 'banned':
+        return 'bg-rose-500/15 text-rose-200 border-rose-500/40';
       default:
         return 'bg-slate-500/15 text-slate-200 border-slate-500/40';
     }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
+  };
+
+  const formatDate = (date: string | undefined) => {
+    return new Date(date || '').toLocaleDateString('en-IN');
   };
 
   if (loading) {
@@ -138,18 +123,11 @@ export function UserAnalytics() {
     );
   }
 
-  const stats = {
-    totalUsers: users.length,
-    activeUsers: users.filter(u => u.account_status === 'active').length,
-    affiliates: users.filter(u => u.is_affiliate).length,
-    totalRevenue: users.reduce((sum, u) => sum + u.total_spent, 0),
-  };
-
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        title="User Analytics & Management"
-        description="View and manage all users with their subscription status, purchase history, and affiliate information."
+        title="User Analytics"
+        description="Monitor user demographics, subscriptions, spending, and affiliate status."
         actions={
           <button
             onClick={fetchUsers}
@@ -165,24 +143,30 @@ export function UserAnalytics() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
           <p className="text-sm text-slate-400">Total Users</p>
-          <p className="text-2xl font-bold text-white">{stats.totalUsers}</p>
+          <p className="text-2xl font-bold text-white">{users.length}</p>
         </div>
         <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
           <p className="text-sm text-slate-400">Active Users</p>
-          <p className="text-2xl font-bold text-emerald-400">{stats.activeUsers}</p>
+          <p className="text-2xl font-bold text-emerald-400">
+            {users.filter(u => u.account_status === 'active').length}
+          </p>
         </div>
         <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
           <p className="text-sm text-slate-400">Affiliates</p>
-          <p className="text-2xl font-bold text-cyan-400">{stats.affiliates}</p>
+          <p className="text-2xl font-bold text-cyan-400">
+            {users.filter(u => u.is_affiliate).length}
+          </p>
         </div>
         <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
           <p className="text-sm text-slate-400">Total Revenue</p>
-          <p className="text-lg font-bold text-yellow-400">{formatCurrency(stats.totalRevenue)}</p>
+          <p className="text-lg font-bold text-cyan-300">
+            {formatCurrency(users.reduce((sum, u) => sum + (u.total_spent || 0), 0))}
+          </p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-900">
+      <div className="bg-slate-950/60 p-6 rounded-2xl border border-slate-800">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">Search</label>
@@ -206,8 +190,8 @@ export function UserAnalytics() {
             >
               <option value="all">All Users</option>
               <option value="active">Active</option>
-              <option value="pending">Pending</option>
               <option value="suspended">Suspended</option>
+              <option value="banned">Banned</option>
             </select>
           </div>
         </div>
@@ -220,11 +204,13 @@ export function UserAnalytics() {
             <thead>
               <tr className="bg-slate-900/60 border-b border-slate-800">
                 <th className="px-6 py-3 text-left text-sm font-semibold text-slate-300">User</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-300">Email</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-slate-300">Status</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-300">Total Spent</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-slate-300">Subscriptions</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-slate-300">Servers</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-300">Total Spent</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-slate-300">Affiliate</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-300">Joined</th>
                 <th className="px-6 py-3 text-right text-sm font-semibold text-slate-300">Actions</th>
               </tr>
             </thead>
@@ -232,55 +218,37 @@ export function UserAnalytics() {
               {filteredUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-slate-900/40 transition">
                   <td className="px-6 py-4">
-                    <div>
-                      <p className="font-medium text-white">{user.full_name}</p>
-                      <p className="text-sm text-slate-400">{user.email}</p>
-                      {user.country && (
-                        <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
-                          <Globe className="w-3 h-3" /> {user.country}
-                          {user.city && `, ${user.city}`}
-                        </p>
-                      )}
-                    </div>
+                    <p className="font-medium text-white">{user.full_name}</p>
                   </td>
+                  <td className="px-6 py-4 text-slate-300">{user.email}</td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold border ${getStatusColor(user.account_status)}`}>
-                      {user.account_status === 'active' && <CheckCircle className="w-3 h-3 mr-1" />}
-                      {user.account_status === 'suspended' && <AlertCircle className="w-3 h-3 mr-1" />}
                       {user.account_status.charAt(0).toUpperCase() + user.account_status.slice(1)}
                     </span>
                   </td>
+                  <td className="px-6 py-4 text-cyan-300 font-medium">{formatCurrency(user.total_spent || 0)}</td>
+                  <td className="px-6 py-4 text-slate-300">{user.active_subscriptions || 0}</td>
+                  <td className="px-6 py-4 text-slate-300">{user.total_servers || 0}</td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-1">
-                      <CreditCard className="w-4 h-4 text-slate-400" />
-                      <span className="text-white font-medium">{user.active_subscriptions}</span>
-                    </div>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold border ${
+                      user.is_affiliate
+                        ? 'bg-indigo-500/15 text-indigo-200 border-indigo-500/40'
+                        : 'bg-slate-500/15 text-slate-200 border-slate-500/40'
+                    }`}>
+                      {user.is_affiliate ? 'Yes' : 'No'}
+                    </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-1">
-                      <Globe className="w-4 h-4 text-slate-400" />
-                      <span className="text-white font-medium">{user.total_servers}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-cyan-300 font-medium">{formatCurrency(user.total_spent)}</td>
-                  <td className="px-6 py-4">
-                    {user.is_affiliate ? (
-                      <div className="space-y-1">
-                        <span className="inline-block px-2 py-1 text-xs font-semibold bg-purple-500/20 text-purple-200 border border-purple-500/40 rounded-full">
-                          Yes
-                        </span>
-                        <p className="text-xs text-slate-400">{formatCurrency(user.affiliate_earnings)}</p>
-                      </div>
-                    ) : (
-                      <span className="text-slate-400 text-sm">No</span>
-                    )}
-                  </td>
+                  <td className="px-6 py-4 text-slate-300 text-sm">{formatDate(user.created_at)}</td>
                   <td className="px-6 py-4 text-right">
                     <button
-                      onClick={() => loadUserDetails(user.id)}
-                      className="px-3 py-1 text-cyan-300 hover:bg-cyan-500/10 rounded text-sm"
+                      onClick={() => {
+                        setSelectedUser(user);
+                        loadUserDetails(user.id);
+                        setShowDetails(true);
+                      }}
+                      className="px-3 py-1 bg-cyan-500/20 text-cyan-300 rounded-lg text-sm hover:bg-cyan-500/30 border border-cyan-500/40"
                     >
-                      View Details
+                      View
                     </button>
                   </td>
                 </tr>
@@ -288,160 +256,102 @@ export function UserAnalytics() {
             </tbody>
           </table>
         </div>
-
-        {filteredUsers.length === 0 && (
-          <div className="text-center py-12 text-slate-400">
-            <Users className="h-10 w-10 mx-auto mb-4 text-slate-500" />
-            <p>No users found</p>
-          </div>
-        )}
       </div>
 
-      {/* User Details Modal */}
+      {/* Details Modal */}
       {showDetails && selectedUser && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-950 rounded-2xl border border-slate-900 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full max-h-96 overflow-y-auto">
+            <div className="sticky top-0 bg-slate-950/60 px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white">User Profile</h3>
+              <button
+                onClick={() => setShowDetails(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
             <div className="p-6 space-y-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h2 className="text-2xl font-bold text-white">{selectedUser.user.full_name}</h2>
-                  <p className="text-slate-400">{selectedUser.user.email}</p>
-                </div>
-                <button
-                  onClick={() => setShowDetails(false)}
-                  className="text-slate-400 hover:text-white text-2xl"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* User Overview */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-b border-slate-800 pb-4">
-                <div>
-                  <p className="text-sm text-slate-400 mb-1">Account Status</p>
-                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold border ${getStatusColor(selectedUser.user.account_status)}`}>
-                    {selectedUser.user.account_status}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-400 mb-1">Active Subscriptions</p>
-                  <p className="text-lg font-bold text-white">{selectedUser.user.active_subscriptions}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-400 mb-1">Total Servers</p>
-                  <p className="text-lg font-bold text-white">{selectedUser.user.total_servers}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-400 mb-1">Total Spent</p>
-                  <p className="text-lg font-bold text-cyan-300">{formatCurrency(selectedUser.user.total_spent)}</p>
-                </div>
-              </div>
-
-              {/* Contact & Location */}
-              <div className="space-y-4 border-b border-slate-800 pb-4">
-                <h3 className="text-lg font-semibold text-white">Contact Information</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="flex items-start gap-2">
-                    <Mail className="w-4 h-4 text-slate-400 mt-1" />
-                    <div>
-                      <p className="text-slate-400">Email</p>
-                      <p className="text-white">{selectedUser.user.email}</p>
-                    </div>
+              {/* Basic Info */}
+              <div className="border-b border-slate-800 pb-6">
+                <h4 className="text-sm font-semibold text-slate-300 uppercase mb-3">Basic Information</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-slate-400 text-sm">Name</p>
+                    <p className="text-white font-medium">{selectedUser.full_name}</p>
                   </div>
-                  {selectedUser.user.phone && (
-                    <div className="flex items-start gap-2">
-                      <Phone className="w-4 h-4 text-slate-400 mt-1" />
-                      <div>
-                        <p className="text-slate-400">Phone</p>
-                        <p className="text-white">{selectedUser.user.phone}</p>
-                      </div>
-                    </div>
-                  )}
-                  {selectedUser.user.country && (
-                    <div className="flex items-start gap-2">
-                      <MapPin className="w-4 h-4 text-slate-400 mt-1" />
-                      <div>
-                        <p className="text-slate-400">Location</p>
-                        <p className="text-white">
-                          {selectedUser.user.city ? `${selectedUser.user.city}, ${selectedUser.user.country}` : selectedUser.user.country}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Subscriptions */}
-              {selectedUser.subscriptions && selectedUser.subscriptions.length > 0 && (
-                <div className="space-y-4 border-b border-slate-800 pb-4">
-                  <h3 className="text-lg font-semibold text-white">Active Subscriptions ({selectedUser.subscriptions.length})</h3>
-                  <div className="space-y-2">
-                    {selectedUser.subscriptions.map((sub, idx) => (
-                      <div key={idx} className="bg-slate-900/60 p-3 rounded-lg">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-medium text-white">{sub.plan_name}</p>
-                            <p className="text-sm text-slate-400">{sub.billing_cycle}</p>
-                          </div>
-                          <span className="text-cyan-300 font-bold">{formatCurrency(sub.amount)}</span>
-                        </div>
-                      </div>
-                    ))}
+                  <div>
+                    <p className="text-slate-400 text-sm">Email</p>
+                    <p className="text-white font-medium">{selectedUser.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-400 text-sm">Phone</p>
+                    <p className="text-white font-medium">{selectedUser.phone || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-400 text-sm">Location</p>
+                    <p className="text-white font-medium">{selectedUser.country || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-400 text-sm">Status</p>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold border mt-1 ${getStatusColor(selectedUser.account_status)}`}>
+                      {selectedUser.account_status.charAt(0).toUpperCase() + selectedUser.account_status.slice(1)}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-slate-400 text-sm">Joined</p>
+                    <p className="text-white font-medium">{formatDate(selectedUser.created_at)}</p>
                   </div>
                 </div>
-              )}
+              </div>
+
+              {/* Activity Stats */}
+              <div className="border-b border-slate-800 pb-6">
+                <h4 className="text-sm font-semibold text-slate-300 uppercase mb-3">Activity</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-slate-900/60 p-3 rounded-lg">
+                    <p className="text-slate-400 text-sm">Total Spent</p>
+                    <p className="text-cyan-300 font-bold text-lg">{formatCurrency(selectedUser.total_spent || 0)}</p>
+                  </div>
+                  <div className="bg-slate-900/60 p-3 rounded-lg">
+                    <p className="text-slate-400 text-sm">Active Subscriptions</p>
+                    <p className="text-emerald-300 font-bold text-lg">{selectedUser.active_subscriptions || 0}</p>
+                  </div>
+                  <div className="bg-slate-900/60 p-3 rounded-lg">
+                    <p className="text-slate-400 text-sm">Total Servers</p>
+                    <p className="text-blue-300 font-bold text-lg">{selectedUser.total_servers || 0}</p>
+                  </div>
+                  <div className="bg-slate-900/60 p-3 rounded-lg">
+                    <p className="text-slate-400 text-sm">Is Affiliate</p>
+                    <p className={`font-bold text-lg ${selectedUser.is_affiliate ? 'text-indigo-300' : 'text-slate-400'}`}>
+                      {selectedUser.is_affiliate ? 'Yes' : 'No'}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
               {/* Affiliate Info */}
-              {selectedUser.user.is_affiliate && selectedUser.affiliate_stats && (
-                <div className="space-y-4 border-b border-slate-800 pb-4">
-                  <h3 className="text-lg font-semibold text-white">Affiliate Information</h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-slate-900/60 p-3 rounded-lg">
-                      <p className="text-sm text-slate-400 mb-1">Referrals</p>
-                      <p className="text-2xl font-bold text-white">{selectedUser.affiliate_stats.referrals_count}</p>
-                    </div>
-                    <div className="bg-slate-900/60 p-3 rounded-lg">
-                      <p className="text-sm text-slate-400 mb-1">Earned</p>
-                      <p className="text-xl font-bold text-emerald-300">{formatCurrency(selectedUser.affiliate_stats.earned_commission)}</p>
-                    </div>
-                    <div className="bg-slate-900/60 p-3 rounded-lg">
-                      <p className="text-sm text-slate-400 mb-1">Pending Payout</p>
-                      <p className="text-xl font-bold text-yellow-300">{formatCurrency(selectedUser.affiliate_stats.pending_payout)}</p>
+              {selectedUser.is_affiliate && (
+                <div className="pb-4">
+                  <h4 className="text-sm font-semibold text-slate-300 uppercase mb-3">Affiliate Info</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-indigo-500/10 p-3 rounded-lg border border-indigo-500/40">
+                      <p className="text-slate-400 text-sm">Earnings</p>
+                      <p className="text-indigo-300 font-bold">{formatCurrency(selectedUser.affiliate_earnings || 0)}</p>
                     </div>
                   </div>
                 </div>
               )}
 
               {/* Actions */}
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2 pt-4 border-t border-slate-800">
                 <button
                   onClick={() => setShowDetails(false)}
                   className="px-4 py-2 border border-slate-700 rounded-lg text-slate-300 hover:bg-slate-900"
                 >
                   Close
                 </button>
-                {selectedUser.user.account_status === 'active' && (
-                  <button
-                    onClick={() => {
-                      handleStatusChange(selectedUser.user.id, 'suspended');
-                      setShowDetails(false);
-                    }}
-                    className="px-4 py-2 bg-rose-500/20 text-rose-300 rounded-lg hover:bg-rose-500/30 border border-rose-500/40"
-                  >
-                    Suspend Account
-                  </button>
-                )}
-                {selectedUser.user.account_status === 'suspended' && (
-                  <button
-                    onClick={() => {
-                      handleStatusChange(selectedUser.user.id, 'active');
-                      setShowDetails(false);
-                    }}
-                    className="px-4 py-2 bg-emerald-500/20 text-emerald-300 rounded-lg hover:bg-emerald-500/30 border border-emerald-500/40"
-                  >
-                    Activate Account
-                  </button>
-                )}
               </div>
             </div>
           </div>
