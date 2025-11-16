@@ -44,7 +44,7 @@ export function PlansManagement() {
   const fetchPlans = async () => {
     try {
       setLoading(true);
-      const response = await api.request('/api/v1/plans', { method: 'GET' });
+      const response = await api.request('/api/v1/admin/plans', { method: 'GET' });
       setPlans(Array.isArray(response) ? response : []);
     } catch (error) {
       console.error('Error fetching plans:', error);

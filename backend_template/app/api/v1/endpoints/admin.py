@@ -503,10 +503,7 @@ async def get_all_referrals(
         if status and status != 'all':
             query = query.where(Referral.is_active == (status == 'active'))
         
-        # Add eager loading and pagination
-        query = query.options(
-            selectinload(Referral.referrer).selectinload(AffiliateSubscription.user if hasattr(AffiliateSubscription, 'user') else None)
-        )
+        # Add pagination and ordering
         query = query.offset(skip).limit(limit).order_by(Referral.created_at.desc())
         
         result = await db.execute(query)

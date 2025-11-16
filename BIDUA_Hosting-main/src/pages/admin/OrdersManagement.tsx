@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Search, RefreshCw, Eye, ChevronDown } from 'lucide-react';
+import { ShoppingCart, Search, RefreshCw, Eye, ChevronDown, Filter } from 'lucide-react';
 import api from '../../lib/api';
 import { AdminPageHeader } from '../../components/admin/AdminPageHeader';
 

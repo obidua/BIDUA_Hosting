@@ -43,7 +43,11 @@ export function ServerManagement() {
     try {
       setLoading(true);
       const response = await api.request('/api/v1/admin/servers?limit=1000', { method: 'GET' });
-      setServers(Array.isArray(response) ? response : []);
+      if (response && response.servers) {
+        setServers(Array.isArray(response.servers) ? response.servers : []);
+      } else {
+        setServers([]);
+      }
     } catch (error) {
       console.error('Error fetching servers:', error);
       setServers([]);
