@@ -5,7 +5,6 @@ import { AdminPageHeader } from '../../components/admin/AdminPageHeader';
 
 interface User {
   id: number;
-  username: string;
   email: string;
   full_name: string;
   role: string;
@@ -39,7 +38,6 @@ export function UserManagement() {
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
-      user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -126,7 +124,7 @@ export function UserManagement() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search by name, username, or email..."
+                placeholder="Search by name or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"

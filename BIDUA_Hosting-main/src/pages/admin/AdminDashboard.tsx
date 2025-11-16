@@ -43,7 +43,7 @@ export function AdminDashboard() {
           totalOrders: statsData.total_orders || 0,
           openTickets: statsData.open_tickets || 0,
           monthlyRevenue: statsData.monthly_revenue || 0,
-          newUsersThisMonth: statsData.new_users_this_month || 0,
+          newUsersThisMonth: statsData.users_this_month || 0,
         });
       }
     } catch (error) {
