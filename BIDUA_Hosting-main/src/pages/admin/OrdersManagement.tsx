@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Search, Filter, RefreshCw, Eye } from 'lucide-react';
+import { ShoppingCart, Search, RefreshCw, Eye, ChevronDown } from 'lucide-react';
 import api from '../../lib/api';
 import { AdminPageHeader } from '../../components/admin/AdminPageHeader';
 
@@ -20,7 +20,9 @@ interface OrderData {
   razorpay_payment_id: string | null;
   created_at: string;
   paid_at: string | null;
+  plan_name: string;
   user?: {
+    id: number;
     email: string;
     full_name: string;
   };
@@ -43,7 +45,11 @@ export function OrdersManagement() {
     try {
       setLoading(true);
       const response = await api.request('/api/v1/admin/orders?limit=1000', { method: 'GET' });
-      setOrders(Array.isArray(response) ? response : []);
+      if (response && response.orders) {
+        setOrders(Array.isArray(response.orders) ? response.orders : []);
+      } else {
+        setOrders([]);
+      }
     } catch (error) {
       console.error('Error fetching orders:', error);
       setOrders([]);
