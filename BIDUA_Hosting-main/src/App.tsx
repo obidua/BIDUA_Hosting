@@ -20,9 +20,13 @@ import { InvoiceView } from './pages/InvoiceView';
 import { InvoicePayment } from './pages/InvoicePayment';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
+import { ResetPassword } from './pages/ResetPassword';
+import { ForgotPassword } from './pages/ForgotPassword';
 import { Terms } from './pages/Terms';
 import { Privacy } from './pages/Privacy';
 import { ServiceLevelAgreement } from './pages/ServiceLevelAgreement';
+import { VerifyEmail } from './pages/VerifyEmail';
+import { VerificationPending } from './pages/VerificationPending';
 
 import { Overview } from './pages/dashboard/Overview';
 import { MyServers } from './pages/dashboard/MyServers';
@@ -38,13 +42,11 @@ import { UserManagement } from './pages/admin/UserManagement';
 import { ServerManagement as AdminServerManagement } from './pages/admin/ServerManagement';
 import { PlansManagement } from './pages/admin/PlansManagement';
 import { OrdersManagement } from './pages/admin/OrdersManagement';
-import { BillManagement } from './pages/admin/BillManagement';
 import { SupportManagementEnhanced as SupportManagement } from './pages/admin/SupportManagementEnhanced';
 import { EmployeeManagement } from './pages/admin/EmployeeManagement';
-import { SubscriptionManagement } from './pages/admin/SubscriptionManagement';
-import { UserAnalytics } from './pages/admin/UserAnalytics';
 import SplashCursor from './components/SplashCurser';
 import { DocsLayout } from './components/docs/DocsLayout';
+
 
 // Documentation imports
 import { Documentation } from './pages/docs/Documentation';
@@ -94,135 +96,140 @@ import { Troubleshooting } from './pages/docs/Troubleshooting';
 function App() {
   return (
     <ErrorBoundary>
-      <SplashCursor/>
+      {/* <SplashCursor/> */}
       <BackendStatusBanner />
       <BrowserRouter>
         <AuthProvider>
           <TawkToWidget hideOnRoutes={['/login', '/signup']} />
           <PWAInstallPrompt />
           <Routes>
-          {/* Invoice route without layout */}
-          <Route path="/invoice/:invoiceId" element={<InvoiceView />} />
-          
-          {/* Invoice Payment route without layout */}
-          <Route path="/pay-invoice/:invoiceId" element={<InvoicePayment />} />
-          
-          <Route element={<PublicLayout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/pricing" element={<Pricing />} />
-            <Route path="/calculator" element={<Calculator />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/dedicated-servers" element={<DedicatedServers />} />
-            <Route path="/solutions" element={<Solutions />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/sla" element={<ServiceLevelAgreement />} />
+            {/* Invoice route without layout */}
+            <Route path="/invoice/:invoiceId" element={<InvoiceView />} />
 
-            {/* Documentation Routes */}
-            <Route path="/docs" element={<DocsLayout />}>
-              <Route index element={<Documentation />} />
-              <Route path="introduction" element={<Introduction />} />
-              <Route path="quick-start" element={<QuickStart />} />
-              <Route path="installation" element={<Installation />} />
-              <Route path="troubleshooting" element={<Troubleshooting />} />
-              <Route path="architecture" element={<Architecture />} />
-              <Route path="backend" element={<Backend />} />
-              <Route path="frontend" element={<Frontend />} />
-              <Route path="database" element={<Database />} />
+            {/* Invoice Payment route without layout */}
+            <Route path="/pay-invoice/:invoiceId" element={<InvoicePayment />} />
 
-              {/* API Documentation */}
-              <Route path="api/auth" element={<AuthAPI />} />
-              <Route path="api/plans" element={<PlansAPI />} />
-              <Route path="api/orders" element={<OrdersAPI />} />
-              <Route path="api/payments" element={<PaymentsAPI />} />
-              <Route path="api/servers" element={<ServersAPI />} />
-              <Route path="api/support" element={<SupportAPI />} />
-              <Route path="api/referrals" element={<ReferralsAPI />} />
+            <Route element={<PublicLayout />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/pricing" element={<Pricing />} />
+              <Route path="/calculator" element={<Calculator />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/dedicated-servers" element={<DedicatedServers />} />
+              <Route path="/solutions" element={<Solutions />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/reset-password/:token" element={<ResetPassword />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="referrals" element={<Referrals onSubscribe={() => window.location.href = '/signup'} onBuyServer={() => window.location.href = '/pricing'} />} />
+              <Route path="/sla" element={<ServiceLevelAgreement />} />
 
-              {/* Features Documentation */}
-              <Route path="features/hosting" element={<HostingFeature />} />
-              <Route path="features/addons" element={<AddonsFeature />} />
-              <Route path="features/billing" element={<BillingFeature />} />
-              <Route path="features/payments" element={<PaymentsFeature />} />
-              <Route path="features/support" element={<SupportFeature />} />
-              <Route path="features/referrals" element={<ReferralsFeature />} />
-              <Route path="features/referrals-registration" element={<ReferralsRegistration />} />
-              <Route path="features/referrals-commission" element={<ReferralsCommission />} />
-              <Route path="features/referrals-payouts" element={<ReferralsPayouts />} />
+              {/* Email Verification Routes */}
+              <Route path="/verify-email/:token" element={<VerifyEmail />} />
+              <Route path="/verification-pending" element={<VerificationPending />} />
 
-              {/* User Guides */}
-              <Route path="user/account" element={<UserAccount />} />
-              <Route path="user/purchase" element={<UserPurchase />} />
-              <Route path="user/servers" element={<UserServers />} />
-              <Route path="user/billing" element={<UserBilling />} />
-              <Route path="user/support" element={<UserSupport />} />
-              <Route path="user/referrals" element={<UserReferrals />} />
+              {/* Documentation Routes */}
+              <Route path="/docs" element={<DocsLayout />}>
+                <Route index element={<Documentation />} />
+                <Route path="introduction" element={<Introduction />} />
+                <Route path="quick-start" element={<QuickStart />} />
+                <Route path="installation" element={<Installation />} />
+                <Route path="troubleshooting" element={<Troubleshooting />} />
+                <Route path="architecture" element={<Architecture />} />
+                <Route path="backend" element={<Backend />} />
+                <Route path="frontend" element={<Frontend />} />
+                <Route path="database" element={<Database />} />
 
-              {/* Admin Guides */}
-              <Route path="admin/dashboard" element={<AdminDashboardDoc />} />
-              <Route path="admin/users" element={<AdminUsers />} />
-              <Route path="admin/plans" element={<AdminPlans />} />
-              <Route path="admin/orders" element={<AdminOrders />} />
-              <Route path="admin/support" element={<AdminSupport />} />
+                {/* API Documentation */}
+                <Route path="api/auth" element={<AuthAPI />} />
+                <Route path="api/plans" element={<PlansAPI />} />
+                <Route path="api/orders" element={<OrdersAPI />} />
+                <Route path="api/payments" element={<PaymentsAPI />} />
+                <Route path="api/servers" element={<ServersAPI />} />
+                <Route path="api/support" element={<SupportAPI />} />
+                <Route path="api/referrals" element={<ReferralsAPI />} />
 
-              {/* Deployment Guides */}
-              <Route path="deploy/environment" element={<DeployEnvironment />} />
-              <Route path="deploy/backend" element={<DeployBackend />} />
-              <Route path="deploy/frontend" element={<DeployFrontend />} />
-              <Route path="deploy/database" element={<DeployDatabase />} />
+                {/* Features Documentation */}
+                <Route path="features/hosting" element={<HostingFeature />} />
+                <Route path="features/addons" element={<AddonsFeature />} />
+                <Route path="features/billing" element={<BillingFeature />} />
+                <Route path="features/payments" element={<PaymentsFeature />} />
+                <Route path="features/support" element={<SupportFeature />} />
+                <Route path="features/referrals" element={<ReferralsFeature />} />
+                <Route path="features/referrals-registration" element={<ReferralsRegistration />} />
+                <Route path="features/referrals-commission" element={<ReferralsCommission />} />
+                <Route path="features/referrals-payouts" element={<ReferralsPayouts />} />
 
-              {/* Configuration */}
-              <Route path="config/env" element={<ConfigEnv />} />
-              <Route path="config/payment" element={<ConfigPayment />} />
-              <Route path="config/email" element={<ConfigEmail />} />
+                {/* User Guides */}
+                <Route path="user/account" element={<UserAccount />} />
+                <Route path="user/purchase" element={<UserPurchase />} />
+                <Route path="user/servers" element={<UserServers />} />
+                <Route path="user/billing" element={<UserBilling />} />
+                <Route path="user/support" element={<UserSupport />} />
+                <Route path="user/referrals" element={<UserReferrals />} />
+
+                {/* Admin Guides */}
+                <Route path="admin/dashboard" element={<AdminDashboardDoc />} />
+                <Route path="admin/users" element={<AdminUsers />} />
+                <Route path="admin/plans" element={<AdminPlans />} />
+                <Route path="admin/orders" element={<AdminOrders />} />
+                <Route path="admin/support" element={<AdminSupport />} />
+
+                {/* Deployment Guides */}
+                <Route path="deploy/environment" element={<DeployEnvironment />} />
+                <Route path="deploy/backend" element={<DeployBackend />} />
+                <Route path="deploy/frontend" element={<DeployFrontend />} />
+                <Route path="deploy/database" element={<DeployDatabase />} />
+
+                {/* Configuration */}
+                <Route path="config/env" element={<ConfigEnv />} />
+                <Route path="config/payment" element={<ConfigPayment />} />
+                <Route path="config/email" element={<ConfigEmail />} />
+              </Route>
             </Route>
-          </Route>
 
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Overview />} />
-            <Route path="servers" element={<MyServers />} />
-            <Route path="servers/:serverId" element={<UserServerManagement />} />
-            <Route path="referrals" element={<Referrals />} />
-            <Route path="billing" element={<Billing />} />
-            <Route path="support" element={<Support />} />
-            <Route path="settings" element={<Settings />} />
-          </Route>
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Overview />} />
+              <Route path="servers" element={<MyServers />} />
+              <Route path="servers/:serverId" element={<UserServerManagement />} />
+              <Route path="billing" element={<Billing />} />
+              <Route path="support" element={<Support />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="referrals" element={<Referrals onSubscribe={() => window.location.href = '/signup'} onBuyServer={() => window.location.href = '/pricing'} />} />
 
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute requireAdmin>
-                <AdminLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<AdminDashboard />} />
-            <Route path="users" element={<UserManagement />} />
-            <Route path="analytics" element={<UserAnalytics />} />
-            <Route path="servers" element={<AdminServerManagement />} />
-            <Route path="plans" element={<PlansManagement />} />
-            <Route path="subscriptions" element={<SubscriptionManagement />} />
-            <Route path="orders" element={<OrdersManagement />} />
-            <Route path="bills" element={<BillManagement />} />
-            <Route path="referrals" element={<ReferralManagement />} />
-            <Route path="support" element={<SupportManagement />} />
-            <Route path="employees" element={<EmployeeManagement />} />
-          </Route>
+            </Route>
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AuthProvider>
-    </BrowserRouter>
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<AdminDashboard />} />
+              <Route path="users" element={<UserManagement />} />
+              <Route path="servers" element={<AdminServerManagement />} />
+              <Route path="plans" element={<PlansManagement />} />
+              <Route path="orders" element={<OrdersManagement />} />
+              <Route path="referrals" element={<ReferralManagement />} />
+              <Route path="support" element={<SupportManagement />} />
+              <Route path="employees" element={<EmployeeManagement />} />
+            </Route>
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AuthProvider>
+      </BrowserRouter>
     </ErrorBoundary>
   );
 }

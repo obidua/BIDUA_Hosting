@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Header
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.core.database import get_db
 from app.core.security import get_current_user
@@ -34,6 +34,17 @@ async def get_razorpay_key():
 # --------------------------------------------------------
 # Request/Response Schemas
 # --------------------------------------------------------
+class AddonSelection(BaseModel):
+    """Selected addon with pricing snapshot"""
+    addon_id: int
+    addon_slug: str
+    addon_name: str
+    quantity: int
+    unit_price: float
+    subtotal: float
+    unit_label: str
+
+
 class CreatePaymentRequest(BaseModel):
     """
     Unified payment creation request for subscription, server, and invoice payments
@@ -44,6 +55,14 @@ class CreatePaymentRequest(BaseModel):
     server_config: Optional[Dict[str, Any]] = None  # For server purchase
     amount: Optional[float] = None  # Required for invoice payment
     invoice_id: Optional[int] = None  # For invoice payment tracking
+    
+    # Addons
+    addons: Optional[List[AddonSelection]] = []  # Selected addons with pricing
+    
+    # Promo code & discounts
+    promo_code: Optional[str] = None  # Promo code applied (e.g., "WELCOME10")
+    discount_amount: Optional[float] = None  # Promo discount amount
+    tax_amount: Optional[float] = None  # Tax amount calculated on frontend
 
 
 class VerifyPaymentRequest(BaseModel):
@@ -64,7 +83,7 @@ async def create_payment_order(
 ):
     """
     Create Razorpay payment order for subscription (499 plan) or server purchase
-    
+
     This endpoint:
     1. Creates a PaymentTransaction record
     2. Calculates user-specific discount
@@ -87,7 +106,7 @@ async def create_payment_order(
         # plan_id is NOT required for this
         amount = Decimal('499.00')  # Fixed ₹499 premium amount
         billing_cycle = 'one_time'
-        
+
         metadata = {
             'plan_id': None,  # Not related to any server plan
             'billing_cycle': billing_cycle,
@@ -99,10 +118,10 @@ async def create_payment_order(
         # For invoice payment - use amount passed from frontend
         if not payment_request.amount:
             raise HTTPException(status_code=400, detail="amount is required for invoice payment")
-        
+
         amount = Decimal(str(payment_request.amount))
         billing_cycle = 'one_time'
-        
+
         metadata = {
             'plan_id': None,
             'billing_cycle': billing_cycle,
@@ -113,12 +132,12 @@ async def create_payment_order(
         # For server purchase - plan_id is mandatory
         if not payment_request.plan_id:
             raise HTTPException(status_code=400, detail="plan_id is required for server purchase")
-        
+
         # Get plan details for server purchase
         plan = await plan_service.get_plan_by_id(db, payment_request.plan_id)
         if not plan:
             raise HTTPException(status_code=404, detail="Plan not found")
-        
+
         # Use amount from frontend if provided (includes all addons AND tax already calculated)
         # Frontend sends final total, so we mark it to skip backend tax/discount recalculation
         if payment_request.amount:
@@ -127,7 +146,7 @@ async def create_payment_order(
         else:
             amount = plan.monthly_price  # Fallback to base server cost
             skip_backend_calculation = False  # Let backend calculate
-        
+
         # Check if user has active ₹499 premium subscription
         from sqlalchemy import select, and_
         from app.models.users import UserProfile
@@ -136,20 +155,25 @@ async def create_payment_order(
         )
         user = result.scalars().first()
         has_premium = user.subscription_status == 'active' if user else False
-        
+
         metadata = {
             'plan_id': payment_request.plan_id,
+            'billing_cycle': payment_request.billing_cycle,  # 🆕 Store billing cycle in metadata
             'server_config': payment_request.server_config,
             'plan_name': plan.name,
             'has_premium_subscription': has_premium,
-            'enable_commission': has_premium,  # Commission केवल premium users के लिए
-            'skip_backend_calculation': skip_backend_calculation  # Flag to skip tax/discount recalc
+            'enable_commission': True,  # Commission enabled for all server purchases (referrer check happens later)
+            'skip_backend_calculation': skip_backend_calculation,  # Flag to skip tax/discount recalc
+            'addons': [addon.dict() for addon in payment_request.addons] if payment_request.addons else [],  # Structured addon data
+            'promo_code': payment_request.promo_code,  # Promo code applied
+            'discount_amount': payment_request.discount_amount,  # Promo discount amount
+            'tax_amount': payment_request.tax_amount  # Tax amount from frontend
         }
 
     try:
         # Create payment transaction with Razorpay order
         payment_type = PaymentType.SUBSCRIPTION if payment_request.payment_type == 'subscription' else PaymentType.SERVER
-        
+
         payment_transaction = await payment_service.create_payment_transaction(
             db=db,
             user_id=current_user.id,
@@ -178,7 +202,7 @@ async def create_payment_order(
                 "activation_type": payment_transaction.activation_type.value
             }
         }
-        
+
         # Add plan details only for server purchase
         if payment_request.payment_type == 'server' and payment_request.plan_id:
             plan = await plan_service.get_plan_by_id(db, payment_request.plan_id)
@@ -194,7 +218,7 @@ async def create_payment_order(
                 "name": "Premium Subscription",
                 "billing_cycle": "one_time"
             }
-        
+
         return response
 
     except Exception as e:
@@ -215,7 +239,7 @@ async def verify_payment(
 ):
     """
     Verify Razorpay payment and complete the transaction
-    
+
     This endpoint:
     1. Verifies Razorpay payment signature
     2. Updates PaymentTransaction to PAID status
@@ -227,6 +251,17 @@ async def verify_payment(
     start_time = time.time()
     print(f"🔄 Payment verification started at {start_time}")
     
+    # 🔍 PRINT RECEIVED VALUES FROM RAZORPAY (for debugging)
+    print("=" * 80)
+    print("📦 RAZORPAY PAYMENT DATA RECEIVED:")
+    print("=" * 80)
+    print(f"✅ razorpay_order_id    : {payment_data.razorpay_order_id}")
+    print(f"✅ razorpay_payment_id  : {payment_data.razorpay_payment_id}")
+    print(f"✅ razorpay_signature   : {payment_data.razorpay_signature}")
+    print(f"👤 Current User ID      : {current_user.id}")
+    print(f"📧 Current User Email   : {current_user.email}")
+    print("=" * 80)
+
     payment_service = PaymentService()
     commission_service = CommissionService()
     order_service = OrderService()
@@ -244,20 +279,20 @@ async def verify_payment(
 
         # Check if this is an invoice payment
         payment_for = payment_transaction.payment_metadata.get('payment_for')
-        
+
         if payment_for == 'invoice':
             # For invoice payment, update the invoice status
             invoice_id = payment_transaction.payment_metadata.get('invoice_id')
-            
+
             if invoice_id:
                 from sqlalchemy import select
                 from app.models.invoice import Invoice as InvoiceModel
-                
+
                 invoice_result = await db.execute(
                     select(InvoiceModel).where(InvoiceModel.id == invoice_id)
                 )
                 invoice_obj = invoice_result.scalars().first()
-                
+
                 if invoice_obj:
                     # Update invoice status
                     invoice_obj.payment_status = 'paid'
@@ -268,17 +303,17 @@ async def verify_payment(
                     invoice_obj.paid_at = payment_transaction.paid_at
                     invoice_obj.payment_method = 'razorpay'
                     invoice_obj.payment_reference = payment_data.razorpay_payment_id
-                    
+
                     # If invoice has an associated order, create the server
                     if invoice_obj.order_id:
                         from app.models.order import Order as OrderModel
                         from app.services.server_service import ServerService
-                        
+
                         order_result = await db.execute(
                             select(OrderModel).where(OrderModel.id == invoice_obj.order_id)
                         )
                         order_obj = order_result.scalars().first()
-                        
+
                         if order_obj and order_obj.plan_id:
                             # Update order status
                             order_obj.payment_status = 'paid'
@@ -286,23 +321,23 @@ async def verify_payment(
                             order_obj.razorpay_order_id = payment_data.razorpay_order_id
                             order_obj.razorpay_payment_id = payment_data.razorpay_payment_id
                             order_obj.paid_at = payment_transaction.paid_at
-                            
+
                             # Create server
                             server_service = ServerService()
                             try:
                                 # Get plan details to create server
                                 from app.services.plan_service import PlanService
                                 from app.schemas.server import ServerCreate
-                                
+
                                 plan_service = PlanService()
                                 plan = await plan_service.get_plan_by_id(db, order_obj.plan_id)
-                                
+
                                 if plan:
                                     # Extract addons and services from order metadata
                                     order_addons = order_obj.order_metadata.get('addons', []) if order_obj.order_metadata else []
                                     order_services = order_obj.order_metadata.get('services', []) if order_obj.order_metadata else []
                                     billing_cycle = order_obj.billing_cycle or "monthly"
-                                    
+
                                     server_data = ServerCreate(
                                         plan_id=plan.id,
                                         server_name=f"{plan.name} Server",
@@ -318,25 +353,25 @@ async def verify_payment(
                                         addons=order_addons,
                                         services=order_services
                                     )
-                                    
+
                                     server = await server_service.create_user_server(
                                         db=db,
                                         user_id=current_user.id,
                                         server_data=server_data
                                     )
-                                    
+
                                     # Update order with server_id
                                     if isinstance(server, dict):
                                         order_obj.server_id = server.get('id')
                                     else:
                                         order_obj.server_id = server.id
-                                        
+
                             except Exception as e:
                                 print(f"Warning: Server creation failed: {str(e)}")
                                 # Don't fail the payment if server creation fails
-                    
+
                     await db.commit()
-            
+
             return {
                 "success": True,
                 "message": "Invoice payment verified successfully",
@@ -348,19 +383,19 @@ async def verify_payment(
                     "invoice_id": invoice_id
                 }
             }
-        
+
         # Check payment type and handle accordingly
         plan_id = payment_transaction.payment_metadata.get('plan_id')
         order_data = None
         order_id = None
-        
+
         # Handle subscription payment (₹499 premium)
         if payment_transaction.payment_type == PaymentType.SUBSCRIPTION:
             t2 = time.time()
             # Create affiliate subscription instead of order
             from app.services.affiliate_service import AffiliateService
             affiliate_service = AffiliateService()
-            
+
             # Create affiliate subscription with payment details
             from app.schemas.affiliate import AffiliateSubscriptionCreate
             subscription_data = AffiliateSubscriptionCreate(
@@ -370,7 +405,7 @@ async def verify_payment(
                 transaction_id=str(payment_transaction.id),
                 amount_paid=float(payment_transaction.total_amount)
             )
-            
+
             affiliate_sub = await affiliate_service.create_affiliate_subscription(
                 db=db,
                 user_id=current_user.id,
@@ -378,7 +413,7 @@ async def verify_payment(
             )
             print(f"⏱️  Affiliate subscription creation took {time.time() - t2:.2f}s")
             print(f"✅ Affiliate subscription created: {affiliate_sub.id}")
-            
+
             # Update user profile subscription status
             from sqlalchemy import select
             from app.models.users import UserProfile
@@ -390,7 +425,7 @@ async def verify_payment(
                 user.subscription_status = 'active'
                 user.subscription_start = datetime.utcnow()
                 await db.commit()
-            
+
             # Set order data for response (subscription doesn't create order)
             order_data = {
                 'id': None,
@@ -398,19 +433,37 @@ async def verify_payment(
                 'order_status': 'active',
                 'is_subscription': True
             }
-            
+
         else:
             # For server payments, create order
             from app.schemas.order import OrderCreate
-            
+
             t2 = time.time()
+            # Get billing cycle from payment transaction (priority: direct column > metadata > error)
+            billing_cycle = payment_transaction.billing_cycle
+            if not billing_cycle:
+                # Fallback to metadata if column is empty
+                billing_cycle = payment_transaction.payment_metadata.get('billing_cycle')
+                if not billing_cycle:
+                    # This should not happen, but default to monthly as last resort
+                    print(f"⚠️  WARNING: No billing_cycle found for payment {payment_transaction.id}, defaulting to monthly")
+                    billing_cycle = 'monthly'
+            
+            print(f"✅ Using billing_cycle: {billing_cycle} for order creation")
+            
             order_create = OrderCreate(
                 plan_id=plan_id,
-                billing_cycle=payment_transaction.payment_metadata.get('billing_cycle', 'one_time'),
+                billing_cycle=billing_cycle,
                 total_amount=payment_transaction.total_amount,
                 status='active',
-                payment_method='razorpay',
-                payment_status='paid'
+                payment_status='paid',
+                payment_method=payment_transaction.payment_method or 'razorpay',
+                razorpay_order_id=payment_transaction.razorpay_order_id,
+                razorpay_payment_id=payment_transaction.razorpay_payment_id,
+                paid_at=payment_transaction.paid_at or datetime.utcnow(),
+                # Pass discount details from metadata
+                discount_amount=Decimal(str(payment_transaction.payment_metadata.get('discount_amount', 0))),
+                promo_code=payment_transaction.payment_metadata.get('promo_code')
             )
 
             order = await order_service.create_order(db, current_user.id, order_create)
@@ -433,12 +486,12 @@ async def verify_payment(
             from sqlalchemy import select
             from app.models.order import Order as OrderModel
             from app.models.invoice import Invoice as InvoiceModel
-            
+
             result = await db.execute(
                 select(OrderModel).where(OrderModel.id == order_id)
             )
             order_obj = result.scalars().first()
-            
+
             if order_obj:
                 order_obj.payment_type = payment_transaction.payment_type.value
                 order_obj.activation_type = payment_transaction.activation_type.value
@@ -448,6 +501,90 @@ async def verify_payment(
                 order_obj.order_status = 'completed'
                 order_obj.payment_status = 'paid'
                 
+                # Save promo code and discount/tax from payment metadata
+                payment_metadata = payment_transaction.payment_metadata or {}
+                order_obj.promo_code = payment_metadata.get('promo_code')
+                if payment_metadata.get('discount_amount') is not None:
+                    order_obj.discount_amount = Decimal(str(payment_metadata.get('discount_amount')))
+                if payment_metadata.get('tax_amount') is not None:
+                    order_obj.tax_amount = Decimal(str(payment_metadata.get('tax_amount')))
+                
+                # 🆕 Ensure service dates are set (if not already set during order creation)
+                if not order_obj.service_start_date or not order_obj.service_end_date:
+                    # Use payment time as service start
+                    service_start = payment_transaction.paid_at or datetime.utcnow()
+                    
+                    # Calculate end date based on billing cycle
+                    billing_cycle = order_obj.billing_cycle or 'monthly'
+                    cycle_days = {
+                        'monthly': 30,
+                        'quarterly': 90,
+                        'semi_annual': 180,
+                        'semi-annually': 180,
+                        'annual': 365,
+                        'annually': 365,
+                        'biennial': 730,
+                        'biennially': 730,
+                        'triennial': 1095,
+                        'triennially': 1095,
+                        'one_time': 30
+                    }
+                    days = cycle_days.get(billing_cycle.lower(), 30)
+                    service_end = service_start + timedelta(days=days)
+                    
+                    order_obj.service_start_date = service_start
+                    order_obj.service_end_date = service_end
+                    
+                    print(f"✅ Service dates set: {service_start.date()} to {service_end.date()} ({billing_cycle})")
+                
+                
+                # Create order_addons records from payment metadata
+                selected_addons = payment_metadata.get('addons', [])
+                if selected_addons:
+                    from app.models.order_addon import OrderAddon
+                    
+                    for addon_data in selected_addons:
+                        # Skip addons with addon_id = 0 (hardcoded/temporary addons)
+                        if addon_data.get('addon_id', 0) == 0:
+                            continue
+                        
+                        try:
+                            # Calculate tax for this addon
+                            subtotal = Decimal(str(addon_data.get('subtotal', 0)))
+                            tax_rate = Decimal('0.18')  # 18% GST
+                            tax_amount = subtotal * tax_rate
+                            total_amount = subtotal + tax_amount
+                            
+                            # Create order_addon record with snapshot
+                            order_addon = OrderAddon(
+                                order_id=order_obj.id,
+                                addon_id=addon_data.get('addon_id'),
+                                addon_name=addon_data.get('addon_name', ''),
+                                addon_category=addon_data.get('category', 'GENERAL'),
+                                addon_description=addon_data.get('description', ''),
+                                quantity=addon_data.get('quantity', 1),
+                                unit_price=Decimal(str(addon_data.get('unit_price', 0))),
+                                subtotal=subtotal,
+                                discount_percent=Decimal('0'),
+                                discount_amount=Decimal('0'),
+                                tax_percent=tax_rate * 100,  # Store as percentage
+                                tax_amount=tax_amount,
+                                total_amount=total_amount,
+                                billing_type='monthly',  # Default
+                                currency='INR',
+                                unit_label=addon_data.get('unit_label', ''),
+                                is_active=1
+                            )
+                            db.add(order_addon)
+                            
+                        except Exception as addon_error:
+                            print(f"Warning: Failed to create order_addon for {addon_data.get('addon_name')}: {str(addon_error)}")
+                            # Continue processing other addons
+                    
+                    # Commit addon records
+                    await db.flush()
+
+
                 # Update associated invoice
                 invoice_result = await db.execute(
                     select(InvoiceModel).where(InvoiceModel.order_id == order_id)
@@ -462,7 +599,7 @@ async def verify_payment(
                     invoice_obj.paid_at = payment_transaction.paid_at
                     invoice_obj.payment_method = 'razorpay'
                     invoice_obj.payment_reference = payment_data.razorpay_payment_id
-                
+
                 await db.commit()
 
         # Distribute commission if applicable (skip for subscription payments)
@@ -505,11 +642,26 @@ async def verify_payment(
                         storage_gb=plan.storage_gb,
                         bandwidth_gb=plan.bandwidth_gb or 1000,
                         plan_id=plan.id,
-                        monthly_cost=plan.base_price
+                        monthly_cost=plan.base_price,
+                        billing_cycle=order_obj.billing_cycle  # 🆕 Pass billing cycle from order
                     )
 
-                    server_created = await server_service.create_user_server(db, current_user.id, server_data)
-                    print(f"✅ Server {server_created.id} created for user {current_user.id}")
+                    # 🆕 Use order service dates for server if available
+                    server_created_date = order_obj.service_start_date or datetime.utcnow()
+                    server_expiry_date = order_obj.service_end_date
+
+                    # Create server with order_id and dates to link them
+                    created_server = await server_service.create_user_server(
+                        db,
+                        current_user.id,
+                        server_data,
+                        order_id=order_obj.id,
+                        created_date=server_created_date,  # 🆕 Pass order start date
+                        expiry_date=server_expiry_date  # 🆕 Pass order end date
+                    )
+                    print(f"✅ Server created: {created_server.id} for order {order_obj.id}")
+                    print(f"🗓️ Server dates: {server_created_date.date()} to {server_expiry_date.date() if server_expiry_date else 'N/A'}")
+                    server_created = created_server # Assign to server_created for response
                     print(f"⏱️  Server creation took {time.time() - t5:.2f}s")
             except Exception as e:
                 print(f"❌ Server creation failed: {str(e)}")
@@ -552,7 +704,7 @@ async def verify_payment(
                 "payment_method": payment_transaction.payment_method
             }
         }
-        
+
         # Add order info if available
         if order_data:
             response["order"] = {
@@ -561,7 +713,7 @@ async def verify_payment(
                 "status": order_data.get('order_status') if isinstance(order_data, dict) else order_data.order_status,
                 "is_subscription": order_data.get('is_subscription', False)
             }
-        
+
         # Add commission info for server payments
         if payment_transaction.payment_type != PaymentType.SUBSCRIPTION:
             response["commission"] = {
@@ -569,7 +721,7 @@ async def verify_payment(
                 "earnings_count": len(commission_earnings),
                 "total_distributed": sum(float(e.commission_amount) for e in commission_earnings)
             }
-        
+
         # Add server info for server payments
         if payment_transaction.payment_type == PaymentType.SERVER:
             response["server"] = {
@@ -580,7 +732,7 @@ async def verify_payment(
             response["affiliate"] = {
                 "activated": affiliate_activated
             }
-        
+
         # Add affiliate info for subscription payments
         if payment_transaction.payment_type == PaymentType.SUBSCRIPTION:
             response["affiliate"] = {
@@ -588,7 +740,17 @@ async def verify_payment(
                 "subscription_type": "premium",
                 "message": "🎉 Your affiliate account is now active! Start referring and earning today!"
             }
-        
+
+        # Add transaction details for invoice display
+        response["transaction"] = {
+            "payment_id": payment_data.razorpay_payment_id,
+            "transaction_date": payment_transaction.paid_at.isoformat() if payment_transaction.paid_at else datetime.utcnow().isoformat(),
+            "gateway": "Razorpay",
+            "amount": float(payment_transaction.total_amount),
+            "transaction_id": payment_transaction.id,
+            "payment_method": payment_transaction.payment_method or "razorpay"
+        }
+
         return response
 
     except HTTPException as e:
@@ -611,7 +773,7 @@ async def razorpay_webhook(
 ):
     """
     Handle Razorpay webhooks for payment events
-    
+
     This is called by Razorpay for events like:
     - payment.authorized
     - payment.captured
@@ -624,11 +786,11 @@ async def razorpay_webhook(
     try:
         # Get webhook payload
         payload = await request.json()
-        
+
         # Verify webhook signature
         from app.services.razorpay_service import RazorpayService
         razorpay_service = RazorpayService()
-        
+
         is_valid = await razorpay_service.process_webhook(
             payload=payload,
             signature=x_razorpay_signature
@@ -639,7 +801,7 @@ async def razorpay_webhook(
 
         # Process webhook event
         event = payload.get('event')
-        
+
         if event == 'payment.captured':
             # Payment was successful
             payment_entity = payload.get('payload', {}).get('payment', {}).get('entity', {})

@@ -13,6 +13,14 @@ interface PlanConfig {
   vcpu: number;
   storage: number;
   basePrice: number;
+  cycleMarket: {
+    monthly: number;
+    quarterly: number;
+    semiannually: number;
+    annually: number;
+    biennially: number;
+    triennially: number;
+  };
 }
 
 const planTypeInfo = {
@@ -49,17 +57,17 @@ export function PlanCalculator() {
   const [extraBandwidth, setExtraBandwidth] = useState<number>(0);
   const [showPriceSummary, setShowPriceSummary] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>('plan');
-  
+
   // Dynamic pricing state
   const [plans, setPlans] = useState<HostingPlan[]>([]);
   const [billingCyclesData, setBillingCyclesData] = useState<ApiBillingCycle[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Load pricing data from API
   useEffect(() => {
     async function loadPricingData() {
       try {
-  console.log('🔄 [Calculator] Fetching pricing data from API...');
+        console.log('🔄 [Calculator] Fetching pricing data from API...');
         const [plansData, cyclesData] = await Promise.all([
           pricingService.getPlans(),
           pricingService.getBillingCycles()
@@ -80,36 +88,59 @@ export function PlanCalculator() {
         console.log('💰 [Calculator] Billing cycles:', cyclesData);
         setPlans(plansData);
         setBillingCyclesData(cyclesData);
-        
-  // Success banner
-  console.log('%c✅ CALCULATOR DATA LOADED FROM DATABASE', 'background: #3b82f6; color: white; padding: 8px 16px; font-weight: bold; font-size: 14px;');
-  console.log('%cAll configurations are now fetched dynamically from PostgreSQL!', 'color: #3b82f6; font-weight: bold;');
+
+        // Success banner
+        console.log('%c✅ CALCULATOR DATA LOADED FROM DATABASE', 'background: #3b82f6; color: white; padding: 8px 16px; font-weight: bold; font-size: 14px;');
+        console.log('%cAll configurations are now fetched dynamically from PostgreSQL!', 'color: #3b82f6; font-weight: bold;');
       } catch (error) {
-  console.error('❌ [Calculator] Failed to load pricing data:', error);
+        console.error('❌ [Calculator] Failed to load pricing data:', error);
       } finally {
         setLoading(false);
       }
     }
     loadPricingData();
   }, []);
-  
+
+  useEffect(() => {
+    if (plans.length > 0) {
+      const availableRams = Object.keys(planConfigurations[planType]).map(Number);
+      if (!availableRams.includes(selectedRam)) {
+        setSelectedRam(availableRams[0]);
+      }
+    }
+  }, [plans, planType]);
+
   // Build plan configurations from API data
   const planConfigurations: Record<PlanType, Record<number, PlanConfig>> = {
     general_purpose: {},
     cpu_optimized: {},
     memory_optimized: {}
   };
-  
+
   plans.forEach(plan => {
+    // Skip plans with invalid plan_type
+    if (!['general_purpose', 'cpu_optimized', 'memory_optimized'].includes(plan.plan_type)) {
+      console.warn(`Skipping plan "${plan.name}" with invalid plan_type: ${plan.plan_type}`);
+      return;
+    }
+
     const config: PlanConfig = {
       ram: plan.ram_gb,
       vcpu: plan.cpu_cores,
       storage: plan.storage_gb,
-      basePrice: parseFloat(plan.monthly_price)
+      basePrice: parseFloat(plan.monthly_price),
+      cycleMarket: {
+        monthly: parseFloat(plan.monthly_price) || 0,
+        quarterly: parseFloat(plan.quarterly_price) || (parseFloat(plan.monthly_price) || 0) * 3,
+        semiannually: parseFloat(plan.semiannual_price as any || '') || (parseFloat(plan.monthly_price) || 0) * 6,
+        annually: parseFloat(plan.annual_price) || (parseFloat(plan.monthly_price) || 0) * 12,
+        biennially: parseFloat(plan.biennial_price) || (parseFloat(plan.monthly_price) || 0) * 24,
+        triennially: parseFloat(plan.triennial_price) || (parseFloat(plan.monthly_price) || 0) * 36,
+      }
     };
     planConfigurations[plan.plan_type as PlanType][plan.ram_gb] = config;
   });
-  
+
   // Build billing cycles from API data
   const billingCycles: Record<BillingCycle, { name: string; months: number; discount: number }> = {
     monthly: { name: 'Monthly', months: 1, discount: 5 },
@@ -119,7 +150,7 @@ export function PlanCalculator() {
     biennially: { name: 'Biennially', months: 24, discount: 25 },
     triennially: { name: 'Triennially', months: 36, discount: 35 }
   };
-  
+
   billingCyclesData.forEach(cycle => {
     if (cycle.id in billingCycles) {
       billingCycles[cycle.id as BillingCycle] = {
@@ -133,7 +164,7 @@ export function PlanCalculator() {
   const availableRamOptions = Object.keys(planConfigurations[planType]).map(Number).sort((a, b) => a - b);
   const currentConfig = planConfigurations[planType][selectedRam];
   const cycleInfo = billingCycles[billingCycle];
-  
+
   // Log selected configuration for debugging
   useEffect(() => {
     if (plans.length > 0 && currentConfig) {
@@ -150,7 +181,7 @@ export function PlanCalculator() {
       });
     }
   }, [planType, selectedRam, billingCycle, extraStorage, extraBandwidth, plans.length, currentConfig]);
-  
+
   const handleDeploy = () => {
     const selectedPlan = plans.find(p => p.ram_gb === selectedRam);
     if (!selectedPlan) return;
@@ -173,8 +204,8 @@ export function PlanCalculator() {
     if (user) {
       navigate('/checkout', { state: { serverConfig } });
     } else {
-      navigate(`/login?redirect=${encodeURIComponent('/checkout')}`, { 
-        state: { serverConfig } 
+      navigate(`/login?redirect=${encodeURIComponent('/checkout')}`, {
+        state: { serverConfig }
       });
     }
   };
@@ -187,7 +218,7 @@ export function PlanCalculator() {
       </div>
     );
   }
-  
+
   // Handle case where config doesn't exist
   if (!currentConfig) {
     return (
@@ -201,21 +232,23 @@ export function PlanCalculator() {
   const BANDWIDTH_PRICE_PER_TB = 100;
 
   const calculatePricing = () => {
-    const baseMonthly = currentConfig.basePrice;
-    const storageAddon = extraStorage * STORAGE_PRICE_PER_GB;
-    const bandwidthAddon = extraBandwidth * BANDWIDTH_PRICE_PER_TB;
+    const addonsMonthly = extraStorage * STORAGE_PRICE_PER_GB + extraBandwidth * BANDWIDTH_PRICE_PER_TB;
 
-    const monthlyTotal = baseMonthly + storageAddon + bandwidthAddon;
-    const totalBeforeDiscount = monthlyTotal * cycleInfo.months;
+    // market (pre-discount) TOTAL for the selected cycle, straight from DB per-cycle columns
+    const marketCycleTotal = currentConfig.cycleMarket[billingCycle] || currentConfig.basePrice * cycleInfo.months;
+    // per-month market price for this cycle (used as 'Base Plan' strike-through basis)
+    const baseMonthly = marketCycleTotal / cycleInfo.months;
+
+    const totalBeforeDiscount = marketCycleTotal + addonsMonthly * cycleInfo.months;
     const discount = (totalBeforeDiscount * cycleInfo.discount) / 100;
     const totalAfterDiscount = totalBeforeDiscount - discount;
     const effectiveMonthly = totalAfterDiscount / cycleInfo.months;
 
     return {
       baseMonthly,
-      storageAddon,
-      bandwidthAddon,
-      monthlyTotal,
+      storageAddon: extraStorage * STORAGE_PRICE_PER_GB,
+      bandwidthAddon: extraBandwidth * BANDWIDTH_PRICE_PER_TB,
+      monthlyTotal: baseMonthly + addonsMonthly,
       totalBeforeDiscount,
       discount,
       totalAfterDiscount,
@@ -339,11 +372,10 @@ export function PlanCalculator() {
                           const firstRam = Object.keys(planConfigurations[type])[0];
                           setSelectedRam(Number(firstRam));
                         }}
-                        className={`flex flex-col items-center space-y-2 p-4 rounded-lg transition-all ${
-                          planType === type
+                        className={`flex flex-col items-center space-y-2 p-4 rounded-lg transition-all ${planType === type
                             ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-500/30'
                             : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-2 border-cyan-500/30'
-                        }`}
+                          }`}
                       >
                         <TypeIcon className="h-8 w-8" />
                         <span className="font-semibold text-sm text-center">{info.name}</span>
@@ -516,11 +548,10 @@ export function PlanCalculator() {
                       <button
                         key={cycle}
                         onClick={() => setBillingCycle(cycle)}
-                        className={`p-3 rounded-lg transition-all ${
-                          billingCycle === cycle
+                        className={`p-3 rounded-lg transition-all ${billingCycle === cycle
                             ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-500/30'
                             : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-2 border-cyan-500/30'
-                        }`}
+                          }`}
                       >
                         <div className="font-semibold text-sm">{info.name}</div>
                         {info.discount > 0 && (

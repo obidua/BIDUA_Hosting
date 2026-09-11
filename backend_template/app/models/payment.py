@@ -59,6 +59,9 @@ class PaymentTransaction(Base):
     
     # Additional payment metadata from Razorpay
     payment_metadata = Column(JSON, nullable=True)  # Store additional Razorpay response data
+    
+    # Billing Cycle - Store directly for reliability
+    billing_cycle = Column(String(50), nullable=True, default='monthly')  # monthly, quarterly, semi_annual, annual, biennial, triennial
 
     # Payment Status
     payment_status = Column(Enum(PaymentStatus), default=PaymentStatus.INITIATED, nullable=False, index=True)
@@ -140,7 +143,8 @@ class ReferralCommissionRate(Base):
     
     # Configuration
     level = Column(Integer, nullable=False, index=True)  # 1, 2, or 3
-    payment_type = Column(Enum(PaymentType), nullable=False, index=True)
+    payment_type = Column(Enum(PaymentType), nullable=True, index=True)  # Legacy: kept for backward compatibility
+    billing_cycle = Column(String(50), nullable=True, index=True)  # monthly, quarterly, semi_annual, annual, biennial, triennial
     commission_percent = Column(Numeric(5, 2), nullable=False)  # e.g., 10.00 for 10%
     
     # Active period
@@ -158,7 +162,8 @@ class ReferralCommissionRate(Base):
     # Indexes and Constraints
     __table_args__ = (
         Index('idx_commission_rate_active', 'level', 'payment_type', 'is_active'),
-        # Ensure only one active rate per level and payment_type
+        Index('idx_commission_rate_billing_cycle', 'level', 'billing_cycle', 'is_active'),
+        # Ensure only one active rate per level and billing_cycle or payment_type
         # Note: For unique constraint with is_active=True, consider using a partial index in migration
     )
 

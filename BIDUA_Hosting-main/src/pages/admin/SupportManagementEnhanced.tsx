@@ -9,6 +9,7 @@ import {
   Send
 } from 'lucide-react';
 import { AdminPageHeader } from '../../components/admin/AdminPageHeader';
+import api from '../../lib/api';
 
 interface Ticket {
   id: number;
@@ -77,13 +78,11 @@ export function SupportManagementEnhanced() {
       if (priorityFilter !== 'all') params.append('priority', priorityFilter);
       if (assignedFilter) params.append('assigned_to', assignedFilter.toString());
 
-      const response = await fetch(`http://localhost:8000/api/v1/support/admin/tickets?${params}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-      });
-      const data = await response.json();
-      setTickets(data);
+      const data = await api.get(`/api/v1/support/admin/tickets?${params}`);
+      setTickets(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to load tickets:', error);
+      setTickets([]);
     } finally {
       setLoading(false);
     }
@@ -91,23 +90,24 @@ export function SupportManagementEnhanced() {
 
   const loadEmployees = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/v1/support/admin/employees', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-      });
-      const data = await response.json();
-      setEmployees(data);
+      const data = await api.get('/api/v1/support/admin/employees');
+      setEmployees(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to load employees:', error);
+      setEmployees([]);
     }
   };
 
   const loadTicketDetail = async (ticketId: number) => {
     try {
       setDetailsLoading(true);
-      const response = await fetch(`http://localhost:8000/api/v1/support/tickets/${ticketId}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-      });
-      const data = await response.json();
+      // Find the ticket to get its ticket_number
+      const ticket = tickets.find(t => t.id === ticketId);
+      if (!ticket) {
+        console.error('Ticket not found in list');
+        return;
+      }
+      const data = await api.get(`/api/v1/support/tickets/${ticket.ticket_number}`) as TicketDetail;
       setSelectedTicket(data);
     } catch (error) {
       console.error('Failed to load ticket:', error);
@@ -118,10 +118,7 @@ export function SupportManagementEnhanced() {
 
   const handleAssignTicket = async (ticketId: number, employeeId: number) => {
     try {
-      await fetch(`http://localhost:8000/api/v1/support/admin/tickets/${ticketId}/assign?employee_id=${employeeId}`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-      });
+      await api.put(`/api/v1/support/admin/tickets/${ticketId}/assign?employee_id=${employeeId}`);
       alert('Ticket assigned successfully');
       await loadTickets();
       await loadTicketDetail(ticketId);
@@ -133,10 +130,9 @@ export function SupportManagementEnhanced() {
 
   const handleUpdateStatus = async (ticketId: number, newStatus: string) => {
     try {
-      await fetch(`http://localhost:8000/api/v1/support/tickets/${ticketId}/status?new_status=${newStatus}`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-      });
+      // Use ticket_number for the API call
+      if (!selectedTicket) return;
+      await api.put(`/api/v1/support/tickets/${selectedTicket.ticket_number}/status?new_status=${newStatus}`);
       alert('Status updated successfully');
       await loadTickets();
       await loadTicketDetail(ticketId);
@@ -150,16 +146,9 @@ export function SupportManagementEnhanced() {
     if (!replyMessage.trim() || !selectedTicket) return;
 
     try {
-      await fetch(`http://localhost:8000/api/v1/support/tickets/${selectedTicket.id}/messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        },
-        body: JSON.stringify({
-          message: replyMessage,
-          is_internal_note: isInternalNote
-        })
+      await api.post(`/api/v1/support/tickets/${selectedTicket.ticket_number}/messages`, {
+        message: replyMessage,
+        is_internal_note: isInternalNote
       });
 
       setReplyMessage('');
@@ -173,20 +162,20 @@ export function SupportManagementEnhanced() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'open': return 'text-cyan-200 bg-cyan-500/15 border-cyan-500/40';
-      case 'in_progress': return 'text-amber-200 bg-amber-500/15 border-amber-500/40';
-      case 'closed': return 'text-slate-200 bg-slate-500/15 border-slate-500/40';
-      default: return 'text-slate-200 bg-slate-500/15 border-slate-500/40';
+      case 'open': return 'text-cyan-700 bg-cyan-50 border-cyan-100';
+      case 'in_progress': return 'text-amber-700 bg-amber-50 border-amber-100';
+      case 'closed': return 'text-slate-600 bg-slate-100 border-slate-200';
+      default: return 'text-slate-600 bg-slate-100 border-slate-200';
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'urgent':
-      case 'high': return 'text-rose-200 bg-rose-500/15 border-rose-500/40';
-      case 'medium': return 'text-amber-200 bg-amber-500/15 border-amber-500/40';
-      case 'low': return 'text-emerald-200 bg-emerald-500/15 border-emerald-500/40';
-      default: return 'text-slate-200 bg-slate-500/15 border-slate-500/40';
+      case 'high': return 'text-rose-700 bg-rose-50 border-rose-100';
+      case 'medium': return 'text-amber-700 bg-amber-50 border-amber-100';
+      case 'low': return 'text-emerald-700 bg-emerald-50 border-emerald-100';
+      default: return 'text-slate-600 bg-slate-100 border-slate-200';
     }
   };
 
@@ -225,7 +214,7 @@ export function SupportManagementEnhanced() {
         actions={
           <button
             onClick={loadTickets}
-            className="px-4 py-2 rounded-xl border border-slate-800 text-slate-300 hover:bg-slate-900/70"
+            className="px-4 py-2 rounded-xl border border-slate-200 text-slate-300  hover:bg-green-500 hover:text-slate-900"
           >
             Refresh tickets
           </button>
@@ -234,24 +223,24 @@ export function SupportManagementEnhanced() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {summaryCards.map((card) => (
-          <div key={card.label} className="bg-slate-950/60 rounded-2xl border border-slate-800 shadow-sm p-5">
-            <p className="text-sm text-slate-400">{card.label}</p>
-            <p className="text-3xl font-semibold text-white mt-1">{card.value}</p>
+          <div key={card.label} className="bg-slate-950/60 rounded-2xl border border-slate-200 shadow-sm p-5">
+            <p className="text-sm text-white">{card.label}</p>
+            <p className="text-3xl font-semibold text-slate-100 mt-1">{card.value}</p>
             <p className={`text-sm mt-2 ${card.accent}`}>{card.helper}</p>
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-slate-950/60 rounded-2xl border border-slate-800 shadow-sm">
-          <div className="p-6 border-b border-slate-800">
+        <div className="lg:col-span-2 bg-slate-950/60 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="p-6 border-b border-slate-100">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Status</label>
+                <label className="block text-sm font-medium text-slate-600 mb-2">Status</label>
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-800 bg-slate-900 text-white rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm placeholder-slate-500"
+                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm bg-slate-950/60"
                 >
                   <option value="all">All</option>
                   <option value="open">Open</option>
@@ -260,11 +249,11 @@ export function SupportManagementEnhanced() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Priority</label>
+                <label className="block text-sm font-medium text-slate-600 mb-2">Priority</label>
                 <select
                   value={priorityFilter}
                   onChange={(e) => setPriorityFilter(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-800 bg-slate-900 text-white rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm placeholder-slate-500"
+                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm bg-slate-950/60"
                 >
                   <option value="all">All</option>
                   <option value="low">Low</option>
@@ -274,11 +263,11 @@ export function SupportManagementEnhanced() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Assignee</label>
+                <label className="block text-sm font-medium text-slate-600 mb-2">Assignee</label>
                 <select
                   value={assignedFilter || ''}
                   onChange={(e) => setAssignedFilter(e.target.value ? Number(e.target.value) : null)}
-                  className="w-full px-4 py-2 border border-slate-800 bg-slate-900 text-white rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm placeholder-slate-500"
+                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm bg-slate-950/60"
                 >
                   <option value="">All agents</option>
                   {employees.map((emp) => (
@@ -289,15 +278,15 @@ export function SupportManagementEnhanced() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Search</label>
+                <label className="block text-sm font-medium text-slate-600 mb-2">Search</label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
                   <input
                     type="text"
                     placeholder="Keyword, ticket #, customer..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 border border-slate-800 bg-slate-900 text-white rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm placeholder-slate-500"
+                    className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm bg-slate-950/60"
                   />
                 </div>
               </div>
@@ -323,22 +312,21 @@ export function SupportManagementEnhanced() {
                     <button
                       key={ticket.id}
                       onClick={() => loadTicketDetail(ticket.id)}
-                      className={`w-full text-left p-4 rounded-2xl border transition hover:border-cyan-500/40 ${
-                        isActive ? 'border-cyan-500/40 bg-cyan-500/10' : 'border-slate-800 bg-slate-950/60'
-                      }`}
+                      className={`w-full text-left p-4 rounded-2xl border transition hover:border-cyan-200 ${isActive ? 'border-cyan-300 ' : 'border-slate-200 '
+                        }`}
                     >
-                      <div className="flex items-center justify-between gap-3 mb-2">
+                      <div className="flex items-center justify-between gap-3 mb-2 ">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-mono text-slate-400">{ticket.ticket_number}</span>
-                          <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusColor(ticket.status)}`}>
+                          <span className="text-xs font-mono text-slate-500">{ticket.ticket_number}</span>
+                          <span className={` inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusColor(ticket.status)}`}>
                             {getStatusIcon(ticket.status)}
-                            <span className="capitalize">{ticket.status.replace('_', ' ')}</span>
+                            <span className="capitalize">{ticket.status ? ticket.status.replace('_', ' ') : 'Unknown'}</span>
                           </span>
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${getPriorityColor(ticket.priority)}`}>
                             <span className="capitalize">{ticket.priority}</span>
                           </span>
                           {ticket.assigned_to_name && (
-                            <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-500/15 text-purple-200 border border-purple-500/40">
+                            <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-600 border border-purple-100">
                               <UserIcon className="h-3 w-3" />
                               <span>{ticket.assigned_to_name}</span>
                             </span>
@@ -348,8 +336,8 @@ export function SupportManagementEnhanced() {
                           Updated {new Date(ticket.updated_at).toLocaleDateString()}
                         </span>
                       </div>
-                      <h3 className="text-base font-semibold text-white">{ticket.subject}</h3>
-                      <p className="text-sm text-slate-400 mb-3">Customer • {ticket.user_name}</p>
+                      <h3 className="text-base font-semibold text-slate-900 dark:text-red-500">{ticket.subject}</h3>
+                      <p className="text-sm text-slate-500 mb-3">Customer • {ticket.user_name}</p>
                       <div className="flex items-center text-xs text-slate-400 gap-4">
                         <span>Created {new Date(ticket.created_at).toLocaleDateString()}</span>
                         <span className="flex items-center gap-1">
@@ -366,7 +354,7 @@ export function SupportManagementEnhanced() {
           </div>
         </div>
 
-        <div className="bg-slate-950/60 rounded-2xl border border-slate-800 shadow-sm p-6 flex flex-col">
+        <div className="bg-slate-950/60 rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
           {detailsLoading ? (
             <div className="flex items-center justify-center flex-1">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-600"></div>
@@ -375,19 +363,19 @@ export function SupportManagementEnhanced() {
             <>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-mono text-slate-500">#{selectedTicket.ticket_number}</p>
-                  <h2 className="text-2xl font-semibold text-white mt-1">{selectedTicket.subject}</h2>
-                  <p className="text-sm text-slate-400 mt-2">
+                  <p className="text-xs font-mono text-slate-400">#{selectedTicket.ticket_number}</p>
+                  <h2 className="text-2xl font-semibold text-slate-900 mt-1">{selectedTicket.subject}</h2>
+                  <p className="text-sm text-slate-500 mt-2">
                     {selectedTicket.user_name} • {selectedTicket.user_email}
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-400">
                     Created {new Date(selectedTicket.created_at).toLocaleString()}
                   </p>
                 </div>
                 <div className="text-right space-y-2">
                   <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(selectedTicket.status)}`}>
                     {getStatusIcon(selectedTicket.status)}
-                    <span className="capitalize">{selectedTicket.status.replace('_', ' ')}</span>
+                    <span className="capitalize">{selectedTicket.status ? selectedTicket.status.replace('_', ' ') : 'Unknown'}</span>
                   </span>
                   <span className={`block px-3 py-1 rounded-full text-xs font-semibold border ${getPriorityColor(selectedTicket.priority)}`}>
                     <span className="capitalize">{selectedTicket.priority} priority</span>
@@ -397,98 +385,97 @@ export function SupportManagementEnhanced() {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
                 <div>
-                  <label className="text-xs font-semibold text-slate-400 uppercase">Assign to</label>
+                  <label className="text-xs font-semibold text-slate-500 uppercase">Assign to</label>
                   <select
                     value={selectedTicket.assigned_to || ''}
                     onChange={(e) => e.target.value && handleAssignTicket(selectedTicket.id, Number(e.target.value))}
-                    className="mt-1 w-full px-3 py-2 border border-slate-800 bg-slate-900 text-white rounded-xl text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 placeholder-slate-500"
+                    className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-transparent"
                   >
-                    <option value="">Unassigned</option>
+                    <option value="" className='bg-transparent'>Unassigned</option>
                     {employees.map((emp) => (
-                      <option key={emp.id} value={emp.id}>
+                      <option key={emp.id} value={emp.id} className='bg-transparent'>
                         {emp.full_name} ({emp.active_tickets} active)
                       </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-400 uppercase">Status</label>
+                  <label className="text-xs font-semibold text-slate-500 uppercase ">Status</label>
                   <select
                     value={selectedTicket.status}
                     onChange={(e) => handleUpdateStatus(selectedTicket.id, e.target.value)}
-                    className="mt-1 w-full px-3 py-2 border border-slate-800 bg-slate-900 text-white rounded-xl text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 placeholder-slate-500"
+                    className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-slate-950/60"
                   >
-                    <option value="open">Open</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="closed">Closed</option>
+                    <option value="open" className='bg-transparent'>Open</option>
+                    <option value="in_progress" className='bg-transparent'>In Progress</option>
+                    <option value="closed" className='bg-transparent'>Closed</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-400 uppercase">Department</label>
-                  <div className="mt-1 px-3 py-2 border border-slate-800 rounded-xl text-sm capitalize text-slate-300">
+                  <label className="text-xs font-semibold text-slate-500 uppercase">Department</label>
+                  <div className="mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm capitalize text-slate-600">
                     {selectedTicket.department}
                   </div>
                 </div>
               </div>
 
-              <div className="mt-6 p-4 border border-slate-800 rounded-2xl bg-slate-900/60">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 flex items-center justify-center text-white">
+              <div className="mt-6 p-4 border border-slate-100 rounded-2xl bg-transparent">
+                <div className="flex items-center gap-3 mb-2 bg-transparent">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 flex items-center justify-center text-white bg-transparent">
                     <UserIcon className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="font-semibold text-white">{selectedTicket.user_name}</p>
-                    <p className="text-xs text-slate-400">{selectedTicket.user_email}</p>
+                    <p className="font-semibold text-yellow-600">{selectedTicket.user_name}</p>
+                    <p className="text-xs text-slate-500">{selectedTicket.user_email}</p>
                   </div>
                 </div>
-                <p className="text-sm text-slate-300 whitespace-pre-line">{selectedTicket.description}</p>
+                <p className="text-sm text-red-600 whitespace-pre-line">{selectedTicket.description}</p>
               </div>
 
               <div className="mt-6 space-y-4 flex-1 overflow-y-auto">
-                <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wide">Conversation</h3>
+                <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Conversation</h3>
                 <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
                   {selectedTicket.messages && selectedTicket.messages.length > 0 ? (
                     selectedTicket.messages.map((message) => (
                       <div
                         key={message.id}
-                        className={`p-4 rounded-2xl border text-sm ${
-                          message.is_internal_note
-                            ? 'bg-purple-500/10 border-purple-500/40'
-                            : message.is_staff_reply
-                              ? 'bg-cyan-500/10 border-cyan-500/40'
-                              : 'bg-slate-900/60 border-slate-800'
-                        }`}
+                        className={`p-4 rounded-2xl border text-sm ${message.is_internal_note
+                          ? 'bg-purple-50 border-purple-100'
+                          : message.is_staff_reply
+                            ? 'bg-cyan-50 border-cyan-100'
+                            : 'bg-slate-50 border-slate-200'
+                          }`}
                       >
-                        <div className="flex items-center justify-between mb-2 text-xs text-slate-400">
+                        <div className="flex items-center justify-between mb-2 text-xs text-slate-500">
                           <div className="flex items-center gap-2">
                             {message.is_internal_note ? (
-                              <span className="px-2 py-0.5 bg-purple-500/20 text-purple-200 rounded-full font-semibold">Internal note</span>
+                              <span className="px-2 py-0.5 bg-purple-100 text-purple-600 rounded-full font-semibold">Internal note</span>
                             ) : message.is_staff_reply ? (
-                              <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-200 rounded-full font-semibold">Staff reply</span>
+                              <span className="px-2 py-0.5 bg-cyan-100 text-cyan-700 rounded-full font-semibold">Staff reply</span>
                             ) : (
-                              <span className="px-2 py-0.5 bg-slate-700 text-slate-200 rounded-full font-semibold">Customer</span>
+                              <span className="px-2 py-0.5 bg-slate-200 text-slate-700 rounded-full font-semibold">Customer</span>
                             )}
-                            <span className="font-medium text-slate-200">{message.author_name}</span>
+                            <span className="font-medium text-slate-700">{message.author_name}</span>
                           </div>
                           <span>{new Date(message.created_at).toLocaleString()}</span>
                         </div>
-                        <p className="text-slate-300 whitespace-pre-line">{message.message}</p>
+                        <p className="text-slate-700 whitespace-pre-line">{message.message}</p>
                       </div>
                     ))
                   ) : (
-                    <p className="text-sm text-slate-400 text-center py-6">No messages yet</p>
+                    <p className="text-sm text-slate-500 text-center py-6">No messages yet</p>
                   )}
                 </div>
               </div>
 
               {selectedTicket.status !== 'closed' && (
                 <div className="mt-6 space-y-3">
-                  <label className="flex items-center gap-2 text-sm text-slate-300">
+                  <label className="flex items-center gap-2 text-sm text-slate-600">
                     <input
                       type="checkbox"
                       checked={isInternalNote}
                       onChange={(e) => setIsInternalNote(e.target.checked)}
-                      className="rounded border-slate-700 bg-slate-900 text-cyan-600 focus:ring-cyan-500"
+                      className="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 bg-transparent"
                     />
                     Internal note (private)
                   </label>
@@ -497,7 +484,7 @@ export function SupportManagementEnhanced() {
                     onChange={(e) => setReplyMessage(e.target.value)}
                     rows={3}
                     placeholder={isInternalNote ? 'Add an internal note...' : 'Write a reply to the customer...'}
-                    className="w-full border border-slate-800 bg-slate-900 text-white rounded-2xl p-4 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 placeholder-slate-500"
+                    className="w-full border border-slate-200 rounded-2xl p-4 text-sm text-slate-50 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-transparent"
                   />
                   <button
                     onClick={handleSendReply}

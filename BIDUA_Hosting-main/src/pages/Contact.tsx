@@ -127,7 +127,7 @@ export function Contact() {
                       onChange={handleChange}
                       required
                       rows={6}
-                      className="w-full px-4 py-3 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none bg-transparent"
+                      className="w-full px-4 py-3 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none bg-transparent text-white"
                       placeholder="Tell us how we can help you..."
                     />
                   </div>

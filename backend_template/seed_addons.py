@@ -29,11 +29,12 @@ async def seed_addons():
     ('Plesk Web Host', 'plesk-host', 'CONTROL_PANEL', 'Plesk Web Host Edition - Unlimited Domains', 2650.00, 'MONTHLY', 'INR', true, false, 12, 0, NULL, 0, NULL, 'Server'),
     
     -- Backup Storage
-    ('Backup Storage 100GB', 'backup-100gb', 'BACKUP', 'Cloud backup storage - 100GB', 750.00, 'MONTHLY', 'INR', true, false, 20, 0, NULL, 0, NULL, 'Database'),
-    ('Backup Storage 200GB', 'backup-200gb', 'BACKUP', 'Cloud backup storage - 200GB', 1500.00, 'MONTHLY', 'INR', true, false, 21, 0, NULL, 0, NULL, 'Database'),
-    ('Backup Storage 300GB', 'backup-300gb', 'BACKUP', 'Cloud backup storage - 300GB', 2250.00, 'MONTHLY', 'INR', true, false, 22, 0, NULL, 0, NULL, 'Database'),
-    ('Backup Storage 500GB', 'backup-500gb', 'BACKUP', 'Cloud backup storage - 500GB', 3750.00, 'MONTHLY', 'INR', true, false, 23, 0, NULL, 0, NULL, 'Database'),
-    ('Backup Storage 1000GB', 'backup-1000gb', 'BACKUP', 'Cloud backup storage - 1000GB', 7500.00, 'MONTHLY', 'INR', true, false, 24, 0, NULL, 0, NULL, 'Database'),
+    ('Backup Storage 100GB', 'backup-storage-100gb', 'STORAGE', 'Cloud backup storage - 100GB', 750.00, 'MONTHLY', 'INR', true, false, 20, 0, NULL, 0, NULL, 'Database'),
+    ('Backup Storage 200GB', 'backup-storage-200gb', 'STORAGE', 'Cloud backup storage - 200GB', 1500.00, 'MONTHLY', 'INR', true, false, 21, 0, NULL, 0, NULL, 'Database'),
+    ('Backup Storage 300GB', 'backup-storage-300gb', 'STORAGE', 'Cloud backup storage - 300GB', 2250.00, 'MONTHLY', 'INR', true, false, 22, 0, NULL, 0, NULL, 'Database'),
+    ('Backup Storage 500GB', 'backup-storage-500gb', 'STORAGE', 'Cloud backup storage - 500GB', 3750.00, 'MONTHLY', 'INR', true, false, 23, 0, NULL, 0, NULL, 'Database'),
+    ('Backup Storage 1000GB', 'backup-storage-1000gb', 'STORAGE', 'Cloud backup storage - 1000GB', 7500.00, 'MONTHLY', 'INR', true, false, 24, 0, NULL, 0, NULL, 'Database'),
+    ('Automated Daily Backups', 'backup-storage-automated', 'STORAGE', 'Recommended: Automated daily backups for your data', 500.00, 'MONTHLY', 'INR', true, true, 25, 0, NULL, 0, NULL, 'CloudDownload'),
     
     -- SSL Certificates
     ('Essential SSL (DV)', 'ssl-essential', 'SSL', '1 Website, Domain Validation SSL Certificate', 2700.00, 'ANNUAL', 'INR', true, false, 30, 0, NULL, 0, NULL, 'Lock'),
@@ -42,6 +43,7 @@ async def seed_addons():
     ('Comodo Wildcard SSL', 'ssl-comodo-wildcard', 'SSL', 'Comodo wildcard for all subdomains', 13005.86, 'ANNUAL', 'INR', true, false, 33, 0, NULL, 0, NULL, 'Lock'),
     ('RapidSSL Certificate', 'ssl-rapid', 'SSL', '1 Website, DV SSL - Quick issuance', 3000.00, 'ANNUAL', 'INR', true, false, 34, 0, NULL, 0, NULL, 'Lock'),
     ('RapidSSL Wildcard', 'ssl-rapid-wildcard', 'SSL', 'RapidSSL wildcard for all subdomains', 16452.72, 'ANNUAL', 'INR', true, false, 35, 0, NULL, 0, NULL, 'Lock'),
+    ('Premium SSL Certificate', 'ssl-premium', 'SSL', 'Secure: High-security premium SSL certificate', 5000.00, 'ANNUAL', 'INR', true, true, 36, 0, NULL, 0, NULL, 'Lock'),
     
     -- Support Packages
     ('BIDUA Hosting Support - Basic', 'support-basic', 'SUPPORT', 'Essential support with 24/7 ticket access', 2500.00, 'MONTHLY', 'INR', true, false, 40, 0, NULL, 0, NULL, 'Headphones'),

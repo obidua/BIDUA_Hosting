@@ -278,6 +278,9 @@ class User(UserBase):
     subscription_start: Optional[datetime] = None
     subscription_end: Optional[datetime] = None
     
+    # Email verification
+    is_email_verified: bool = False
+    
     created_at: datetime
     updated_at: Optional[datetime] = None
 

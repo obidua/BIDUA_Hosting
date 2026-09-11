@@ -1,13 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
-import { CheckCircle, Server, Zap, Database, MapPin, Clock, Shield, Award, HardDrive, Cpu, MemoryStick, Network } from 'lucide-react';
+import {
+  CheckCircle,
+  Server,
+  Zap,
+  Database,
+  MapPin,
+  Clock,
+  Shield,
+  Award,
+  HardDrive,
+  Cpu,
+  MemoryStick,
+  Network,
+} from 'lucide-react';
 import { MobileFilters } from '../components/pricing/MobileFilters';
-import { pricingService, type HostingPlan } from '../lib/pricingService';
 import { useAuth } from '../contexts/AuthContext';
+import { useHostingPlansStore, type HostingPlan } from "../stores/PlansStore";
 
 type BillingCycle = 'monthly' | 'quarterly' | 'semiannually' | 'annually' | 'biennially' | 'triennially';
 
 interface Plan {
+  id: number;
   name: string;
   ram: number;
   vcpu: number;
@@ -23,26 +37,57 @@ interface Plan {
   };
   features: string[];
   popular?: boolean;
+  plan_type_label?: string; // friendly label
+  raw_plan_type?: string; // backend plan_type preserved
 }
 
+/* ---------------------------
+   Pricing helpers (paise math)
+   --------------------------- */
+
+// convert rupees (number) -> paise (integer)
+const toPaise = (rupees: number) => Math.round(rupees * 100);
+
+// convert paise -> rupees (float)
+const fromPaise = (paise: number) => paise / 100;
+
+// months in cycle
+const monthsForCycle = (cycle: BillingCycle) => {
+  switch (cycle) {
+    case 'monthly': return 1;
+    case 'quarterly': return 3;
+    case 'semiannually': return 6;
+    case 'annually': return 12;
+    case 'biennially': return 24;
+    case 'triennially': return 36;
+    default: return 1;
+  }
+};
+
+// format rupee amount (rounded rupee, no paise)
+const formatRupeeRounded = (r: number) => Math.round(r).toLocaleString();
+
+/* ---------------------------
+   Component
+   --------------------------- */
 export function Pricing() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const typeParam = searchParams.get('type');
+
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
-  const [selectedType, setSelectedType] = useState(typeParam || 'general_purpose');
-  
-  // Dynamic pricing state
-  const [apiPlans, setApiPlans] = useState<HostingPlan[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [selectedType, setSelectedType] = useState<string>(typeParam || '');
 
-  const planTypes = [
-    { id: 'general_purpose', name: 'General Purpose VM', icon: Server, color: 'blue' },
-    { id: 'cpu_optimized', name: 'CPU Optimized VM', icon: Zap, color: 'orange' },
-    { id: 'memory_optimized', name: 'Memory Optimized VM', icon: Database, color: 'green' },
-  ];
+  // Zustand store
+  const { fetchAllPlans, plans, loading, error } = useHostingPlansStore();
 
+  // Fetch plans once (on mount)
+  useEffect(() => {
+    fetchAllPlans();
+  }, [fetchAllPlans]);
+
+  // ========== Billing cycles (UI) ==========
   const billingCycles = [
     { id: 'monthly' as BillingCycle, name: 'Monthly', discount: 5 },
     { id: 'quarterly' as BillingCycle, name: 'Quarterly', discount: 10 },
@@ -52,153 +97,188 @@ export function Pricing() {
     { id: 'triennially' as BillingCycle, name: 'Triennially', discount: 35 },
   ];
 
-  // Load plans from API
-  useEffect(() => {
-    const loadPlans = async () => {
-      try {
-        setLoading(true);
-        console.log('🔄 [Pricing Page] Fetching plans from API...');
-        const data = await pricingService.getPlans();
-        console.log('✅ [Pricing Page] Received data from database:', {
-          totalPlans: data.length,
-          planTypes: {
-            general_purpose: data.filter(p => p.plan_type === 'general_purpose').length,
-            cpu_optimized: data.filter(p => p.plan_type === 'cpu_optimized').length,
-            memory_optimized: data.filter(p => p.plan_type === 'memory_optimized').length,
-          },
-          samplePlan: data[0] ? {
-            name: data[0].name,
-            type: data[0].plan_type,
-            cpu: data[0].cpu_cores,
-            ram: data[0].ram_gb,
-            basePrice: data[0].base_price
-          } : null
-        });
-        console.log('📊 [Pricing Page] Full API Response:', data);
-        setApiPlans(data);
-        
-  // Success banner
-  console.log('%c✅ PRICING DATA LOADED FROM DATABASE', 'background: #10b981; color: white; padding: 8px 16px; font-weight: bold; font-size: 14px;');
-  console.log('%cAll plans are now fetched dynamically from PostgreSQL!', 'color: #10b981; font-weight: bold;');
-      } catch (error) {
-        console.error('❌ [Pricing Page] Error loading plans:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadPlans();
-  }, []);
+  // ========== Helpers ==========
+  const humanizePlanType = (raw: string) =>
+    raw
+      .replace(/[_\-]/g, ' ')
+      .replace(/\b([a-z])/g, (m) => m.toUpperCase());
 
-  // Transform API plans to UI format
-  const transformPlanToUI = (p: HostingPlan, planType: string): Plan & { id: number } => {
-    // Calculate semiannual price (6 months with 15% discount)
-    const basePrice = parseFloat(p.base_price);
-    const semiannualPrice = Math.round(basePrice * 6 * 0.85); // 15% discount
-
-    return {
-      id: p.id, // 🆕 Add plan ID
-      name: p.name,
-      ram: p.ram_gb,
-      vcpu: p.cpu_cores,
-      storage: p.storage_gb,
-      bandwidth: p.bandwidth_gb / 1000,
-      prices: {
-        monthly: parseFloat(p.monthly_price),
-        quarterly: parseFloat(p.quarterly_price),
-        semiannually: semiannualPrice,
-        annually: parseFloat(p.annual_price),
-        biennially: parseFloat(p.biennial_price),
-        triennially: parseFloat(p.triennial_price),
-      },
-      features: [
-        `${p.cpu_cores} vCPU`,
-        `${p.ram_gb}GB RAM`,
-        `${p.storage_gb}GB SSD Storage`,
-        `${p.bandwidth_gb / 1000}TB Bandwidth`,
-        planType === 'cpu_optimized' ? 'Dedicated CPU' : planType === 'memory_optimized' ? 'High Memory Ratio' : 'IPv4 Address',
-        'Console Access',
-        'Full Root Access'
-      ],
-      popular: p.name === 'G.8GB' || p.name === 'C.8GB' || p.name === 'M.16GB',
-    };
-  };
-
-  const plans: Record<string, Plan[]> = {
-    general_purpose: apiPlans.filter(p => p.plan_type === 'general_purpose').map(p => transformPlanToUI(p, 'general_purpose')),
-    cpu_optimized: apiPlans.filter(p => p.plan_type === 'cpu_optimized').map(p => transformPlanToUI(p, 'cpu_optimized')),
-    memory_optimized: apiPlans.filter(p => p.plan_type === 'memory_optimized').map(p => transformPlanToUI(p, 'memory_optimized')),
-  };
-
-  const currentPlans = plans[selectedType as keyof typeof plans];
-
-  // Log transformed plans for debugging
-  useEffect(() => {
-    if (apiPlans.length > 0) {
-      console.log(`� [Pricing Page] Currently showing: ${selectedType}`, {
-        planCount: currentPlans.length,
-        samplePlan: currentPlans[0] ? {
-          name: currentPlans[0].name,
-          vcpu: currentPlans[0].vcpu,
-          ram: currentPlans[0].ram,
-          monthlyPrice: currentPlans[0].prices.monthly
-        } : null,
-        allPlans: currentPlans.map(p => `${p.name} (${p.vcpu} vCPU, ${p.ram}GB RAM, ₹${p.prices.monthly}/mo)`)
-      });
-    }
-  }, [apiPlans.length, selectedType, currentPlans.length]);
-  const selectedPlanType = planTypes.find(type => type.id === selectedType);
-
+  // Defensive: read discount percent for the currently selected cycle
   const getDiscountPercent = () => {
     const cycle = billingCycles.find(c => c.id === billingCycle);
     return cycle?.discount || 0;
   };
 
-  const calculateOriginalPrice = (plan: Plan) => {
-    const basePrice = plan.prices[billingCycle];
-    const months = billingCycle === 'monthly' ? 1 : billingCycle === 'quarterly' ? 3 : billingCycle === 'semiannually' ? 6 : billingCycle === 'annually' ? 12 : billingCycle === 'biennially' ? 24 : 36;
-    return Math.round(basePrice / months);
+  // compute pricing for a plan (assumes plan.prices.<cycle> stores MARKET TOTAL for that cycle,
+  // and the selected cycle discount is applied on top -> final = exact selling price)
+  const computePricing = (plan: Plan) => {
+    // market (pre-discount) TOTAL for the selected billing cycle
+    const cycleMarketRupees = Number(plan.prices?.[billingCycle] ?? 0) || 0;
+    const months = monthsForCycle(billingCycle);
+    const discountPercent = getDiscountPercent();
+
+    // convert to paise
+    const marketTotalPaise = toPaise(cycleMarketRupees);
+
+    // cycle total after discount (apply integer math)
+    const cycleTotalAfterPaise = Math.round(marketTotalPaise * (100 - discountPercent) / 100);
+
+    // per-month after discount (paise) - divide then round to nearest paise
+    const perMonthAfterPaise = Math.round(cycleTotalAfterPaise / months);
+
+    return {
+      monthlyUnitRupees: Number(plan.prices?.monthly ?? 0) || 0,
+      perMonthAfterDiscountRupees: fromPaise(perMonthAfterPaise),
+      cycleTotalAfterDiscountRupees: fromPaise(cycleTotalAfterPaise),
+      // market (pre-discount) per-month for this cycle — strike-through display
+      originalPerMonthRupees: months > 0 ? cycleMarketRupees / months : cycleMarketRupees,
+    };
   };
 
-  const calculateDisplayPrice = (plan: Plan) => {
-    const originalPrice = calculateOriginalPrice(plan);
-    const discount = getDiscountPercent();
-    return Math.round(originalPrice * (1 - discount / 100));
+  // Transform HostingPlan (backend) -> Plan (UI)
+  const transformPlanToUI = (p: HostingPlan): Plan => {
+    // canonical: treat p.monthly_price as the per-month MARKET price
+    const monthly = parseFloat(String(p.monthly_price ?? p.base_price ?? 0)) || 0;
+
+    const monthsMap: Record<string, number> = {
+      monthly: 1,
+      quarterly: 3,
+      semiannually: 6,
+      annually: 12,
+      biennially: 24,
+      triennially: 36,
+    };
+
+    const num = (v: unknown, fb: number): number => {
+      const n = parseFloat(String(v ?? ''));
+      return Number.isFinite(n) && n > 0 ? n : fb;
+    };
+
+    // market (pre-discount) TOTAL per billing cycle, straight from the DB columns
+    const prices: Plan['prices'] = {
+      monthly: monthly,
+      quarterly: num(p.quarterly_price, monthly * monthsMap.quarterly),
+      semiannually: num(p.semiannual_price, monthly * monthsMap.semiannually),
+      annually: num(p.annual_price, monthly * monthsMap.annually),
+      biennially: num(p.biennial_price, monthly * monthsMap.biennially),
+      triennially: num(p.triennial_price, monthly * monthsMap.triennially),
+    };
+
+    const planTypeLabel = humanizePlanType(p.plan_type || '');
+
+    return {
+      id: p.id,
+      name: p.name,
+      ram: p.ram_gb,
+      vcpu: p.cpu_cores,
+      storage: p.storage_gb,
+      bandwidth: p.bandwidth_gb / 1000,
+      prices,
+      features: [
+        `${p.cpu_cores} vCPU`,
+        `${p.ram_gb}GB RAM`,
+        `${p.storage_gb}GB SSD Storage`,
+        `${p.bandwidth_gb / 1000}TB Bandwidth`,
+        p.plan_type && p.plan_type.toLowerCase().includes('cpu') ? 'Dedicated CPU'
+          : p.plan_type && p.plan_type.toLowerCase().includes('memory') ? 'High Memory Ratio'
+            : 'IPv4 Address',
+        'Console Access',
+        'Full Root Access'
+      ],
+      popular: ['G.8GB', 'C.8GB', 'M.16GB'].includes(p.name),
+      plan_type_label: planTypeLabel,
+      raw_plan_type: p.plan_type,
+    };
   };
 
-  const getTotalPrice = (plan: Plan) => {
-    const basePrice = plan.prices[billingCycle];
-    const discount = getDiscountPercent();
-    return Math.round(basePrice * (1 - discount / 100));
-  };
+  // ========== Categories (auto from backend) ==========
+  const uniquePlanTypes = useMemo(() => {
+    const seen = new Set<string>();
+    const list: string[] = [];
+    for (const p of plans) {
+      const t = p.plan_type ?? 'unknown';
+      if (!seen.has(t)) {
+        seen.add(t);
+        list.push(t);
+      }
+    }
+    return list;
+  }, [plans]);
 
-  const handleDeploy = (plan: Plan & { id: number }) => {
+  useEffect(() => {
+    if (!selectedType) {
+      if (typeParam) {
+        setSelectedType(typeParam);
+      } else if (uniquePlanTypes.length > 0) {
+        setSelectedType(uniquePlanTypes[0]);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uniquePlanTypes, typeParam]);
+
+  const planTypeTabs = useMemo(() => {
+    return uniquePlanTypes.map((raw) => ({
+      id: raw,
+      label: humanizePlanType(raw),
+      icon:
+        raw.toLowerCase().includes('cpu') || raw.toLowerCase().includes('dedicated')
+          ? Zap
+          : raw.toLowerCase().includes('memory')
+            ? Database
+            : raw.toLowerCase().includes('vps') || raw.toLowerCase().includes('cloud')
+              ? Server
+              : Server,
+    }));
+  }, [uniquePlanTypes]);
+
+  const fallbackPlanTypes = [
+    { id: 'general_purpose', label: 'General Purpose VM', icon: Server },
+    { id: 'cpu_optimized', label: 'CPU Optimized VM', icon: Zap },
+    { id: 'memory_optimized', label: 'Memory Optimized VM', icon: Database },
+  ];
+
+  const effectiveTabs = planTypeTabs.length > 0 ? planTypeTabs : fallbackPlanTypes;
+
+  // ========== Filter & transform plans for UI based on raw backend category ==========
+  const currentPlans: Plan[] = useMemo(() => {
+    if (!selectedType) return [];
+    return plans
+      .filter((p) => (p.plan_type ?? 'unknown') === selectedType)
+      .map(transformPlanToUI);
+  }, [plans, selectedType]);
+
+  // friendly selectedPlanType (for headings)
+  const selectedPlanTypeLabel = useMemo(() => {
+    const tab = effectiveTabs.find((t) => t.id === selectedType);
+    return tab?.label || humanizePlanType(selectedType || '');
+  }, [effectiveTabs, selectedType]);
+
+  // ========== Deploy handler (uses computePricing) ==========
+  const handleDeploy = (plan: Plan) => {
+    const pricing = computePricing(plan);
     const serverConfig = {
-      planId: plan.id, // 🆕 Add plan ID
+      planId: plan.id,
       planName: plan.name,
-      planType: selectedType,
+      planType: plan.raw_plan_type || selectedType,
       vcpu: plan.vcpu,
       ram: plan.ram,
       storage: plan.storage,
       bandwidth: plan.bandwidth,
       billingCycle,
-      monthlyPrice: calculateDisplayPrice(plan),
-      totalPrice: getTotalPrice(plan),
+      // round per your display decision — here we store precise rupees (float)
+      monthlyPrice: Math.round(pricing.perMonthAfterDiscountRupees), // rupees rounded
+      totalPrice: Math.round(pricing.cycleTotalAfterDiscountRupees), // rupees rounded
       discount: getDiscountPercent()
     };
 
     if (user) {
-      // User is logged in, go to checkout
       navigate('/checkout', { state: { serverConfig } });
     } else {
-      // User not logged in, go to login with return URL
-      navigate(`/login?redirect=${encodeURIComponent('/checkout')}`, { 
-        state: { serverConfig } 
-      });
+      navigate(`/login?redirect=${encodeURIComponent('/checkout')}`, { state: { serverConfig } });
     }
   };
 
-  // Show loading state while fetching data
+  // ========== Loading & Error UI ==========
   if (loading) {
     return (
       <div className="bg-slate-950 min-h-screen flex items-center justify-center">
@@ -210,6 +290,21 @@ export function Pricing() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="bg-slate-950 min-h-screen flex items-center justify-center p-6">
+        <div className="text-center max-w-xl">
+          <h2 className="text-2xl font-bold text-white mb-2">Failed to load plans</h2>
+          <p className="text-slate-300 mb-6">{error}</p>
+          <button onClick={() => fetchAllPlans()} className="px-4 py-2 rounded bg-cyan-600 text-white font-semibold">
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ========== Render ==========
   return (
     <div className="bg-slate-950 min-h-screen">
       <MobileFilters
@@ -217,7 +312,7 @@ export function Pricing() {
         setBillingCycle={setBillingCycle}
         selectedType={selectedType}
         setSelectedType={setSelectedType}
-        planTypes={planTypes}
+        planTypes={effectiveTabs.map(t => ({ id: t.id, name: t.label, icon: t.icon }))}
         billingCycles={billingCycles}
       />
 
@@ -263,27 +358,29 @@ export function Pricing() {
                   <Server className="h-5 w-5 text-cyan-400 mr-2" />
                   Configure Your Plan
                 </h3>
-                
-                {/* Server Type Filter */}
+
+                {/* Dynamic Server Type Filter (tabs) */}
                 <div className="mb-6">
                   <label className="block text-sm font-semibold text-white mb-3">
                     Server Type
                   </label>
                   <div className="space-y-2">
-                    {planTypes.map((type) => (
-                      <button
-                        key={type.id}
-                        onClick={() => setSelectedType(type.id)}
-                        className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg font-medium transition-all ${
-                          selectedType === type.id
+                    {effectiveTabs.map((type) => {
+                      const Icon = type.icon;
+                      return (
+                        <button
+                          key={type.id}
+                          onClick={() => setSelectedType(type.id)}
+                          className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg font-medium transition-all ${selectedType === type.id
                             ? 'bg-cyan-600 text-white shadow-md'
                             : 'bg-slate-800 text-slate-300 border border-cyan-500/30 hover:bg-slate-700'
-                        }`}
-                      >
-                        <type.icon className="h-5 w-5" />
-                        <span className="text-sm">{type.name}</span>
-                      </button>
-                    ))}
+                            }`}
+                        >
+                          <Icon className="h-5 w-5" />
+                          <span className="text-sm">{type.label}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -297,17 +394,15 @@ export function Pricing() {
                       <button
                         key={cycle.id}
                         onClick={() => setBillingCycle(cycle.id)}
-                        className={`w-full flex items-center justify-between px-4 py-3 rounded-lg font-medium transition-all ${
-                          billingCycle === cycle.id
-                            ? 'bg-cyan-600 text-white shadow-md'
-                            : 'bg-slate-800 text-slate-300 border border-cyan-500/30 hover:bg-slate-700'
-                        }`}
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-lg font-medium transition-all ${billingCycle === cycle.id
+                          ? 'bg-cyan-600 text-white shadow-md'
+                          : 'bg-slate-800 text-slate-300 border border-cyan-500/30 hover:bg-slate-700'
+                          }`}
                       >
                         <span className="text-sm">{cycle.name}</span>
                         {cycle.discount > 0 && (
-                          <span className={`text-xs px-2 py-1 rounded-full ${
-                            billingCycle === cycle.id ? 'bg-white/20' : 'bg-green-500/20 text-green-400'
-                          }`}>
+                          <span className={`text-xs px-2 py-1 rounded-full ${billingCycle === cycle.id ? 'bg-white/20' : 'bg-green-500/20 text-green-400'
+                            }`}>
                             {cycle.discount}% off
                           </span>
                         )}
@@ -330,112 +425,114 @@ export function Pricing() {
               <div className="bg-slate-900 rounded-2xl p-6 border-2 border-cyan-500">
                 <div className="mb-6">
                   <h2 className="text-2xl font-bold text-white mb-2">
-                    {selectedPlanType?.name} Plans
+                    {selectedPlanTypeLabel} Plans
                   </h2>
                   <p className="text-slate-400">
                     Showing {currentPlans.length} plans • Pricing per month
                   </p>
                 </div>
 
-                {/* Scrollable Plans Container - Amazon style showing 6 plans at once */}
+                {/* Scrollable Plans Container */}
                 <div className="h-[800px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-cyan-500 scrollbar-track-slate-800">
                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {currentPlans.map((plan, index) => (
-                      <div
-                        key={index}
-                        className={`bg-slate-950 rounded-xl shadow-lg overflow-hidden transition-all transform hover:scale-105 hover:shadow-xl hover:shadow-cyan-500/20 ${
-                          plan.popular ? 'ring-2 ring-cyan-500' : 'border border-cyan-500/30'
-                        }`}
-                      >
-                        {plan.popular && (
-                          <div className="bg-gradient-to-r from-cyan-600 to-teal-600 text-white text-center py-2 text-xs font-bold">
-                            ⭐ MOST POPULAR
-                          </div>
-                        )}
-                        <div className="p-5">
-                          <div className="flex justify-between items-start mb-3">
-                            <h3 className="text-xl font-bold text-white">{plan.name}</h3>
-                            {getDiscountPercent() > 0 && (
-                              <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">
-                                {getDiscountPercent()}% OFF
+                    {currentPlans.map((plan, index) => {
+                      const pricing = computePricing(plan);
+                      return (
+                        <div
+                          key={index}
+                          className={`bg-slate-950 rounded-xl shadow-lg overflow-hidden transition-all transform hover:scale-105 hover:shadow-xl hover:shadow-cyan-500/20 ${plan.popular ? 'ring-2 ring-cyan-500' : 'border border-cyan-500/30'
+                            }`}
+                        >
+                          {plan.popular && (
+                            <div className="bg-gradient-to-r from-cyan-600 to-teal-600 text-white text-center py-2 text-xs font-bold">
+                              ⭐ MOST POPULAR
+                            </div>
+                          )}
+                          <div className="p-5">
+                            <div className="flex justify-between items-start mb-3">
+                              <h3 className="text-xl font-bold text-white">{plan.name}</h3>
+                              {getDiscountPercent() > 0 && (
+                                <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">
+                                  {getDiscountPercent()}% OFF
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="mb-4">
+                              {getDiscountPercent() > 0 && (
+                                <div className="text-xs text-slate-500 line-through mb-1">
+                                  ₹{formatRupeeRounded(pricing.originalPerMonthRupees)}/mo
+                                </div>
+                              )}
+                              <div className="flex items-baseline">
+                                <span className="text-3xl font-bold text-white">
+                                  ₹{formatRupeeRounded(pricing.perMonthAfterDiscountRupees)}
+                                </span>
+                                <span className="text-slate-400 ml-2 text-sm">/month</span>
                               </div>
-                            )}
-                          </div>
+                              {billingCycle !== 'monthly' && (
+                                <p className="text-xs text-green-600 mt-1 font-medium">
+                                  Total: ₹{formatRupeeRounded(pricing.cycleTotalAfterDiscountRupees)}
+                                </p>
+                              )}
+                            </div>
 
-                          <div className="mb-4">
-                            {getDiscountPercent() > 0 && (
-                              <div className="text-xs text-slate-500 line-through mb-1">
-                                ₹{calculateOriginalPrice(plan).toLocaleString()}/mo
+                            <div className="space-y-2 mb-4 border-t border-b border-cyan-500/30 py-3">
+                              <div className="flex items-center text-xs">
+                                <Cpu className="h-3 w-3 text-cyan-400 mr-2" />
+                                <span className="text-white">{plan.vcpu} vCPU</span>
                               </div>
-                            )}
-                            <div className="flex items-baseline">
-                              <span className="text-3xl font-bold text-white">
-                                ₹{calculateDisplayPrice(plan).toLocaleString()}
-                              </span>
-                              <span className="text-slate-400 ml-2 text-sm">/month</span>
+                              <div className="flex items-center text-xs">
+                                <MemoryStick className="h-3 w-3 text-green-600 mr-2" />
+                                <span className="text-white">{plan.ram}GB RAM</span>
+                              </div>
+                              <div className="flex items-center text-xs">
+                                <HardDrive className="h-3 w-3 text-orange-600 mr-2" />
+                                <span className="text-white">{plan.storage}GB SSD</span>
+                              </div>
+                              <div className="flex items-center text-xs">
+                                <Network className="h-3 w-3 text-purple-600 mr-2" />
+                                <span className="text-white">{plan.bandwidth}TB Bandwidth</span>
+                              </div>
                             </div>
-                            {billingCycle !== 'monthly' && (
-                              <p className="text-xs text-green-600 mt-1 font-medium">
-                                Total: ₹{getTotalPrice(plan).toLocaleString()}
-                              </p>
-                            )}
-                          </div>
 
-                          <div className="space-y-2 mb-4 border-t border-b border-cyan-500/30 py-3">
-                            <div className="flex items-center text-xs">
-                              <Cpu className="h-3 w-3 text-cyan-400 mr-2" />
-                              <span className="text-white">{plan.vcpu} vCPU</span>
-                            </div>
-                            <div className="flex items-center text-xs">
-                              <MemoryStick className="h-3 w-3 text-green-600 mr-2" />
-                              <span className="text-white">{plan.ram}GB RAM</span>
-                            </div>
-                            <div className="flex items-center text-xs">
-                              <HardDrive className="h-3 w-3 text-orange-600 mr-2" />
-                              <span className="text-white">{plan.storage}GB SSD</span>
-                            </div>
-                            <div className="flex items-center text-xs">
-                              <Network className="h-3 w-3 text-purple-600 mr-2" />
-                              <span className="text-white">{plan.bandwidth}TB Bandwidth</span>
-                            </div>
-                          </div>
+                            <ul className="space-y-1 mb-4">
+                              {plan.features.slice(4, 7).map((feature, i) => (
+                                <li key={i} className="flex items-start text-xs">
+                                  <CheckCircle className="h-3 w-3 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                                  <span className="text-slate-300">{feature}</span>
+                                </li>
+                              ))}
+                            </ul>
 
-                          <ul className="space-y-1 mb-4">
-                            {plan.features.slice(4, 7).map((feature, i) => (
-                              <li key={i} className="flex items-start text-xs">
-                                <CheckCircle className="h-3 w-3 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                                <span className="text-slate-300">{feature}</span>
-                              </li>
-                            ))}
-                          </ul>
-
-                          <button
-                            onClick={() => handleDeploy(plan)}
-                            className={`block w-full text-center px-4 py-2.5 rounded-lg font-bold text-sm transition-all ${
-                              plan.popular
+                            <button
+                              onClick={() => handleDeploy(plan)}
+                              className={`block w-full text-center px-4 py-2.5 rounded-lg font-bold text-sm transition-all ${plan.popular
                                 ? 'bg-gradient-to-r from-cyan-600 to-teal-600 text-white hover:from-cyan-500 hover:to-teal-500 shadow-md'
                                 : 'bg-slate-800 text-cyan-400 hover:bg-slate-700 border border-cyan-500'
-                            }`}
-                          >
-                            Deploy Now
-                          </button>
+                                }`}
+                            >
+                              Deploy Now
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
+
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Mobile: Original Full Page Layout */}
+      {/* Mobile: Full Page Layout */}
       <section className="md:hidden py-8 bg-slate-950">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-white mb-2">
-              {selectedPlanType?.name} Plans
+              {selectedPlanTypeLabel} Plans
             </h2>
             <p className="text-sm text-slate-400">
               Save up to {getDiscountPercent()}% on {billingCycle} billing
@@ -443,92 +540,94 @@ export function Pricing() {
           </div>
 
           <div className="grid grid-cols-1 gap-6">
-            {currentPlans.map((plan, index) => (
-              <div
-                key={index}
-                className={`bg-slate-900 rounded-2xl shadow-lg overflow-hidden transition-all ${
-                  plan.popular ? 'ring-2 ring-cyan-500 border-2 border-cyan-500' : 'border-2 border-cyan-500'
-                }`}
-              >
-                {plan.popular && (
-                  <div className="bg-gradient-to-r from-cyan-600 to-teal-600 text-white text-center py-2.5 text-sm font-bold">
-                    ⭐ MOST POPULAR
-                  </div>
-                )}
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-2xl font-bold text-white">{plan.name}</h3>
-                    {getDiscountPercent() > 0 && (
-                      <div className="bg-green-100 text-green-700 px-2 py-1 rounded-md text-xs font-bold">
-                        SAVE {getDiscountPercent()}%
+            {currentPlans.map((plan, index) => {
+              const pricing = computePricing(plan);
+              return (
+                <div
+                  key={index}
+                  className={`bg-slate-900 rounded-2xl shadow-lg overflow-hidden transition-all ${plan.popular ? 'ring-2 ring-cyan-500 border-2 border-cyan-500' : 'border-2 border-cyan-500'
+                    }`}
+                >
+                  {plan.popular && (
+                    <div className="bg-gradient-to-r from-cyan-600 to-teal-600 text-white text-center py-2.5 text-sm font-bold">
+                      ⭐ MOST POPULAR
+                    </div>
+                  )}
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <h3 className="text-2xl font-bold text-white">{plan.name}</h3>
+                      {getDiscountPercent() > 0 && (
+                        <div className="bg-green-100 text-green-700 px-2 py-1 rounded-md text-xs font-bold">
+                          SAVE {getDiscountPercent()}%
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mb-6">
+                      {getDiscountPercent() > 0 && (
+                        <div className="text-sm text-slate-500 line-through mb-1">
+                          ₹{formatRupeeRounded(pricing.originalPerMonthRupees)}/month
+                        </div>
+                      )}
+                      <div className="flex items-baseline">
+                        <span className="text-4xl font-bold text-white">
+                          ₹{formatRupeeRounded(pricing.perMonthAfterDiscountRupees)}
+                        </span>
+                        <span className="text-slate-400 ml-2">/month</span>
                       </div>
-                    )}
-                  </div>
+                      {billingCycle !== 'monthly' && (
+                        <p className="text-sm text-green-600 mt-2 font-medium">
+                          Total: ₹{formatRupeeRounded(pricing.cycleTotalAfterDiscountRupees)} for {billingCycle}
+                        </p>
+                      )}
+                    </div>
 
-                  <div className="mb-6">
-                    {getDiscountPercent() > 0 && (
-                      <div className="text-sm text-slate-500 line-through mb-1">
-                        ₹{calculateOriginalPrice(plan).toLocaleString()}/month
+                    <div className="space-y-3 mb-6 border-t border-b border-cyan-500/30 py-4">
+                      <div className="flex items-center text-sm">
+                        <Cpu className="h-4 w-4 text-cyan-400 mr-2 flex-shrink-0" />
+                        <span className="font-semibold text-white">{plan.vcpu} vCPU</span>
                       </div>
-                    )}
-                    <div className="flex items-baseline">
-                      <span className="text-4xl font-bold text-white">
-                        ₹{calculateDisplayPrice(plan).toLocaleString()}
-                      </span>
-                      <span className="text-slate-400 ml-2">/month</span>
+                      <div className="flex items-center text-sm">
+                        <MemoryStick className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                        <span className="font-semibold text-white">{plan.ram}GB RAM</span>
+                      </div>
+                      <div className="flex items-center text-sm">
+                        <HardDrive className="h-4 w-4 text-orange-600 mr-2 flex-shrink-0" />
+                        <span className="font-semibold text-white">{plan.storage}GB SSD</span>
+                      </div>
+                      <div className="flex items-center text-sm">
+                        <Network className="h-4 w-4 text-purple-600 mr-2 flex-shrink-0" />
+                        <span className="font-semibold text-white">{plan.bandwidth}TB Bandwidth</span>
+                      </div>
                     </div>
-                    {billingCycle !== 'monthly' && (
-                      <p className="text-sm text-green-600 mt-2 font-medium">
-                        Total: ₹{getTotalPrice(plan).toLocaleString()} for {billingCycle}
-                      </p>
-                    )}
-                  </div>
 
-                  <div className="space-y-3 mb-6 border-t border-b border-cyan-500/30 py-4">
-                    <div className="flex items-center text-sm">
-                      <Cpu className="h-4 w-4 text-cyan-400 mr-2 flex-shrink-0" />
-                      <span className="font-semibold text-white">{plan.vcpu} vCPU</span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <MemoryStick className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
-                      <span className="font-semibold text-white">{plan.ram}GB RAM</span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <HardDrive className="h-4 w-4 text-orange-600 mr-2 flex-shrink-0" />
-                      <span className="font-semibold text-white">{plan.storage}GB SSD</span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <Network className="h-4 w-4 text-purple-600 mr-2 flex-shrink-0" />
-                      <span className="font-semibold text-white">{plan.bandwidth}TB Bandwidth</span>
-                    </div>
-                  </div>
+                    <ul className="space-y-2 mb-6">
+                      {plan.features.slice(4).map((feature, i) => (
+                        <li key={i} className="flex items-start text-sm">
+                          <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                          <span className="text-slate-300">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
 
-                  <ul className="space-y-2 mb-6">
-                    {plan.features.slice(4).map((feature, i) => (
-                      <li key={i} className="flex items-start text-sm">
-                        <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                        <span className="text-slate-300">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <button
-                    onClick={() => handleDeploy(plan)}
-                    className={`block w-full text-center px-6 py-3.5 rounded-lg font-bold transition-all ${
-                      plan.popular
+                    <button
+                      onClick={() => handleDeploy(plan)}
+                      className={`block w-full text-center px-6 py-3.5 rounded-lg font-bold transition-all ${plan.popular
                         ? 'bg-gradient-to-r from-cyan-600 to-teal-600 text-white hover:from-cyan-500 hover:to-teal-500 shadow-md'
                         : 'bg-slate-800 text-cyan-400 hover:bg-slate-700 border-2 border-cyan-500'
-                    }`}
-                  >
-                    Deploy Now
-                  </button>
+                        }`}
+                    >
+                      Deploy Now
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
 
+      {/* All Plans Include */}
       <section className="py-16 bg-slate-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -558,6 +657,7 @@ export function Pricing() {
         </div>
       </section>
 
+      {/* Choose the Right Plan */}
       <section className="py-16 bg-slate-950">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -611,6 +711,7 @@ export function Pricing() {
         </div>
       </section>
 
+      {/* Contact / Custom */}
       <section className="py-16  text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">

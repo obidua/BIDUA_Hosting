@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Server } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { Eye, EyeOff } from "lucide-react";
+
 
 export function Login() {
   const [username, setUsername] = useState('');
@@ -14,13 +16,15 @@ export function Login() {
   const location = useLocation();
   const redirectUrl = searchParams.get('redirect') || '/dashboard';
   const serverConfig = location.state?.serverConfig;
+  const [showPassword, setShowPassword] = useState(false);
+
 
   useEffect(() => {
     // If already logged in, redirect based on role
     if (user && profile) {
       const isAdmin = profile.role === 'admin' || profile.role === 'super_admin';
       const destination = isAdmin ? '/admin' : redirectUrl;
-      
+
       if (serverConfig) {
         navigate(destination, { state: { serverConfig }, replace: true });
       } else {
@@ -42,30 +46,6 @@ export function Login() {
       setLoading(false);
     }
   };
-
-  // const handleSubmit = async (e: React.FormEvent) => {
-  //   e.preventDefault();
-  //   setError('');
-  //   setLoading(true);
-
-  //   try {
-  //     const email = username.includes('@') ? username : `${username}@test.com`;
-  //     await signIn(email, password);
-
-  //     const { data: profile } = await supabase
-  //       .from('users_profiles')
-  //       .select('role')
-  //       .eq('email', email)
-  //       .maybeSingle();
-
-  //     const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
-  //     navigate(isAdmin ? '/admin' : '/dashboard');
-  //   } catch (err: any) {
-  //     setError(err.message || 'Failed to sign in');
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-cyan-950 to-slate-950 flex items-center justify-center px-4 py-12">
@@ -101,19 +81,32 @@ export function Login() {
               />
             </div>
 
+
             <div>
               <label className="block text-sm font-semibold text-slate-200 mb-2">
                 Password
               </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full px-4 py-3 bg-slate-800 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-slate-400"
-                placeholder="••••••••"
-              />
+
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 pr-12 bg-slate-800 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-slate-400"
+                  placeholder="••••••••"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                >
+                  {showPassword ? "🙈" : "👁️"}
+                </button>
+              </div>
             </div>
+
 
             <div className="flex items-center justify-between">
               <label className="flex items-center">
@@ -123,9 +116,9 @@ export function Login() {
                 />
                 <span className="ml-2 text-sm text-slate-300">Remember me</span>
               </label>
-              <a href="#" className="text-sm text-cyan-400 hover:text-cyan-300 font-semibold">
+              <Link to="/forgot-password" className="text-sm text-cyan-400 hover:text-cyan-300 font-semibold">
                 Forgot password?
-              </a>
+              </Link>
             </div>
 
 
@@ -152,42 +145,6 @@ export function Login() {
             </p>
           </div>
 
-          <div className="mt-6 pt-6 border-t border-cyan-500/20">
-            <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-4">
-              <p className="text-xs font-semibold text-cyan-300 mb-3">Demo Credentials:</p>
-              <div className="space-y-3">
-                <div className="bg-slate-950/50 rounded-lg p-3 border border-red-500/20">
-                  <p className="text-xs font-semibold text-red-400 mb-1">Admin Account:</p>
-                  <p className="text-sm text-slate-300">
-                    <span className="text-cyan-400">Email:</span> admin1234@test.com
-                  </p>
-                  <p className="text-sm text-slate-300">
-                    <span className="text-cyan-400">Password:</span> 1234
-                  </p>
-                  <Link to="/admin" className="text-sm text-cyan-400 hover:text-cyan-300 font-semibold mt-1 inline-block">
-                    Go to Admin Dashboard
-                  </Link>
-                </div>
-                <div className="bg-slate-950/50 rounded-lg p-3 border border-green-500/20">
-                  <p className="text-xs font-semibold text-green-400 mb-1">User Account:</p>
-                  <p className="text-sm text-slate-300">
-                    <span className="text-cyan-400">Email:</span> user1234@test.com
-                  </p>
-                  <p className="text-sm text-slate-300">
-                    <span className="text-cyan-400">Password:</span> 1234
-                  </p>
-                  <Link to="/dashboard" className="text-sm text-cyan-400 hover:text-cyan-300 font-semibold mt-1 inline-block">
-                    Go to User Dashboard
-                  </Link>
-                </div>
-
-
-                <p className="text-xs text-slate-500 mt-2">
-                  Note: Create these accounts via the signup page first
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

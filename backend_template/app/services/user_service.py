@@ -581,3 +581,302 @@ class UserService:
             "start_date": start_date,
             "end_date": end_date
         }
+
+    # ✅ Email verification methods
+    async def set_verification_token(
+        self, 
+        db: AsyncSession, 
+        user_id: int, 
+        token: str, 
+        expires_at: datetime
+    ) -> bool:
+        """Set email verification token for a user"""
+        try:
+            await db.execute(
+                update(UserProfile)
+                .where(UserProfile.id == user_id)
+                .values(
+                    email_verification_token=token,
+                    verification_token_expires=expires_at
+                )
+            )
+            await db.commit()
+            return True
+        except Exception as e:
+            print(f"Error setting verification token: {str(e)}")
+            await db.rollback()
+            return False
+
+    async def get_user_by_verification_token(
+        self, 
+        db: AsyncSession, 
+        token: str
+    ) -> Optional[UserProfile]:
+        """Get user by email verification token"""
+        result = await db.execute(
+            select(UserProfile).where(
+                UserProfile.email_verification_token == token
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def verify_email_token(
+        self, 
+        db: AsyncSession, 
+        token: str
+    ) -> tuple[bool, str, Optional[UserProfile]]:
+        """
+        Verify email token and mark user as verified
+        Returns: (success, message, user)
+        """
+        user = await self.get_user_by_verification_token(db, token)
+        
+        if not user:
+            return False, "Invalid verification token", None
+        
+        if user.is_email_verified:
+            return True, "Email already verified", user
+        
+        # Check if token has expired
+        if user.verification_token_expires and datetime.utcnow() > user.verification_token_expires:
+            return False, "Verification token has expired. Please request a new one.", None
+        
+        # Mark email as verified
+        try:
+            await db.execute(
+                update(UserProfile)
+                .where(UserProfile.id == user.id)
+                .values(
+                    is_email_verified=True,
+                    email_verification_token=None,
+                    verification_token_expires=None
+                )
+            )
+            await db.commit()
+            
+            # Refresh user object
+            await db.refresh(user)
+            return True, "Email verified successfully", user
+            
+        except Exception as e:
+            print(f"Error verifying email: {str(e)}")
+            await db.rollback()
+            return False, "Failed to verify email", None
+
+    async def mark_email_verified(
+        self, 
+        db: AsyncSession, 
+        user_id: int
+    ) -> bool:
+        """Mark user's email as verified (admin action or migration)"""
+        try:
+            await db.execute(
+                update(UserProfile)
+                .where(UserProfile.id == user_id)
+                .values(
+                    is_email_verified=True,
+                    email_verification_token=None,
+                    verification_token_expires=None,
+                    email_otp=None,
+                    email_otp_expires=None,
+                    email_otp_attempts=0
+                )
+            )
+            await db.commit()
+            return True
+        except Exception as e:
+            print(f"Error marking email verified: {str(e)}")
+            await db.rollback()
+            return False
+
+    # ✅ OTP-based email verification methods
+    async def set_email_otp(
+        self, 
+        db: AsyncSession, 
+        user_id: int, 
+        otp: str, 
+        expires_at: datetime
+    ) -> bool:
+        """Set email OTP for a user, resets attempt counter"""
+        try:
+            await db.execute(
+                update(UserProfile)
+                .where(UserProfile.id == user_id)
+                .values(
+                    email_otp=otp,
+                    email_otp_expires=expires_at,
+                    email_otp_attempts=0  # Reset attempts on new OTP
+                )
+            )
+            await db.commit()
+            return True
+        except Exception as e:
+            print(f"Error setting email OTP: {str(e)}")
+            await db.rollback()
+            return False
+
+    async def verify_email_otp(
+        self, 
+        db: AsyncSession, 
+        email: str,
+        otp: str
+    ) -> tuple[bool, str, Optional[UserProfile]]:
+        """
+        Verify email OTP and mark user as verified
+        Returns: (success, message, user)
+        """
+        user = await self.get_user_by_email(db, email)
+        
+        if not user:
+            return False, "User not found", None
+        
+        if user.is_email_verified:
+            return True, "Email already verified", user
+        
+        # Check OTP attempts (max 5)
+        if user.email_otp_attempts and user.email_otp_attempts >= 5:
+            return False, "Too many failed attempts. Please request a new OTP.", None
+        
+        # Check if OTP exists
+        if not user.email_otp:
+            return False, "No OTP found. Please request a new one.", None
+        
+        # Check if OTP has expired
+        if user.email_otp_expires and datetime.utcnow() > user.email_otp_expires:
+            return False, "OTP has expired. Please request a new one.", None
+        
+        # Verify OTP
+        if user.email_otp != otp:
+            # Increment attempt counter
+            try:
+                await db.execute(
+                    update(UserProfile)
+                    .where(UserProfile.id == user.id)
+                    .values(
+                        email_otp_attempts=(user.email_otp_attempts or 0) + 1
+                    )
+                )
+                await db.commit()
+            except:
+                pass
+            return False, "Invalid OTP code", None
+        
+        # OTP is valid - mark email as verified
+        try:
+            await db.execute(
+                update(UserProfile)
+                .where(UserProfile.id == user.id)
+                .values(
+                    is_email_verified=True,
+                    email_otp=None,
+                    email_otp_expires=None,
+                    email_otp_attempts=0
+                )
+            )
+            await db.commit()
+            
+            # Refresh user object
+            await db.refresh(user)
+            return True, "Email verified successfully", user
+            
+        except Exception as e:
+            print(f"Error verifying email OTP: {str(e)}")
+            await db.rollback()
+            return False, "Failed to verify email", None
+
+    # ✅ Password reset methods
+    async def set_password_reset_token(
+        self, 
+        db: AsyncSession, 
+        user_id: int, 
+        token: str, 
+        expires_at: datetime
+    ) -> bool:
+        """Set password reset token for a user"""
+        try:
+            await db.execute(
+                update(UserProfile)
+                .where(UserProfile.id == user_id)
+                .values(
+                    password_reset_token=token,
+                    password_reset_token_expires=expires_at
+                )
+            )
+            await db.commit()
+            return True
+        except Exception as e:
+            print(f"Error setting password reset token: {str(e)}")
+            await db.rollback()
+            return False
+
+    async def get_user_by_reset_token(
+        self, 
+        db: AsyncSession, 
+        token: str
+    ) -> Optional[UserProfile]:
+        """Get user by password reset token"""
+        result = await db.execute(
+            select(UserProfile).where(
+                UserProfile.password_reset_token == token
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def verify_reset_token(
+        self, 
+        db: AsyncSession, 
+        token: str
+    ) -> tuple[bool, str, Optional[UserProfile]]:
+        """
+        Verify password reset token
+        Returns: (valid, message, user)
+        """
+        user = await self.get_user_by_reset_token(db, token)
+        
+        if not user:
+            return False, "Invalid or expired reset token", None
+        
+        # Check if token has expired
+        if user.password_reset_token_expires and datetime.utcnow() > user.password_reset_token_expires:
+            return False, "Reset token has expired. Please request a new one.", None
+        
+        return True, "Token is valid", user
+
+    async def reset_password_with_token(
+        self, 
+        db: AsyncSession, 
+        token: str,
+        new_password: str
+    ) -> tuple[bool, str]:
+        """
+        Reset password using token
+        Returns: (success, message)
+        """
+        # Verify token first
+        valid, message, user = await self.verify_reset_token(db, token)
+        
+        if not valid or not user:
+            return False, message
+        
+        # Hash new password
+        try:
+            hashed_password = await get_password_hash(new_password)
+            
+            # Update password and clear reset token
+            await db.execute(
+                update(UserProfile)
+                .where(UserProfile.id == user.id)
+                .values(
+                    hashed_password=hashed_password,
+                    password_reset_token=None,
+                    password_reset_token_expires=None
+                )
+            )
+            await db.commit()
+            
+            return True, "Password reset successfully"
+            
+        except Exception as e:
+            print(f"Error resetting password: {str(e)}")
+            await db.rollback()
+            return False, "Failed to reset password"

@@ -17,9 +17,47 @@ from app.models.order_service import OrderService as OrderServiceModel
 from app.schemas.order import OrderCreate, OrderUpdate, OrderSummary, InvoiceResponse
 from app.models.referrals import ReferralEarning
 from app.services.referral_service import ReferralService
+from app.models.payment import PaymentTransaction
 
 
 class OrderService:
+    # -----------------------------
+    # 🔹 HELPER METHOD: Calculate service period dates
+    # -----------------------------
+    def _calculate_service_dates(self, billing_cycle: str, start_date: Optional[datetime] = None) -> tuple[datetime, datetime]:
+        """
+        Calculate service start and end dates based on billing cycle.
+        
+        Args:
+            billing_cycle: Billing cycle (monthly, quarterly, annually, etc.)
+            start_date: Optional start date (defaults to current UTC time)
+            
+        Returns:
+            Tuple of (service_start_date, service_end_date)
+        """
+        if not start_date:
+            start_date = datetime.utcnow()
+        
+        # Billing cycle to days mapping
+        cycle_days = {
+            'monthly': 30,
+            'quarterly': 90,
+            'semi_annual': 180,
+            'semi-annually': 180,
+            'annual': 365,
+            'annually': 365,
+            'biennial': 730,
+            'biennially': 730,
+            'triennial': 1095,
+            'triennially': 1095,
+            'one_time': 30  # Default to 30 days for one-time purchases
+        }
+        
+        days = cycle_days.get(billing_cycle.lower(), 30)  # Default to 30 days
+        end_date = start_date + timedelta(days=days)
+        
+        return start_date, end_date
+    
     # -----------------------------
     # 🔹 USER-SPECIFIC QUERIES
     # -----------------------------
@@ -74,9 +112,10 @@ class OrderService:
         payment_status: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         query = (
-            select(Order, HostingPlan, UserProfile)
+            select(Order, HostingPlan, UserProfile, PaymentTransaction)
             .join(HostingPlan, Order.plan_id == HostingPlan.id)
             .join(UserProfile, Order.user_id == UserProfile.id)
+            .outerjoin(PaymentTransaction, Order.id == PaymentTransaction.order_id)
         )
 
         if status and status != "all":
@@ -89,27 +128,62 @@ class OrderService:
         rows = result.all()
 
         return [
-            {
-                "id": order.id,
-                "user_id": order.user_id,
-                "plan_id": order.plan_id,
-                "order_number": order.order_number,
-                "order_status": order.order_status,
-                "total_amount": order.total_amount,
-                "payment_status": order.payment_status,
-                "billing_cycle": order.billing_cycle,
-                "server_details": order.server_details,
-                "payment_method": order.payment_method,
-                "payment_reference": order.payment_reference,
-                "payment_date": order.payment_date,
-                "created_at": order.created_at,
-                "updated_at": order.updated_at,
-                "plan_name": plan.name,
-                "plan_type": plan.plan_type,
-                "user_email": user.email,
-            }
-            for order, plan, user in rows
-        ]
+        {
+            "id": order.id,
+            "user_id": order.user_id,
+            "plan_id": order.plan_id,
+            "order_number": order.order_number,
+            "order_status": order.order_status,
+            "payment_status": order.payment_status,
+            "billing_cycle": order.billing_cycle,
+            
+            # Financial Details - Convert Decimal to float for JSON serialization
+            "total_amount": float(order.total_amount) if order.total_amount else 0.0,
+            "discount_amount": float(order.discount_amount) if order.discount_amount else 0.0,
+            "tax_amount": float(order.tax_amount) if order.tax_amount else 0.0,
+            "grand_total": float(order.grand_total) if order.grand_total else 0.0,
+            "currency": order.currency,
+            "promo_code": order.promo_code,
+            
+            # Server Configuration
+            "server_details": order.server_details,
+            
+            # Payment Information
+            "payment_method": order.payment_method,
+            "payment_reference": order.payment_reference,
+            "payment_date": order.payment_date,
+            "razorpay_order_id": order.razorpay_order_id,
+            "razorpay_payment_id": order.razorpay_payment_id,
+            "paid_at": order.paid_at,
+            
+            # Service Dates
+            "service_start_date": order.service_start_date,
+            "service_end_date": order.service_end_date,
+            
+            # Timestamps
+            "created_at": order.created_at,
+            "updated_at": order.updated_at,
+            "completed_at": order.completed_at,
+            
+            # Additional Info
+            "notes": order.notes,
+            
+            # Plan Details
+            "plan_name": plan.name,
+            "plan_type": plan.plan_type,
+            
+            # User Details
+            "user_email": user.email,
+            "user": {
+                "email": user.email,
+                "full_name": user.full_name,
+            },
+            
+            # Payment Metadata
+            "payment_metadata": payment.payment_metadata if payment else None
+        }
+        for order, plan, user, payment in rows
+    ]
 
     # -----------------------------
     # 🔹 CRUD OPERATIONS
@@ -151,26 +225,26 @@ class OrderService:
             addon_total = Decimal("0.00")
             addon_records = []
             invoice_addon_items = []
-            
+
             if order_data.addon_ids:
                 addon_result = await db.execute(
                     select(Addon).where(Addon.id.in_(order_data.addon_ids), Addon.is_active == True)
                 )
                 addons = addon_result.scalars().all()
-                
+
                 for addon in addons:
                     unit_price = Decimal(str(addon.price))
                     quantity = Decimal("1")  # Default quantity, can be extended later
                     subtotal = unit_price * quantity
-                    
+
                     # Apply same discount as plan
                     addon_discount = (subtotal * discount_percent) / Decimal("100.00")
                     addon_discounted = subtotal - addon_discount
                     addon_tax = (addon_discounted * Decimal("18.00")) / Decimal("100.00")
                     addon_item_total = addon_discounted + addon_tax
-                    
+
                     addon_total += addon_item_total
-                    
+
                     # Store for OrderAddon creation later
                     addon_records.append({
                         "addon_id": addon.id,
@@ -182,7 +256,7 @@ class OrderService:
                         "total_amount": addon_item_total,
                         "billing_type": addon.billing_type,
                     })
-                    
+
                     # Invoice line item
                     invoice_addon_items.append({
                         "description": f"{addon.name} - {addon.category.value}",
@@ -200,26 +274,26 @@ class OrderService:
             service_total = Decimal("0.00")
             service_records = []
             invoice_service_items = []
-            
+
             if order_data.service_ids:
                 service_result = await db.execute(
                     select(Service).where(Service.id.in_(order_data.service_ids), Service.is_active == True)
                 )
                 services = service_result.scalars().all()
-                
+
                 for service in services:
-                    unit_price = Decimal(str(service.base_price))
+                    unit_price = Decimal(str(service.price))  # ✅ Changed from base_price to price
                     quantity = Decimal("1")
                     subtotal = unit_price * quantity
-                    
+
                     # Apply same discount as plan
                     service_discount = (subtotal * discount_percent) / Decimal("100.00")
                     service_discounted = subtotal - service_discount
                     service_tax = (service_discounted * Decimal("18.00")) / Decimal("100.00")
                     service_item_total = service_discounted + service_tax
-                    
+
                     service_total += service_item_total
-                    
+
                     # Store for OrderService creation later
                     service_records.append({
                         "service_id": service.id,
@@ -231,7 +305,7 @@ class OrderService:
                         "total_amount": service_item_total,
                         "service_status": "pending",
                     })
-                    
+
                     # Invoice line item
                     invoice_service_items.append({
                         "description": f"{service.name} - {service.category.value}",
@@ -246,14 +320,36 @@ class OrderService:
                     })
 
             # ✅ 7️⃣ Calculate final totals (Plan + Addons + Services)
-            total_discount_amount = plan_discount_amount + sum(a["discount_amount"] for a in addon_records) + sum(s["discount_amount"] for s in service_records)
-            total_discounted = plan_discounted_total + sum(a["subtotal"] - a["discount_amount"] for a in addon_records) + sum(s["subtotal"] - s["discount_amount"] for s in service_records)
+            # Base billing cycle discount
+            billing_cycle_discount = plan_discount_amount + sum(a["discount_amount"] for a in addon_records) + sum(s["discount_amount"] for s in service_records)
             
+            # Add promo discount from frontend if provided
+            promo_discount = order_data.discount_amount or Decimal("0.00")
+            
+            # Total discount is sum of billing cycle discount + promo discount
+            total_discount_amount = billing_cycle_discount + promo_discount
+            
+            # Calculate discounted total (subtracting promo discount as well)
+            base_discounted = plan_discounted_total + sum(a["subtotal"] - a["discount_amount"] for a in addon_records) + sum(s["subtotal"] - s["discount_amount"] for s in service_records)
+            total_discounted = base_discounted - promo_discount
+            
+            # Ensure total doesn't go below zero
+            if total_discounted < 0:
+                total_discounted = Decimal("0.00")
+
             # GST calculation (18% on total discounted amount)
             gst_amount = (total_discounted * Decimal("18.00")) / Decimal("100.00")
-            
+
             # Grand total for customer invoice
             grand_total = total_discounted + gst_amount
+
+            # ✅ 7️⃣.5️⃣ Calculate service period dates
+            # Use dates from order_data if provided, otherwise calculate from billing cycle
+            if order_data.service_start_date and order_data.service_end_date:
+                service_start_date = order_data.service_start_date
+                service_end_date = order_data.service_end_date
+            else:
+                service_start_date, service_end_date = self._calculate_service_dates(order_data.billing_cycle)
 
             # ✅ 8️⃣ Create Order
             new_order = Order(
@@ -266,9 +362,16 @@ class OrderService:
                 tax_amount=gst_amount,
                 grand_total=grand_total,
                 server_details=order_data.server_details,  # Kept for backward compatibility
-                order_status="pending",
-                payment_status="pending",
+                order_status="active" if order_data.payment_status == 'paid' else "pending",
+                payment_status=order_data.payment_status or "pending",
+                payment_method=order_data.payment_method,
+                razorpay_order_id=order_data.razorpay_order_id,
+                razorpay_payment_id=order_data.razorpay_payment_id,
+                paid_at=order_data.paid_at,
                 currency="INR",
+                service_start_date=service_start_date,  # 🆕 Set service start date
+                service_end_date=service_end_date,  # 🆕 Set service end date
+                promo_code=order_data.promo_code,  # 🆕 Store promo code
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow(),
             )
@@ -278,9 +381,18 @@ class OrderService:
 
             # ✅ 9️⃣ Create OrderAddon records
             for addon_data in addon_records:
+                # Fetch addon details for metadata
+                addon_result = await db.execute(
+                    select(Addon).where(Addon.id == addon_data["addon_id"])
+                )
+                addon = addon_result.scalar_one()
+                
                 order_addon = OrderAddon(
                     order_id=new_order.id,
                     addon_id=addon_data["addon_id"],
+                    addon_name=addon.name,
+                    addon_category=addon.category.value,
+                    addon_description=addon.description,
                     unit_price=addon_data["unit_price"],
                     quantity=addon_data["quantity"],
                     subtotal=addon_data["subtotal"],
@@ -288,28 +400,41 @@ class OrderService:
                     tax_amount=addon_data["tax_amount"],
                     total_amount=addon_data["total_amount"],
                     billing_type=addon_data["billing_type"],
+                    unit_label=addon.unit_label,
                     is_active=True,
                 )
                 db.add(order_addon)
 
             # ✅ 🔟 Create OrderService records
             for service_data in service_records:
+                # Fetch service details for metadata
+                service_result = await db.execute(
+                    select(Service).where(Service.id == service_data["service_id"])
+                )
+                service = service_result.scalar_one()
+                
                 order_service = OrderServiceModel(
                     order_id=new_order.id,
                     service_id=service_data["service_id"],
+                    service_name=service.name,
+                    service_category=service.category.value,
+                    service_description=service.description,
                     unit_price=service_data["unit_price"],
                     quantity=service_data["quantity"],
                     subtotal=service_data["subtotal"],
                     discount_amount=service_data["discount_amount"],
                     tax_amount=service_data["tax_amount"],
                     total_amount=service_data["total_amount"],
+                    billing_type=service.billing_type,
+                    duration_hours=service.duration_hours,
+                    sla_response_time=service.sla_response_time,
                     service_status=service_data["service_status"],
                 )
                 db.add(order_service)
 
             # ✅ 1️⃣1️⃣ Create Invoice with all line items
             invoice_number = await self._generate_invoice_number(db)
-            
+
             # Build complete invoice items array: plan + addons + services
             plan_item = {
                 "description": f"{plan.name} - {order_data.billing_cycle.title()} Plan",
@@ -323,9 +448,9 @@ class OrderService:
                 "gst_amount": float((plan_discounted_total * Decimal("18.00")) / Decimal("100.00")),
                 "total_amount": float(plan_discounted_total + (plan_discounted_total * Decimal("18.00")) / Decimal("100.00"))
             }
-            
+
             invoice_items = [plan_item] + invoice_addon_items + invoice_service_items
-            
+
             new_invoice = Invoice(
                 user_id=user_id,
                 order_id=new_order.id,
@@ -355,7 +480,12 @@ class OrderService:
             await db.refresh(new_order)
             await db.refresh(new_invoice)
 
-            # ✅ 1️⃣3️⃣ Auto Commission (optional)
+            # ✅ 1️⃣3️⃣ Server creation will happen ONLY after payment is verified
+            # This prevents duplicate server creation
+            # Payment webhook will handle server provisioning
+
+
+            # ✅ 1️⃣4️⃣ Auto Commission (optional)
             # If payment_status == "completed" → auto distribute commission
             if new_order.order_status == "completed":
                 referral_service = ReferralService()
@@ -367,7 +497,7 @@ class OrderService:
                     plan_type="recurring" if order_data.billing_cycle.lower() == "monthly" else "longterm",
                 )
 
-            # ✅ 1️⃣4️⃣ Return combined response with addons and services
+            # ✅ 1️⃣5️⃣ Return combined response with addons and services
             return {
                 "order": {
                     "id": new_order.id,

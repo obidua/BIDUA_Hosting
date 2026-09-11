@@ -51,40 +51,29 @@ export function AdminDashboard() {
 
         {/* Dashboard Sections */}
         <section>
-          <h2 className="text-2xl font-bold text-slate-900 mb-4">Dashboard Pages & Features</h2>
-
-          <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-6 mb-6">
-            <p className="text-slate-700 font-semibold mb-3">✨ Recent Updates (November 2025)</p>
-            <ul className="space-y-2 text-slate-600 text-sm">
-              <li>• <strong>Dark Theme</strong> - All admin pages converted to modern dark slate theme</li>
-              <li>• <strong>User Analytics</strong> - New comprehensive user dashboard with 500+ users, spending analysis, affiliate tracking</li>
-              <li>• <strong>Subscription Management</strong> - Fixed and enhanced with real order data (500+ subscriptions)</li>
-              <li>• <strong>Plans & Addons</strong> - Unified management with tabbed interface</li>
-              <li>• <strong>Real-time Data</strong> - All pages now pull live data from backend API</li>
-            </ul>
-          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Dashboard Sections</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
             {[
               {
                 icon: BarChart3,
-                title: 'Dashboard Home',
-                items: ['Key metrics cards', 'Revenue overview', 'User statistics', 'System health']
+                title: 'Overview',
+                items: ['Key metrics', 'Revenue stats', 'System health', 'Recent activity']
               },
               {
                 icon: Users,
-                title: 'User Analytics',
-                items: ['500+ user listing', 'Search & filter by status', 'User spending analysis', 'Affiliate tracking', 'Detailed user profiles']
+                title: 'Users',
+                items: ['User list', 'New signups', 'Active users', 'Suspended accounts']
               },
               {
                 icon: DollarSign,
-                title: 'Subscriptions',
-                items: ['500+ active orders', 'Order status tracking', 'Payment status display', 'Revenue metrics', 'Order details modal']
+                title: 'Billing',
+                items: ['Invoices', 'Payments', 'Refunds', 'Revenue reports']
               },
               {
                 icon: Settings,
-                title: 'Plans & Addons',
-                items: ['Hosting plan management', 'Add-on services', 'Tabbed interface', 'Full CRUD operations', 'Real pricing data']
+                title: 'Settings',
+                items: ['System config', 'Payment gateways', 'Email settings', 'Security']
               }
             ].map((section, idx) => {
               const Icon = section.icon;
@@ -154,53 +143,45 @@ export function AdminDashboard() {
 
         {/* Navigation */}
         <section>
-          <h2 className="text-2xl font-bold text-slate-900 mb-4">Main Navigation Menu</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Main Navigation</h2>
 
-          <p className="text-slate-600 mb-6">The admin dashboard sidebar provides quick access to all key admin sections:</p>
+          <p className="text-slate-600 mb-6">The admin dashboard sidebar provides access to all key sections:</p>
 
           <div className="border border-slate-200 rounded-lg p-6 bg-slate-50">
-            <h3 className="font-semibold text-slate-900 mb-4">Left Sidebar Menu Items</h3>
+            <h3 className="font-semibold text-slate-900 mb-4">Left Sidebar Menu</h3>
 
-            <div className="space-y-3 text-slate-600">
+            <div className="space-y-2 text-slate-600">
               <p className="flex items-center space-x-2">
                 <span className="w-4 h-4 bg-cyan-500 rounded"></span>
-                <span><strong>Dashboard</strong> - Home overview with key metrics</span>
+                <span><strong>Dashboard</strong> - Main overview</span>
               </p>
               <p className="flex items-center space-x-2">
                 <span className="w-4 h-4 bg-cyan-500 rounded"></span>
-                <span><strong>Users</strong> - Manage admin staff and support users</span>
+                <span><strong>Users</strong> - User management</span>
               </p>
               <p className="flex items-center space-x-2">
                 <span className="w-4 h-4 bg-cyan-500 rounded"></span>
-                <span><strong>User Analytics</strong> - <span className="text-green-600 font-semibold">[NEW]</span> Comprehensive user data, spending, affiliates</span>
+                <span><strong>Orders</strong> - Order tracking</span>
               </p>
               <p className="flex items-center space-x-2">
                 <span className="w-4 h-4 bg-cyan-500 rounded"></span>
-                <span><strong>Orders/Subscriptions</strong> - View 500+ customer orders and subscriptions</span>
+                <span><strong>Plans</strong> - Hosting plans</span>
               </p>
               <p className="flex items-center space-x-2">
                 <span className="w-4 h-4 bg-cyan-500 rounded"></span>
-                <span><strong>Plans & Addons</strong> - Manage hosting plans and add-on services</span>
+                <span><strong>Servers</strong> - Server management</span>
               </p>
               <p className="flex items-center space-x-2">
                 <span className="w-4 h-4 bg-cyan-500 rounded"></span>
-                <span><strong>Servers</strong> - Monitor and control VPS/Cloud/Dedicated servers</span>
+                <span><strong>Billing</strong> - Invoices & payments</span>
               </p>
               <p className="flex items-center space-x-2">
                 <span className="w-4 h-4 bg-cyan-500 rounded"></span>
-                <span><strong>Billing</strong> - Invoice management and payment tracking</span>
+                <span><strong>Support</strong> - Tickets & issues</span>
               </p>
               <p className="flex items-center space-x-2">
                 <span className="w-4 h-4 bg-cyan-500 rounded"></span>
-                <span><strong>Support Tickets</strong> - Customer support issue management</span>
-              </p>
-              <p className="flex items-center space-x-2">
-                <span className="w-4 h-4 bg-cyan-500 rounded"></span>
-                <span><strong>Affiliates</strong> - Manage referral program and commissions</span>
-              </p>
-              <p className="flex items-center space-x-2">
-                <span className="w-4 h-4 bg-cyan-500 rounded"></span>
-                <span><strong>Employees</strong> - Employee account and role management</span>
+                <span><strong>Settings</strong> - System settings</span>
               </p>
             </div>
           </div>
@@ -312,154 +293,6 @@ export function AdminDashboard() {
               <li>• Document all major changes</li>
               <li>• Review and reconcile billing weekly</li>
             </ul>
-          </div>
-        </section>
-
-        {/* New Features Section */}
-        <section>
-          <h2 className="text-2xl font-bold text-slate-900 mb-4">✨ New Features (v2.0 Update)</h2>
-
-          <div className="space-y-6">
-            {/* User Analytics */}
-            <div className="border-l-4 border-cyan-500 bg-cyan-50 p-6 rounded-lg">
-              <h3 className="text-xl font-semibold text-slate-900 mb-3">User Analytics Dashboard</h3>
-              <p className="text-slate-600 mb-4">
-                Comprehensive user management and analytics page with advanced filtering and detailed user profiles.
-              </p>
-              <div className="bg-white rounded-lg p-4 border border-cyan-200 mb-4">
-                <h4 className="font-semibold text-slate-900 mb-3">Features:</h4>
-                <ul className="space-y-2 text-slate-600 text-sm">
-                  <li>✓ View 500+ users with real-time data</li>
-                  <li>✓ Search by name or email</li>
-                  <li>✓ Filter by account status (active, suspended, banned)</li>
-                  <li>✓ User statistics: total spent, subscriptions, servers</li>
-                  <li>✓ Affiliate tracking and earnings display</li>
-                  <li>✓ Detailed user profile modal with full information</li>
-                  <li>✓ Dark theme styling for better visibility</li>
-                </ul>
-              </div>
-              <div className="bg-slate-900 text-cyan-200 rounded-lg p-3 font-mono text-sm">
-                <strong>API Endpoint:</strong> GET /api/v1/admin/users?skip=0&limit=500
-              </div>
-            </div>
-
-            {/* Subscription Management */}
-            <div className="border-l-4 border-green-500 bg-green-50 p-6 rounded-lg">
-              <h3 className="text-xl font-semibold text-slate-900 mb-3">Subscription Management (Fixed)</h3>
-              <p className="text-slate-600 mb-4">
-                Enhanced subscription/order management with real backend integration showing 500+ active orders.
-              </p>
-              <div className="bg-white rounded-lg p-4 border border-green-200 mb-4">
-                <h4 className="font-semibold text-slate-900 mb-3">Features:</h4>
-                <ul className="space-y-2 text-slate-600 text-sm">
-                  <li>✓ Display 500+ customer orders/subscriptions</li>
-                  <li>✓ 6 stat cards: total, active, pending, completed, cancelled, revenue</li>
-                  <li>✓ Order status tracking (active, pending, completed, cancelled, expired)</li>
-                  <li>✓ Payment status display (paid, pending, failed, refunded)</li>
-                  <li>✓ Billing cycle information (monthly, quarterly, annual, biennial, triennial)</li>
-                  <li>✓ Revenue and financial breakdown</li>
-                  <li>✓ Search and filter capabilities</li>
-                  <li>✓ Detailed order modal with customer information</li>
-                </ul>
-              </div>
-              <div className="bg-slate-900 text-green-200 rounded-lg p-3 font-mono text-sm">
-                <strong>API Endpoint:</strong> GET /api/v1/admin/orders?skip=0&limit=100&status=&lt;status&gt;
-              </div>
-            </div>
-
-            {/* Plans & Addons */}
-            <div className="border-l-4 border-indigo-500 bg-indigo-50 p-6 rounded-lg">
-              <h3 className="text-xl font-semibold text-slate-900 mb-3">Plans & Add-ons Management</h3>
-              <p className="text-slate-600 mb-4">
-                Unified interface for managing hosting plans and add-on services with full CRUD operations.
-              </p>
-              <div className="bg-white rounded-lg p-4 border border-indigo-200 mb-4">
-                <h4 className="font-semibold text-slate-900 mb-3">Features:</h4>
-                <ul className="space-y-2 text-slate-600 text-sm">
-                  <li>✓ Tabbed interface: Plans tab + Add-ons tab</li>
-                  <li>✓ Real hosting plan data (VPS, Cloud, Dedicated)</li>
-                  <li>✓ Add-on services management (backup, SSL, support, etc)</li>
-                  <li>✓ Create, read, update, delete operations</li>
-                  <li>✓ Pricing configuration</li>
-                  <li>✓ Plan features and specifications</li>
-                  <li>✓ Real-time data from backend</li>
-                </ul>
-              </div>
-              <div className="bg-slate-900 text-indigo-200 rounded-lg p-3 font-mono text-sm">
-                <strong>API Endpoints:</strong><br/>
-                GET /api/v1/admin/plans<br/>
-                GET /api/v1/admin/addons
-              </div>
-            </div>
-
-            {/* Dark Theme */}
-            <div className="border-l-4 border-slate-500 bg-slate-100 p-6 rounded-lg">
-              <h3 className="text-xl font-semibold text-slate-900 mb-3">Modern Dark Theme</h3>
-              <p className="text-slate-600 mb-4">
-                All admin pages converted to a consistent dark theme for better visibility and reduced eye strain.
-              </p>
-              <div className="bg-white rounded-lg p-4 border border-slate-300 mb-4">
-                <h4 className="font-semibold text-slate-900 mb-3">Color Scheme:</h4>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-slate-950 border border-slate-700 rounded"></div>
-                    <span className="text-slate-700">bg-slate-950 (Primary)</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-slate-900 border border-slate-700 rounded"></div>
-                    <span className="text-slate-700">bg-slate-900 (Secondary)</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-cyan-500 rounded"></div>
-                    <span className="text-slate-700">cyan-500 (Accent)</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-white rounded border border-slate-300"></div>
-                    <span className="text-slate-700">White (Text)</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Technical Details */}
-        <section>
-          <h2 className="text-2xl font-bold text-slate-900 mb-4">Technical Implementation</h2>
-
-          <div className="space-y-4">
-            <div className="border border-slate-200 rounded-lg p-4">
-              <h3 className="font-semibold text-slate-900 mb-2">Frontend Stack</h3>
-              <ul className="space-y-1 text-slate-600 text-sm">
-                <li>• React 18 with TypeScript</li>
-                <li>• Vite for fast builds</li>
-                <li>• Tailwind CSS for styling</li>
-                <li>• React Router for navigation</li>
-                <li>• Lucide icons for UI</li>
-              </ul>
-            </div>
-
-            <div className="border border-slate-200 rounded-lg p-4">
-              <h3 className="font-semibold text-slate-900 mb-2">Backend API</h3>
-              <ul className="space-y-1 text-slate-600 text-sm">
-                <li>• FastAPI (Python)</li>
-                <li>• SQLAlchemy ORM</li>
-                <li>• SQLite database</li>
-                <li>• RESTful architecture</li>
-                <li>• Comprehensive admin endpoints</li>
-              </ul>
-            </div>
-
-            <div className="border border-slate-200 rounded-lg p-4">
-              <h3 className="font-semibold text-slate-900 mb-2">Build & Deployment</h3>
-              <ul className="space-y-1 text-slate-600 text-sm">
-                <li>• Current build: 1586 modules</li>
-                <li>• Build size: ~1.4MB JS, ~102KB CSS (gzipped)</li>
-                <li>• Build time: ~1m 22s</li>
-                <li>• Zero TypeScript errors</li>
-                <li>• Optimized for production</li>
-              </ul>
-            </div>
           </div>
         </section>
       </div>

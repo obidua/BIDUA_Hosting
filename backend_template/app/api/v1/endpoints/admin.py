@@ -13,9 +13,9 @@ from app.models.support import SupportTicket
 from app.models.affiliate import Referral
 from app.models.roles import Department, Role, Permission, UserDepartment, user_roles
 from app.models.plan import HostingPlan
-from app.models.invoice import Invoice
 from pydantic import BaseModel
 from typing import Optional
+from decimal import Decimal
 
 router = APIRouter()
 
@@ -71,9 +71,17 @@ class PlanCreate(BaseModel):
     ram_gb: int
     storage_gb: int
     bandwidth_gb: int
-    base_price: float
+    base_price: Decimal
     is_active: bool = True
+    is_featured: bool = False
     features: List[str] = []
+    # Optional custom pricing (if not provided, will be calculated from base_price)
+    monthly_price: Optional[Decimal] = None
+    quarterly_price: Optional[Decimal] = None
+    semiannual_price: Optional[Decimal] = None
+    annual_price: Optional[Decimal] = None
+    biennial_price: Optional[Decimal] = None
+    triennial_price: Optional[Decimal] = None
 
 class PlanUpdate(BaseModel):
     name: Optional[str] = None
@@ -84,9 +92,16 @@ class PlanUpdate(BaseModel):
     ram_gb: Optional[int] = None
     storage_gb: Optional[int] = None
     bandwidth_gb: Optional[int] = None
-    base_price: Optional[float] = None
+    base_price: Optional[Decimal] = None
     is_active: Optional[bool] = None
+    is_featured: Optional[bool] = None
     features: Optional[List[str]] = None
+    monthly_price: Optional[Decimal] = None
+    quarterly_price: Optional[Decimal] = None
+    semiannual_price: Optional[Decimal] = None
+    annual_price: Optional[Decimal] = None
+    biennial_price: Optional[Decimal] = None
+    triennial_price: Optional[Decimal] = None
 
 
 def require_admin(current_user: UserProfile = Depends(get_current_user)):
@@ -105,102 +120,149 @@ async def get_admin_stats(
     current_user: UserProfile = Depends(require_admin)
 ):
     """Get admin dashboard statistics"""
-    try:
-        # Get total users count
-        users_result = await db.execute(select(func.count(UserProfile.id)))
-        total_users = users_result.scalar() or 0
-        
-        # Get users created this month
-        current_month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        users_this_month_result = await db.execute(
-            select(func.count(UserProfile.id)).where(UserProfile.created_at >= current_month_start)
+    
+    # Get total users count
+    users_stmt = select(func.count(UserProfile.id))
+    users_result = await db.execute(users_stmt)
+    total_users = users_result.scalar() or 0
+    
+    # Get users created this month
+    current_month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    users_this_month_stmt = select(func.count(UserProfile.id)).where(
+        UserProfile.created_at >= current_month_start
+    )
+    users_this_month_result = await db.execute(users_this_month_stmt)
+    users_this_month = users_this_month_result.scalar() or 0
+    
+    # Get active servers count
+    servers_stmt = select(func.count(Server.id)).where(Server.server_status == 'active')
+    servers_result = await db.execute(servers_stmt)
+    active_servers = servers_result.scalar() or 0
+    
+    # Get total orders count
+    orders_stmt = select(func.count(Order.id))
+    orders_result = await db.execute(orders_stmt)
+    total_orders = orders_result.scalar() or 0
+    
+    # Get monthly revenue (sum of completed orders this month)
+    monthly_revenue_stmt = select(func.sum(Order.total_amount)).where(
+        and_(
+            Order.created_at >= current_month_start,
+            Order.order_status == 'completed'
         )
-        users_this_month = users_this_month_result.scalar() or 0
+    )
+    monthly_revenue_result = await db.execute(monthly_revenue_stmt)
+    monthly_revenue = float(monthly_revenue_result.scalar() or 0)
+    
+    # Get open support tickets
+    open_tickets_stmt = select(func.count(SupportTicket.id)).where(
+        SupportTicket.status.in_(['open', 'in_progress'])
+    )
+    open_tickets_result = await db.execute(open_tickets_stmt)
+    open_tickets = open_tickets_result.scalar() or 0
+    
+    return {
+        "total_users": total_users,
+        "new_users_this_month": users_this_month,
+        "active_servers": active_servers,
+        "total_orders": total_orders,
+        "monthly_revenue": monthly_revenue,
+        "open_tickets": open_tickets,
+    }
+
+
+@router.get("/activity-feed")
+async def get_activity_feed(
+    db: AsyncSession = Depends(get_db),
+    current_user: UserProfile = Depends(require_admin)
+):
+    """Get recent activity feed for admin dashboard"""
+    
+    # Get last 5 orders
+    orders_stmt = select(Order).order_by(Order.created_at.desc()).limit(5)
+    orders_result = await db.execute(orders_stmt)
+    recent_orders = orders_result.scalars().all()
+    
+    # Get last 5 tickets
+    tickets_stmt = select(SupportTicket).order_by(SupportTicket.created_at.desc()).limit(5)
+    tickets_result = await db.execute(tickets_stmt)
+    recent_tickets = tickets_result.scalars().all()
+    
+    activity_feed = []
+    for order in recent_orders:
+        activity_feed.append({
+            "type": "order",
+            "title": f"New order #{order.id}",
+            "meta": f"Total: ₹{order.total_amount}",
+            "time": order.created_at
+        })
         
-        # Get active servers count (safely handle if table doesn't exist)
-        try:
-            servers_result = await db.execute(
-                select(func.count(Server.id)).where(Server.server_status == 'active')
-            )
-            active_servers = servers_result.scalar() or 0
-        except:
-            active_servers = 0
+    for ticket in recent_tickets:
+        activity_feed.append({
+            "type": "ticket",
+            "title": f"New ticket #{ticket.id}",
+            "meta": ticket.subject,
+            "time": ticket.created_at
+        })
         
-        # Get total servers count
-        try:
-            total_servers_result = await db.execute(select(func.count(Server.id)))
-            total_servers = total_servers_result.scalar() or 0
-        except:
-            total_servers = 0
-        
-        # Get total orders count
-        try:
-            orders_result = await db.execute(select(func.count(Order.id)))
-            total_orders = orders_result.scalar() or 0
-        except:
-            total_orders = 0
-        
-        # Get monthly revenue (sum of completed orders this month)
-        try:
-            monthly_revenue_result = await db.execute(
-                select(func.sum(Order.total_amount)).where(
-                    and_(
-                        Order.created_at >= current_month_start,
-                        Order.order_status == 'completed'
-                    )
-                )
-            )
-            monthly_revenue = float(monthly_revenue_result.scalar() or 0)
-        except:
-            monthly_revenue = 0.0
-        
-        # Get open support tickets
-        try:
-            open_tickets_result = await db.execute(
-                select(func.count(SupportTicket.id)).where(
-                    SupportTicket.status.in_(['open', 'in_progress'])
-                )
-            )
-            open_tickets = open_tickets_result.scalar() or 0
-        except:
-            open_tickets = 0
-        
-        # Get referral program status
-        try:
-            referrals_result = await db.execute(
-                select(func.count(Referral.id)).where(Referral.status == 'active')
-            )
-            active_referrals = referrals_result.scalar() or 0
-        except:
-            active_referrals = 0
-        
-        return {
-            "total_users": total_users,
-            "users_this_month": users_this_month,
-            "active_servers": active_servers,
-            "total_servers": total_servers,
-            "total_orders": total_orders,
-            "monthly_revenue": monthly_revenue,
-            "open_tickets": open_tickets,
-            "active_referrals": active_referrals,
-            "referral_status": "Active" if active_referrals > 0 else "Inactive"
-        }
-    except Exception as e:
-        print(f"Error in admin stats: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        # Return default stats if there's an error
-        return {
-            "total_users": 0,
-            "users_this_month": 0,
-            "active_servers": 0,
-            "total_servers": 0,
-            "total_orders": 0,
-            "monthly_revenue": 0.0,
-            "open_tickets": 0,
-            "active_referrals": 0,
-            "referral_status": "Inactive"
-        }
+    # Sort by time
+    activity_feed.sort(key=lambda x: x["time"], reverse=True)
+    
+    # Format time to be more readable
+    for item in activity_feed:
+        item["time"] = item["time"].isoformat()
+
+    return activity_feed[:5]
+
+
+@router.get("/revenue-pace")
+async def get_revenue_pace(
+    db: AsyncSession = Depends(get_db),
+    current_user: UserProfile = Depends(require_admin)
+):
+    """Get revenue pace for admin dashboard"""
+    
+    current_month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    # Get monthly revenue (sum of completed orders this month)
+    monthly_revenue_stmt = select(func.sum(Order.total_amount)).where(
+        and_(
+            Order.created_at >= current_month_start,
+            Order.order_status == 'completed'
+        )
+    )
+    monthly_revenue_result = await db.execute(monthly_revenue_stmt)
+    monthly_revenue = float(monthly_revenue_result.scalar() or 0)
+
+    # For simplicity, I will return a breakdown of revenue by plan type.
+    # This is not what is hardcoded, but it is more realistic with the current data model.
+    revenue_by_plan_type_stmt = select(
+        HostingPlan.plan_type,
+        func.sum(Order.total_amount)
+    ).join(HostingPlan, Order.plan_id == HostingPlan.id).where(
+        and_(
+            Order.created_at >= current_month_start,
+            Order.order_status == 'completed'
+        )
+    ).group_by(HostingPlan.plan_type)
+
+    revenue_by_plan_type_result = await db.execute(revenue_by_plan_type_stmt)
+    revenue_by_plan_type = revenue_by_plan_type_result.all()
+
+    revenue_breakdown = []
+    if monthly_revenue > 0:
+        for plan_type, total in revenue_by_plan_type:
+            percentage = (float(total) / monthly_revenue * 100) if monthly_revenue > 0 else 0
+            revenue_breakdown.append({
+                "label": f"{plan_type.upper()} plans",
+                "value": f"{percentage:.0f}%",
+                "helper": f"₹{total:,.0f}"
+            })
+
+    return {
+        "monthly_revenue": monthly_revenue,
+        "revenue_breakdown": revenue_breakdown
+    }
 
 
 @router.get("/users")
@@ -211,367 +273,150 @@ async def get_all_users(
     current_user: UserProfile = Depends(require_admin)
 ):
     """Get all users with pagination"""
-    try:
-        stmt = select(UserProfile).offset(skip).limit(limit).order_by(UserProfile.created_at.desc())
-        result = await db.execute(stmt)
-        users = result.scalars().all()
-        
-        # Get total count
-        count_stmt = select(func.count(UserProfile.id))
-        count_result = await db.execute(count_stmt)
-        total = count_result.scalar() or 0
-        
-        return {
-            "users": [
-                {
-                    "id": user.id,
-                    "email": user.email,
-                    "full_name": user.full_name,
-                    "role": user.role,
-                    "account_status": user.account_status,
-                    "created_at": user.created_at.isoformat() if user.created_at else None,
-                    "referral_code": user.referral_code
-                }
-                for user in users
-            ],
-            "total": total,
-            "skip": skip,
-            "limit": limit
-        }
-    except Exception as e:
-        print(f"Error getting users: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return {
-            "users": [],
-            "total": 0,
-            "skip": skip,
-            "limit": limit,
-            "error": str(e)
-        }
+    stmt = select(UserProfile).offset(skip).limit(limit).order_by(UserProfile.created_at.desc())
+    result = await db.execute(stmt)
+    users = result.scalars().all()
+    
+    # Get total count
+    count_stmt = select(func.count(UserProfile.id))
+    count_result = await db.execute(count_stmt)
+    total = count_result.scalar() or 0
+    
+    return {
+        "users": [
+            {
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.full_name,
+                "role": user.role,
+                "account_status": user.account_status,
+                "created_at": user.created_at.isoformat() if user.created_at else None,
+                "referral_code": user.referral_code
+            }
+            for user in users
+        ],
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
 
+
+from sqlalchemy.orm import joinedload
 
 @router.get("/servers")
 async def get_all_servers(
     skip: int = 0,
     limit: int = 100,
-    status: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     current_user: UserProfile = Depends(require_admin)
 ):
-    """Get all servers with pagination and filtering"""
-    try:
-        # Build query with optional status filter
-        query = select(Server)
-        if status and status != 'all':
-            query = query.where(Server.server_status == status)
-        
-        # Add pagination and ordering
-        query = query.offset(skip).limit(limit).order_by(Server.created_at.desc())
-        
-        # Execute query with eager loading of user and plan
-        from sqlalchemy.orm import selectinload
-        query = query.options(
-            selectinload(Server.user),
-            selectinload(Server.plan)
-        )
-        
-        result = await db.execute(query)
-        servers = result.unique().scalars().all()
-        
-        # Get total count with optional filtering
-        count_query = select(func.count(Server.id))
-        if status and status != 'all':
-            count_query = count_query.where(Server.server_status == status)
-        count_result = await db.execute(count_query)
-        total = count_result.scalar() or 0
-        
-        return {
-            "servers": [
-                {
-                    "id": server.id,
-                    "user_id": server.user_id,
-                    "server_name": getattr(server, 'server_name', f'Server {server.id}'),
-                    "hostname": server.hostname,
-                    "ip_address": server.ip_address,
-                    "server_status": getattr(server, 'server_status', 'unknown'),
-                    "server_type": getattr(server, 'server_type', 'vps'),
-                    "plan_name": server.plan.name if server.plan else 'N/A',
-                    "monthly_cost": float(server.plan.base_price) if server.plan else 0,
-                    "vcpu": server.plan.cpu_cores if server.plan else 0,
-                    "ram_gb": server.plan.ram_gb if server.plan else 0,
-                    "storage_gb": server.plan.storage_gb if server.plan else 0,
-                    "bandwidth_gb": server.plan.bandwidth_gb if server.plan else 0,
-                    "operating_system": getattr(server, 'operating_system', 'Unknown'),
-                    "created_at": server.created_at.isoformat() if server.created_at else None,
-                    "expiry_date": getattr(server, 'expiry_date', None),
-                    "user": {
-                        "id": server.user.id if server.user else None,
-                        "email": server.user.email if server.user else "N/A",
-                        "full_name": server.user.full_name if server.user else "N/A"
-                    }
-                }
-                for server in servers
-            ],
-            "total": total,
-            "skip": skip,
-            "limit": limit
+    """Get all servers with pagination"""
+    stmt = (
+        select(Server)
+        .options(joinedload(Server.user), joinedload(Server.plan))
+        .offset(skip)
+        .limit(limit)
+        .order_by(Server.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    servers = result.scalars().unique().all()
+    
+    return [
+        {
+            "id": server.id,
+            "user_id": server.user_id,
+            "server_name": server.server_name,
+            "hostname": server.hostname,
+            "ip_address": server.ip_address,
+            "server_status": server.server_status,
+            "server_type": server.server_type,
+            "plan_name": server.plan.name if server.plan else None,
+            "monthly_cost": server.monthly_cost,
+            "vcpu": server.vcpu,
+            "ram_gb": server.ram_gb,
+            "storage_gb": server.storage_gb,
+            "bandwidth_gb": server.bandwidth_gb,
+            "operating_system": server.operating_system,
+            "created_at": server.created_at.isoformat() if server.created_at else None,
+            "expiry_date": server.expiry_date.isoformat() if server.expiry_date else None,
+            "user": {
+                "email": server.user.email,
+                "full_name": server.user.full_name,
+            } if server.user else None,
         }
-    except Exception as e:
-        print(f"Error getting admin servers: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return {
-            "servers": [],
-            "total": 0,
-            "skip": skip,
-            "limit": limit,
-            "error": str(e)
-        }
+        for server in servers
+    ]
 
 
 @router.get("/orders")
 async def get_all_orders(
     skip: int = 0,
     limit: int = 100,
-    status: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     current_user: UserProfile = Depends(require_admin)
 ):
-    """Get all orders with pagination and filtering"""
-    try:
-        from sqlalchemy.orm import selectinload
-        
-        # Build query with optional status filter
-        query = select(Order)
-        if status and status != 'all':
-            query = query.where(Order.order_status == status)
-        
-        # Add eager loading and pagination
-        query = query.options(selectinload(Order.user), selectinload(Order.plan))
-        query = query.offset(skip).limit(limit).order_by(Order.created_at.desc())
-        
-        result = await db.execute(query)
-        orders = result.unique().scalars().all()
-        
-        # Get total count
-        count_query = select(func.count(Order.id))
-        if status and status != 'all':
-            count_query = count_query.where(Order.order_status == status)
-        count_result = await db.execute(count_query)
-        total = count_result.scalar() or 0
-        
-        return {
-            "orders": [
-                {
-                    "id": order.id,
-                    "order_number": getattr(order, 'order_number', f'ORD-{order.id}'),
-                    "user_id": order.user_id,
-                    "plan_id": order.plan_id,
-                    "order_status": getattr(order, 'order_status', 'pending'),
-                    "payment_status": getattr(order, 'payment_status', 'pending'),
-                    "billing_cycle": getattr(order, 'billing_cycle', 'monthly'),
-                    "total_amount": float(order.total_amount) if order.total_amount else 0,
-                    "discount_amount": float(getattr(order, 'discount_amount', 0)) or 0,
-                    "tax_amount": float(getattr(order, 'tax_amount', 0)) or 0,
-                    "grand_total": float(getattr(order, 'grand_total', order.total_amount)) or 0,
-                    "currency": getattr(order, 'currency', 'INR'),
-                    "payment_method": getattr(order, 'payment_method', None),
-                    "razorpay_order_id": getattr(order, 'razorpay_order_id', None),
-                    "razorpay_payment_id": getattr(order, 'razorpay_payment_id', None),
-                    "created_at": order.created_at.isoformat() if order.created_at else None,
-                    "paid_at": getattr(order, 'paid_at', None),
-                    "plan_name": order.plan.name if order.plan else 'N/A',
-                    "user": {
-                        "id": order.user.id if order.user else None,
-                        "email": order.user.email if order.user else "N/A",
-                        "full_name": order.user.full_name if order.user else "N/A"
-                    }
-                }
-                for order in orders
-            ],
-            "total": total,
-            "skip": skip,
-            "limit": limit
-        }
-    except Exception as e:
-        print(f"Error getting orders: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return {
-            "orders": [],
-            "total": 0,
-            "skip": skip,
-            "limit": limit,
-            "error": str(e)
-        }
+    """Get all orders with pagination"""
+    stmt = select(Order).offset(skip).limit(limit).order_by(Order.created_at.desc())
+    result = await db.execute(stmt)
+    orders = result.scalars().all()
+    
+    # Get total count
+    count_stmt = select(func.count(Order.id))
+    count_result = await db.execute(count_stmt)
+    total = count_result.scalar() or 0
+    
+    return {
+        "orders": [
+            {
+                "id": order.id,
+                "user_id": order.user_id,
+                "plan_id": order.plan_id,
+                "status": order.status,
+                "total_amount": float(order.total_amount) if order.total_amount else 0,
+                "created_at": order.created_at.isoformat() if order.created_at else None,
+            }
+            for order in orders
+        ],
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
 
 
 @router.get("/tickets")
 async def get_all_tickets(
     skip: int = 0,
     limit: int = 100,
-    status: Optional[str] = None,
-    priority: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     current_user: UserProfile = Depends(require_admin)
 ):
-    """Get all support tickets with pagination and filtering"""
-    try:
-        from sqlalchemy.orm import selectinload
-        
-        # Build query with optional filters
-        query = select(SupportTicket)
-        if status and status != 'all':
-            query = query.where(SupportTicket.status == status)
-        if priority and priority != 'all':
-            query = query.where(SupportTicket.priority == priority)
-        
-        # Add eager loading and pagination
-        query = query.options(selectinload(SupportTicket.user))
-        query = query.offset(skip).limit(limit).order_by(SupportTicket.created_at.desc())
-        
-        result = await db.execute(query)
-        tickets = result.unique().scalars().all()
+    """Get all support tickets with pagination"""
+    stmt = select(SupportTicket).offset(skip).limit(limit).order_by(SupportTicket.created_at.desc())
+    result = await db.execute(stmt)
+    tickets = result.scalars().all()
 
-        # Get total count
-        count_query = select(func.count(SupportTicket.id))
-        if status and status != 'all':
-            count_query = count_query.where(SupportTicket.status == status)
-        if priority and priority != 'all':
-            count_query = count_query.where(SupportTicket.priority == priority)
-        count_result = await db.execute(count_query)
-        total = count_result.scalar() or 0
+    # Get total count
+    count_stmt = select(func.count(SupportTicket.id))
+    count_result = await db.execute(count_stmt)
+    total = count_result.scalar() or 0
 
-        return {
-            "tickets": [
-                {
-                    "id": ticket.id,
-                    "ticket_number": getattr(ticket, 'ticket_number', f'TKT-{ticket.id}'),
-                    "user_id": ticket.user_id,
-                    "subject": ticket.subject,
-                    "description": getattr(ticket, 'description', ''),
-                    "status": ticket.status,
-                    "priority": ticket.priority,
-                    "category": ticket.category,
-                    "response_time_minutes": getattr(ticket, 'response_time_minutes', 0),
-                    "last_reply_at": getattr(ticket, 'last_reply_at', None),
-                    "created_at": ticket.created_at.isoformat() if ticket.created_at else None,
-                    "resolved_at": getattr(ticket, 'resolved_at', None),
-                    "user": {
-                        "id": ticket.user.id if ticket.user else None,
-                        "email": ticket.user.email if ticket.user else "N/A",
-                        "full_name": ticket.user.full_name if ticket.user else "N/A"
-                    }
-                }
-                for ticket in tickets
-            ],
-            "total": total,
-            "skip": skip,
-            "limit": limit
-        }
-    except Exception as e:
-        print(f"Error getting tickets: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return {
-            "tickets": [],
-            "total": 0,
-            "skip": skip,
-            "limit": limit,
-            "error": str(e)
-        }
-
-
-# ========================================
-# REFERRAL MANAGEMENT ENDPOINTS
-# ========================================
-
-@router.get("/referrals")
-async def get_all_referrals(
-    skip: int = 0,
-    limit: int = 100,
-    status: Optional[str] = None,
-    db: AsyncSession = Depends(get_db),
-    current_user: UserProfile = Depends(require_admin)
-):
-    """Get all referrals with pagination and filtering"""
-    try:
-        from sqlalchemy.orm import selectinload
-        
-        # Build query with optional status filter
-        query = select(Referral)
-        if status and status != 'all':
-            query = query.where(Referral.is_active == (status == 'active'))
-        
-        # Add pagination and ordering
-        query = query.offset(skip).limit(limit).order_by(Referral.created_at.desc())
-        
-        result = await db.execute(query)
-        referrals = result.unique().scalars().all()
-        
-        # Get total count
-        count_query = select(func.count(Referral.id))
-        if status and status != 'all':
-            count_query = count_query.where(Referral.is_active == (status == 'active'))
-        count_result = await db.execute(count_query)
-        total = count_result.scalar() or 0
-        
-        # Get user data for referrer and referred user
-        referrer_ids = [r.referrer_id for r in referrals if r.referrer_id]
-        referred_ids = [r.referred_user_id for r in referrals if r.referred_user_id]
-        
-        users_map = {}
-        if referrer_ids:
-            user_result = await db.execute(select(UserProfile).where(UserProfile.id.in_(referrer_ids)))
-            for user in user_result.scalars().all():
-                users_map[user.id] = user
-        
-        if referred_ids:
-            user_result = await db.execute(select(UserProfile).where(UserProfile.id.in_(referred_ids)))
-            for user in user_result.scalars().all():
-                users_map[user.id] = user
-        
-        return {
-            "referrals": [
-                {
-                    "id": referral.id,
-                    "referrer_id": referral.referrer_id,
-                    "referred_user_id": referral.referred_user_id,
-                    "referral_code_used": referral.referral_code_used,
-                    "level": referral.level,
-                    "is_active": referral.is_active,
-                    "has_purchased": referral.has_purchased,
-                    "first_purchase_amount": float(referral.first_purchase_amount) if referral.first_purchase_amount else 0,
-                    "created_at": referral.created_at.isoformat() if referral.created_at else None,
-                    "referrer": {
-                        "id": users_map.get(referral.referrer_id).id if referral.referrer_id and users_map.get(referral.referrer_id) else None,
-                        "email": users_map.get(referral.referrer_id).email if referral.referrer_id and users_map.get(referral.referrer_id) else "N/A",
-                        "full_name": users_map.get(referral.referrer_id).full_name if referral.referrer_id and users_map.get(referral.referrer_id) else "N/A"
-                    },
-                    "referred_user": {
-                        "id": users_map.get(referral.referred_user_id).id if referral.referred_user_id and users_map.get(referral.referred_user_id) else None,
-                        "email": users_map.get(referral.referred_user_id).email if referral.referred_user_id and users_map.get(referral.referred_user_id) else "N/A",
-                        "full_name": users_map.get(referral.referred_user_id).full_name if referral.referred_user_id and users_map.get(referral.referred_user_id) else "N/A"
-                    }
-                }
-                for referral in referrals
-            ],
-            "total": total,
-            "skip": skip,
-            "limit": limit
-        }
-    except Exception as e:
-        print(f"Error getting referrals: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return {
-            "referrals": [],
-            "total": 0,
-            "skip": skip,
-            "limit": limit,
-            "error": str(e)
-        }
+    return {
+        "tickets": [
+            {
+                "id": ticket.id,
+                "user_id": ticket.user_id,
+                "subject": ticket.subject,
+                "status": ticket.status,
+                "priority": ticket.priority,
+                "category": ticket.category,
+                "created_at": ticket.created_at.isoformat() if ticket.created_at else None,
+            }
+            for ticket in tickets
+        ],
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
 
 
 # ========================================
@@ -1021,12 +866,20 @@ async def get_all_plans_admin(
             "name": plan.name,
             "slug": plan.name.lower().replace(" ", "-"),  # Generate slug from name
             "description": plan.description,
+            "plan_type": plan.plan_type,
             "vcpu": plan.cpu_cores,  # Map cpu_cores to vcpu for frontend
             "ram_gb": plan.ram_gb,
             "storage_gb": plan.storage_gb,
             "bandwidth_gb": plan.bandwidth_gb,
             "base_price": float(plan.base_price),
+            "monthly_price": float(plan.monthly_price),
+            "quarterly_price": float(plan.quarterly_price),
+            "semiannual_price": float(plan.semiannual_price) if plan.semiannual_price else None,
+            "annual_price": float(plan.annual_price),
+            "biennial_price": float(plan.biennial_price),
+            "triennial_price": float(plan.triennial_price),
             "is_active": plan.is_active,
+            "is_featured": plan.is_featured,
             "features": plan.features or [],
             "created_at": plan.created_at.isoformat() if plan.created_at else None,
         }
@@ -1046,6 +899,17 @@ async def create_plan(
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Plan with this name already exists")
 
+    # Use Decimal for precise calculations
+    base = data.base_price
+    
+    # Use custom prices if provided, otherwise calculate from base_price
+    monthly = data.monthly_price if data.monthly_price is not None else base
+    quarterly = data.quarterly_price if data.quarterly_price is not None else base * 3 * Decimal('0.95')
+    semiannual = data.semiannual_price if data.semiannual_price is not None else base * 6 * Decimal('0.92')
+    annual = data.annual_price if data.annual_price is not None else base * 12 * Decimal('0.90')
+    biennial = data.biennial_price if data.biennial_price is not None else base * 24 * Decimal('0.85')
+    triennial = data.triennial_price if data.triennial_price is not None else base * 36 * Decimal('0.80')
+
     plan = HostingPlan(
         name=data.name,
         description=data.description,
@@ -1054,13 +918,15 @@ async def create_plan(
         ram_gb=data.ram_gb,
         storage_gb=data.storage_gb,
         bandwidth_gb=data.bandwidth_gb,
-        base_price=data.base_price,
-        monthly_price=data.base_price,  # Default to base_price
-        quarterly_price=data.base_price * 3 * 0.95,  # 5% discount
-        annual_price=data.base_price * 12 * 0.90,  # 10% discount
-        biennial_price=data.base_price * 24 * 0.85,  # 15% discount
-        triennial_price=data.base_price * 36 * 0.80,  # 20% discount
+        base_price=base,
+        monthly_price=monthly,
+        quarterly_price=quarterly,
+        semiannual_price=semiannual,
+        annual_price=annual,
+        biennial_price=biennial,
+        triennial_price=triennial,
         is_active=data.is_active,
+        is_featured=data.is_featured,
         features=data.features
     )
     db.add(plan)
@@ -1072,12 +938,20 @@ async def create_plan(
         "name": plan.name,
         "slug": plan.name.lower().replace(" ", "-"),
         "description": plan.description,
+        "plan_type": plan.plan_type,
         "vcpu": plan.cpu_cores,
         "ram_gb": plan.ram_gb,
         "storage_gb": plan.storage_gb,
         "bandwidth_gb": plan.bandwidth_gb,
         "base_price": float(plan.base_price),
+        "monthly_price": float(plan.monthly_price),
+        "quarterly_price": float(plan.quarterly_price),
+        "semiannual_price": float(plan.semiannual_price) if plan.semiannual_price else None,
+        "annual_price": float(plan.annual_price),
+        "biennial_price": float(plan.biennial_price),
+        "triennial_price": float(plan.triennial_price),
         "is_active": plan.is_active,
+        "is_featured": plan.is_featured,
         "features": plan.features or [],
         "created_at": plan.created_at.isoformat() if plan.created_at else None,
     }
@@ -1111,17 +985,43 @@ async def update_plan(
         plan.storage_gb = data.storage_gb
     if data.bandwidth_gb is not None:
         plan.bandwidth_gb = data.bandwidth_gb
-    if data.base_price is not None:
-        plan.base_price = data.base_price
-        plan.monthly_price = data.base_price
-        plan.quarterly_price = data.base_price * 3 * 0.95
-        plan.annual_price = data.base_price * 12 * 0.90
-        plan.biennial_price = data.base_price * 24 * 0.85
-        plan.triennial_price = data.base_price * 36 * 0.80
     if data.is_active is not None:
         plan.is_active = data.is_active
+    if data.is_featured is not None:
+        plan.is_featured = data.is_featured
     if data.features is not None:
         plan.features = data.features
+    
+    # Handle pricing updates - use custom values if provided, otherwise recalculate from base_price
+    if data.base_price is not None:
+        plan.base_price = data.base_price
+        # Recalculate all pricing unless individual prices are also provided
+        if data.monthly_price is None:
+            plan.monthly_price = data.base_price
+        if data.quarterly_price is None:
+            plan.quarterly_price = data.base_price * 3 * Decimal('0.95')
+        if data.semiannual_price is None:
+            plan.semiannual_price = data.base_price * 6 * Decimal('0.92')
+        if data.annual_price is None:
+            plan.annual_price = data.base_price * 12 * Decimal('0.90')
+        if data.biennial_price is None:
+            plan.biennial_price = data.base_price * 24 * Decimal('0.85')
+        if data.triennial_price is None:
+            plan.triennial_price = data.base_price * 36 * Decimal('0.80')
+    
+    # Allow individual pricing updates
+    if data.monthly_price is not None:
+        plan.monthly_price = data.monthly_price
+    if data.quarterly_price is not None:
+        plan.quarterly_price = data.quarterly_price
+    if data.semiannual_price is not None:
+        plan.semiannual_price = data.semiannual_price
+    if data.annual_price is not None:
+        plan.annual_price = data.annual_price
+    if data.biennial_price is not None:
+        plan.biennial_price = data.biennial_price
+    if data.triennial_price is not None:
+        plan.triennial_price = data.triennial_price
 
     await db.commit()
     await db.refresh(plan)
@@ -1131,12 +1031,20 @@ async def update_plan(
         "name": plan.name,
         "slug": plan.name.lower().replace(" ", "-"),
         "description": plan.description,
+        "plan_type": plan.plan_type,
         "vcpu": plan.cpu_cores,
         "ram_gb": plan.ram_gb,
         "storage_gb": plan.storage_gb,
         "bandwidth_gb": plan.bandwidth_gb,
         "base_price": float(plan.base_price),
+        "monthly_price": float(plan.monthly_price),
+        "quarterly_price": float(plan.quarterly_price),
+        "semiannual_price": float(plan.semiannual_price) if plan.semiannual_price else None,
+        "annual_price": float(plan.annual_price),
+        "biennial_price": float(plan.biennial_price),
+        "triennial_price": float(plan.triennial_price),
         "is_active": plan.is_active,
+        "is_featured": plan.is_featured,
         "features": plan.features or [],
     }
 
@@ -1163,167 +1071,3 @@ async def delete_plan(
     await db.commit()
 
     return {"message": "Plan deleted successfully"}
-
-
-# ========================================
-# BILL/INVOICE MANAGEMENT ENDPOINTS
-# ========================================
-
-@router.get("/invoices")
-async def get_all_invoices(
-    skip: int = 0,
-    limit: int = 100,
-    status: Optional[str] = None,
-    payment_status: Optional[str] = None,
-    db: AsyncSession = Depends(get_db),
-    current_user: UserProfile = Depends(require_admin)
-):
-    """Get all invoices with pagination and filtering"""
-    try:
-        from sqlalchemy.orm import selectinload
-        
-        # Build query with optional filters
-        query = select(Invoice)
-        if status and status != 'all':
-            query = query.where(Invoice.status == status)
-        if payment_status and payment_status != 'all':
-            query = query.where(Invoice.payment_status == payment_status)
-        
-        # Add eager loading and pagination
-        query = query.options(selectinload(Invoice.user), selectinload(Invoice.order))
-        query = query.offset(skip).limit(limit).order_by(Invoice.invoice_date.desc())
-        
-        result = await db.execute(query)
-        invoices = result.unique().scalars().all()
-        
-        # Get total count
-        count_query = select(func.count(Invoice.id))
-        if status and status != 'all':
-            count_query = count_query.where(Invoice.status == status)
-        if payment_status and payment_status != 'all':
-            count_query = count_query.where(Invoice.payment_status == payment_status)
-        count_result = await db.execute(count_query)
-        total = count_result.scalar() or 0
-        
-        return {
-            "invoices": [
-                {
-                    "id": invoice.id,
-                    "invoice_number": invoice.invoice_number,
-                    "user_id": invoice.user_id,
-                    "order_id": invoice.order_id,
-                    "invoice_date": invoice.invoice_date.isoformat() if invoice.invoice_date else None,
-                    "due_date": invoice.due_date.isoformat() if invoice.due_date else None,
-                    "subtotal": float(invoice.subtotal) if invoice.subtotal else 0,
-                    "tax_amount": float(invoice.tax_amount) if invoice.tax_amount else 0,
-                    "total_amount": float(invoice.total_amount) if invoice.total_amount else 0,
-                    "amount_paid": float(invoice.amount_paid) if invoice.amount_paid else 0,
-                    "balance_due": float(invoice.balance_due) if invoice.balance_due else 0,
-                    "status": invoice.status,
-                    "payment_status": invoice.payment_status,
-                    "payment_method": invoice.payment_method,
-                    "payment_date": invoice.payment_date.isoformat() if invoice.payment_date else None,
-                    "currency": getattr(invoice, 'currency', 'INR'),
-                    "items": invoice.items or [],
-                    "user": {
-                        "id": invoice.user.id if invoice.user else None,
-                        "email": invoice.user.email if invoice.user else "N/A",
-                        "full_name": invoice.user.full_name if invoice.user else "N/A"
-                    },
-                    "order": {
-                        "id": invoice.order.id if invoice.order else None,
-                        "order_number": invoice.order.order_number if invoice.order else "N/A"
-                    } if invoice.order else None
-                }
-                for invoice in invoices
-            ],
-            "total": total,
-            "skip": skip,
-            "limit": limit
-        }
-    except Exception as e:
-        print(f"Error getting invoices: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return {
-            "invoices": [],
-            "total": 0,
-            "skip": skip,
-            "limit": limit,
-            "error": str(e)
-        }
-
-
-@router.get("/invoices/stats")
-async def get_invoice_stats(
-    db: AsyncSession = Depends(get_db),
-    current_user: UserProfile = Depends(require_admin)
-):
-    """Get invoice statistics"""
-    try:
-        # Total invoices
-        total_invoices_result = await db.execute(select(func.count(Invoice.id)))
-        total_invoices = total_invoices_result.scalar() or 0
-        
-        # Paid invoices
-        paid_invoices_result = await db.execute(
-            select(func.count(Invoice.id)).where(Invoice.payment_status == 'paid')
-        )
-        paid_invoices = paid_invoices_result.scalar() or 0
-        
-        # Pending invoices
-        pending_invoices_result = await db.execute(
-            select(func.count(Invoice.id)).where(
-                Invoice.payment_status.in_(['pending', 'partially_paid'])
-            )
-        )
-        pending_invoices = pending_invoices_result.scalar() or 0
-        
-        # Total revenue from paid invoices
-        total_revenue_result = await db.execute(
-            select(func.sum(Invoice.total_amount)).where(Invoice.payment_status == 'paid')
-        )
-        total_revenue = float(total_revenue_result.scalar() or 0)
-        
-        # Overdue invoices
-        overdue_invoices_result = await db.execute(
-            select(func.count(Invoice.id)).where(
-                and_(
-                    Invoice.due_date < datetime.now(Invoice.due_date.tzinfo if hasattr(Invoice.due_date, 'tzinfo') else None),
-                    Invoice.payment_status.in_(['pending', 'partially_paid'])
-                )
-            )
-        )
-        overdue_invoices = overdue_invoices_result.scalar() or 0
-        
-        # Outstanding amount
-        outstanding_result = await db.execute(
-            select(func.sum(Invoice.balance_due)).where(
-                Invoice.payment_status.in_(['pending', 'partially_paid'])
-            )
-        )
-        outstanding_amount = float(outstanding_result.scalar() or 0)
-        
-        return {
-            "total_invoices": total_invoices,
-            "paid_invoices": paid_invoices,
-            "pending_invoices": pending_invoices,
-            "overdue_invoices": overdue_invoices,
-            "total_revenue": total_revenue,
-            "outstanding_amount": outstanding_amount,
-            "paid_percentage": (paid_invoices / total_invoices * 100) if total_invoices > 0 else 0
-        }
-    except Exception as e:
-        print(f"Error getting invoice stats: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return {
-            "total_invoices": 0,
-            "paid_invoices": 0,
-            "pending_invoices": 0,
-            "overdue_invoices": 0,
-            "total_revenue": 0,
-            "outstanding_amount": 0,
-            "paid_percentage": 0,
-            "error": str(e)
-        }

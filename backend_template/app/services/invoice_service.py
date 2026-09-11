@@ -334,6 +334,10 @@ class InvoiceService:
         self, db: AsyncSession, user_id: int, invoice_data: Dict[str, Any]
     ) -> Invoice:
         invoice_number = await self._generate_invoice_number(db)
+        # 🔹 NEW: Calculate subtotal from items if not provided
+        if 'subtotal' not in invoice_data:
+            calculated_subtotal = sum(Decimal(item['amount']) for item in invoice_data['items'])
+            invoice_data['subtotal'] = calculated_subtotal.quantize(Decimal('0.01'))
 
         db_invoice = Invoice(
             user_id=user_id,

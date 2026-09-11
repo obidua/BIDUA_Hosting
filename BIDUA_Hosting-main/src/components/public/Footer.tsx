@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Server, Mail, Phone, MapPin, Facebook, Twitter, Linkedin, Github, Book } from 'lucide-react';
+import logo from "../../assets/logo/biduahostinglogo.png"
 
 export function Footer() {
   return (
@@ -8,8 +9,8 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           <div>
             <div className="flex items-center space-x-2 mb-4">
-              <Server className="h-8 w-8 text-cyan-400 animate-serverGlow" />
-              <span className="text-xl font-bold text-white">BIDUA Hosting</span>
+              {/* <Server className="h-8 w-8 text-cyan-400 animate-serverGlow" /> */}
+              <img src={logo} className="h-18 w-auto" /> 
             </div>
             <p className="text-sm mb-4">
               BIDUA Hosting is operated by <span className="font-semibold text-white">BIDUA Industries Pvt Ltd</span>, headquartered in Noida, India. We deliver
@@ -103,6 +104,12 @@ export function Footer() {
                 <Link to="/docs/quick-start" className="hover:text-cyan-400 transition">
                   Quick Start
                 </Link>
+              </li>
+              <li>
+                <Link to="referrals" className="hover:text-cyan-400 transition">
+                  Affiliate Program
+                </Link>
+
               </li>
               <li>
                 <Link to="/docs/api/auth" className="hover:text-cyan-400 transition">

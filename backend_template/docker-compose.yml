@@ -1,0 +1,67 @@
+name: biduahosting
+
+services:
+
+  frontend:
+    build:
+      context: ../hostingfrontend
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+        VITE_RAZORPAY_KEY_ID: ${VITE_RAZORPAY_KEY_ID}
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - pgbouncer
+    command: >
+      bash -c "
+      echo 'Waiting for PgBouncer...' &&
+      until nc -z pgbouncer 5432; do sleep 1; done &&
+      echo 'PgBouncer ready ✅' &&
+      python create_db.py &&
+      echo 'Checking migration status...' &&
+      (alembic stamp head 2>/dev/null || echo 'Migrations already stamped') &&
+      (alembic upgrade head 2>/dev/null || echo 'Skipping migrations - schema exists') &&
+      uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4 --loop uvloop --http httptools --proxy-headers --forwarded-allow-ips='*'
+      "
+    restart: unless-stopped
+
+  db:
+    image: postgres:13
+    command: postgres -c max_connections=300
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  pgbouncer:
+    image: edoburu/pgbouncer
+    depends_on:
+      - db
+    ports:
+      - "127.0.0.1:6432:5432"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 2000
+      DEFAULT_POOL_SIZE: 50
+      RESERVE_POOL_SIZE: 20
+      SERVER_RESET_QUERY: DISCARD ALL
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

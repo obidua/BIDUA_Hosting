@@ -6,15 +6,31 @@ import os
 # Get database URL from environment or settings
 DATABASE_URL = os.getenv("DATABASE_URL") or settings.DATABASE_URL
 
-# Create async engine
+# Convert PostgreSQL URL to async version (postgresql+asyncpg://)
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+elif DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+
+# asyncpg doesn't support sslmode parameter - remove it
+if "?sslmode=" in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.split("?sslmode=")[0]
+elif "&sslmode=" in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.split("&sslmode=")[0]
+
 engine = create_async_engine(
-    DATABASE_URL, 
-    echo=False,  # Set to True for SQL debugging
+    DATABASE_URL,
+    echo=False,
     future=True,
-    pool_pre_ping=True,  # Verify connections before using
-    pool_size=10,  # Connection pool size
-    max_overflow=20  # Max connections beyond pool_size
+
+    # REQUIRED FOR LOAD
+    pool_pre_ping=True,
+    pool_size=20,         # persistent connections
+    max_overflow=40,     # burst connections
+    pool_timeout=30,
+    pool_recycle=1800,
 )
+
 
 AsyncSessionLocal = sessionmaker(
     bind=engine,

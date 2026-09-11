@@ -1,7 +1,8 @@
 from pydantic import BaseModel, validator
-from typing import Optional, Dict, Any, List
+from typing import Optional, List
 from datetime import datetime
 from decimal import Decimal
+import json
 
 class HostingPlanBase(BaseModel):
     name: str
@@ -16,11 +17,12 @@ class HostingPlanBase(BaseModel):
 class HostingPlanCreate(HostingPlanBase):
     monthly_price: Decimal
     quarterly_price: Decimal
+    semiannual_price: Optional[Decimal] = None
     annual_price: Decimal
     biennial_price: Decimal
     triennial_price: Decimal
     is_featured: bool = False
-    features: Optional[Dict[str, Any]] = None
+    features: Optional[List[str]] = None
 
     @validator('cpu_cores')
     def validate_cpu_cores(cls, v):
@@ -42,10 +44,11 @@ class HostingPlanUpdate(BaseModel):
     base_price: Optional[Decimal] = None
     monthly_price: Optional[Decimal] = None
     quarterly_price: Optional[Decimal] = None
+    semiannual_price: Optional[Decimal] = None
     annual_price: Optional[Decimal] = None
     biennial_price: Optional[Decimal] = None
     triennial_price: Optional[Decimal] = None
-    features: Optional[Dict[str, Any]] = None
+    features: Optional[List[str]] = None
 
 class HostingPlan(HostingPlanBase):
     id: int
@@ -56,9 +59,20 @@ class HostingPlan(HostingPlanBase):
     triennial_price: Decimal
     is_active: bool = True
     is_featured: bool = False
-    features: Optional[Dict[str, Any]] = None
+    features: Optional[List[str]] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+
+    @validator('features', pre=True, always=True)
+    def validate_features(cls, v):
+        if v is None:
+            return []
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                return [v]
+        return v
 
     class Config:
         from_attributes = True
