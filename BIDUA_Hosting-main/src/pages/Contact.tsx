@@ -155,8 +155,8 @@ export function Contact() {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-white mb-1">Email</p>
-                      <p className="text-slate-400">support@biduapods.com</p>
-                      <p className="text-slate-400">biduaindustries@gmail.com</p>
+                      <p className="text-slate-400">support@biduahosting.com</p>
+                      <p className="text-slate-400">sales@biduahosting.com</p>
                     </div>
                   </div>
 
@@ -165,8 +165,9 @@ export function Contact() {
                       <Phone className="h-6 w-6 text-cyan-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-white mb-1">Phone / WhatsApp</p>
-                      <p className="text-slate-400">+91 95129 21903</p>
+                      <p className="text-sm font-semibold text-white mb-1">Phone</p>
+                      <p className="text-slate-400">+1 (555) 123-4567</p>
+                      <p className="text-slate-400">+1 (555) 987-6543</p>
                     </div>
                   </div>
 
@@ -177,10 +178,9 @@ export function Contact() {
                     <div>
                       <p className="text-sm font-semibold text-white mb-1">Address</p>
                       <p className="text-slate-400">
-                        Suite 209, C-104, Sector 65<br />
-                        Noida, Uttar Pradesh 201301<br />
-                        India<br />
-                        <span className="text-xs">GSTIN: 09AANCB0882D1ZM</span>
+                        123 Cloud Street<br />
+                        Tech City, TC 12345<br />
+                        United States
                       </p>
                     </div>
                   </div>
@@ -193,8 +193,12 @@ export function Contact() {
                 </h3>
                 <div className="space-y-2 text-slate-200">
                   <div className="flex justify-between">
-                    <span>Monday - Saturday:</span>
-                    <span className="font-semibold">9:00 AM - 6:00 PM IST</span>
+                    <span>Monday - Friday:</span>
+                    <span className="font-semibold">9:00 AM - 6:00 PM</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Saturday:</span>
+                    <span className="font-semibold">10:00 AM - 4:00 PM</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Sunday:</span>

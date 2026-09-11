@@ -12,6 +12,7 @@ from app.services.order_service import OrderService
 from app.services.plan_service import PlanService
 from app.schemas.users import User
 from app.models.payment import PaymentType, PaymentStatus
+from app.models.order import Order as OrderModel
 from app.core.config import settings
 from pydantic import BaseModel
 
@@ -462,7 +463,7 @@ async def verify_payment(
                 razorpay_payment_id=payment_transaction.razorpay_payment_id,
                 paid_at=payment_transaction.paid_at or datetime.utcnow(),
                 # Pass discount details from metadata
-                discount_amount=Decimal(str(payment_transaction.payment_metadata.get('discount_amount', 0))),
+                discount_amount=Decimal(str(payment_transaction.payment_metadata.get('discount_amount') or 0)),
                 promo_code=payment_transaction.payment_metadata.get('promo_code')
             )
 
@@ -686,6 +687,7 @@ async def verify_payment(
                 print(f"⏱️  Affiliate activation took {time.time() - t6:.2f}s")
             except Exception as e:
                 print(f"❌ Affiliate activation failed: {str(e)}")
+                # Mark that we need a fresh session for email workflow
                 import traceback
                 traceback.print_exc()
 
@@ -750,6 +752,179 @@ async def verify_payment(
             "transaction_id": payment_transaction.id,
             "payment_method": payment_transaction.payment_method or "razorpay"
         }
+
+        # 🆕 SEND INVOICE & PROVIDER EMAILS (for server purchases only)
+        if payment_transaction.payment_type == PaymentType.SERVER and order_id:
+            try:
+                print("📧 Starting email workflow...")
+                t7 = time.time()
+                
+                # Import required services
+                from app.services.pdf_service import pdf_service
+                from app.services.email_service import email_service
+                from sqlalchemy import select
+                from app.models.invoice import Invoice as InvoiceModel
+                from app.models.users import UserProfile
+                from app.models.plan import HostingPlan
+                from app.models.order_addon import OrderAddon
+                from app.core.database import AsyncSessionLocal
+                import base64
+                
+                # Use a fresh session to avoid transaction state issues
+                async with AsyncSessionLocal() as email_db:
+                    # Fetch order, invoice, user, and plan details
+                    order_result = await email_db.execute(select(OrderModel).where(OrderModel.id == order_id))
+                    order = order_result.scalar_one_or_none()
+                    
+                    if order:
+                        # Get associated invoice
+                        invoice_result = await email_db.execute(
+                            select(InvoiceModel).where(InvoiceModel.order_id == order_id)
+                        )
+                        invoice = invoice_result.scalar_one_or_none()
+                        
+                        # Get user details
+                        user_result = await email_db.execute(
+                            select(UserProfile).where(UserProfile.id == current_user.id)
+                        )
+                        user = user_result.scalar_one_or_none()
+                        
+                        # Get plan details
+                        plan_result = await email_db.execute(
+                            select(HostingPlan).where(HostingPlan.id == order.plan_id)
+                        )
+                        plan = plan_result.scalar_one_or_none()
+                        
+                        # Get order addons
+                        addons_result = await email_db.execute(
+                            select(OrderAddon).where(OrderAddon.order_id == order_id)
+                        )
+                        order_addons = addons_result.scalars().all()
+                    
+                    if invoice and user and plan:
+                        # Prepare invoice data
+                        invoice_data = {
+                            'invoice_number': invoice.invoice_number,
+                            'invoice_date': invoice.invoice_date,
+                            'subtotal': invoice.subtotal,
+                            'tax_amount': invoice.tax_amount,
+                            'total_amount': invoice.total_amount
+                        }
+                        
+                        # Prepare order data
+                        order_data_for_pdf = {
+                            'order_number': order.order_number,
+                            'paid_at': order.paid_at,
+                            'payment_method': order.payment_method or 'Razorpay',
+                            'razorpay_payment_id': order.razorpay_payment_id,
+                            'discount_amount': order.discount_amount or 0
+                        }
+                        
+                        # Prepare user data
+                        user_data = {
+                            'full_name': user.full_name or user.email,
+                            'email': user.email
+                        }
+                        
+                        # Prepare server config
+                        server_config = {
+                            'server_type': plan.plan_type or 'VPS',
+                            'vcpu': plan.cpu_cores,
+                            'ram_gb': plan.ram_gb,
+                            'storage_gb': plan.storage_gb,
+                            'bandwidth_gb': plan.bandwidth_gb or 1000,
+                            'operating_system': getattr(server_created, 'operating_system', 'Ubuntu 22.04 LTS') if server_created else 'Ubuntu 22.04 LTS',
+                            'billing_cycle': order.billing_cycle or 'Monthly',
+                            'ip_requirement': '1 Dedicated IPv4'
+                        }
+                        
+                        # Prepare addons list
+                        addons_list = []
+                        if order_addons:
+                            for addon in order_addons:
+                                addons_list.append({
+                                    'addon_name': addon.addon_name,
+                                    'quantity': addon.quantity,
+                                    'unit_price': addon.unit_price,
+                                    'subtotal': addon.subtotal,
+                                    'unit_label': addon.unit_label or ''
+                                })
+                        
+                        # Generate PDF invoice
+                        try:
+                            pdf_content = pdf_service.generate_invoice_pdf(
+                                invoice_data=invoice_data,
+                                order_data=order_data_for_pdf,
+                                user_data=user_data,
+                                server_config=server_config,
+                                addons=addons_list
+                            )
+                            
+                            # Convert PDF to base64 for email attachment
+                            pdf_base64 = base64.b64encode(pdf_content).decode('utf-8')
+                            
+                            print(f"✅ PDF invoice generated: {len(pdf_content)} bytes")
+                            
+                            # Save PDF to file system (optional, for audit)
+                            try:
+                                pdf_path = pdf_service.save_invoice_pdf(
+                                    pdf_content=pdf_content,
+                                    invoice_number=invoice.invoice_number
+                                )
+                                print(f"✅ PDF saved to: {pdf_path}")
+                            except Exception as save_error:
+                                print(f"⚠️ PDF save failed (non-critical): {str(save_error)}")
+                            
+                            # Send customer invoice email
+                            try:
+                                email_sent = await email_service.send_invoice_email(
+                                    to_email=user.email,
+                                    user_name=user.full_name or user.email,
+                                    invoice_number=invoice.invoice_number,
+                                    order_number=order.order_number,
+                                    total_amount=float(invoice.total_amount),
+                                    payment_date=order.paid_at.strftime("%B %d, %Y") if order.paid_at else datetime.now(datetime.now().astimezone().tzinfo).strftime("%B %d, %Y"),
+                                    server_config=server_config,
+                                    pdf_attachment_base64=pdf_base64,
+                                    addons=addons_list if addons_list else None
+                                )
+                                
+                                if email_sent:
+                                    print(f"✅ Customer invoice email sent to: {user.email}")
+                                else:
+                                    print(f"⚠️ Failed to send customer invoice email")
+                            except Exception as email_error:
+                                print(f"❌ Customer email error: {str(email_error)}")
+                            
+                            # Send provider configuration email (NO PII)
+                            try:
+                                from app.core.config import settings
+                                provider_email_sent = await email_service.send_provider_notification_email(
+                                    provider_email=settings.SERVER_PROVIDER_EMAIL,
+                                    order_number=order.order_number,
+                                    server_config=server_config,
+                                    addons=addons_list if addons_list else None
+                                )
+                                
+                                if provider_email_sent:
+                                    print(f"✅ Provider notification email sent to: {settings.SERVER_PROVIDER_EMAIL}")
+                                else:
+                                    print(f"⚠️ Failed to send provider notification email")
+                            except Exception as provider_error:
+                                print(f"❌ Provider email error: {str(provider_error)}")
+                                
+                        except Exception as pdf_error:
+                            print(f"❌ PDF generation error: {str(pdf_error)}")
+                            import traceback
+                            traceback.print_exc()
+                    
+                print(f"⏱️  Email workflow took {time.time() - t7:.2f}s")
+                
+            except Exception as email_workflow_error:
+                # Don't fail the payment if email fails
+                print(f"❌ Email workflow failed (non-critical): {str(email_workflow_error)}")
+                import traceback
+                traceback.print_exc()
 
         return response
 

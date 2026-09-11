@@ -72,8 +72,8 @@ export function Privacy() {
         <section className="bg-slate-900/30 border border-slate-800 rounded-xl p-6 space-y-3">
           <h2 className="text-xl font-semibold text-white">Contact & Requests</h2>
           <p className="text-sm text-slate-300">
-            Email <a href="mailto:support@biduapods.com" className="text-cyan-400 hover:underline">support@biduapods.com</a> or call +91 95129 21903 to
-            submit privacy questions, file a complaint, or exercise your rights. Postal correspondence can be sent to BIDUA Industries Pvt Ltd, Suite 209, C-104, Sector 65, Noida, Uttar Pradesh 201301, India.
+            Email <a href="mailto:support@biduahosting.com" className="text-cyan-400 hover:underline">support@biduahosting.com</a> or call +1 (555) 123-4567 to
+            submit privacy questions, file a complaint, or exercise your rights. Postal correspondence can be sent to BIDUA Industries Pvt Ltd, Noida, Uttar Pradesh, India.
           </p>
         </section>
       </div>

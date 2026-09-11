@@ -57,6 +57,9 @@ class Settings(BaseSettings):
     BREVO_API_KEY: Optional[str] = Field(default=None, alias="BREVO_MAIL_API_KEY")
     BREVO_SENDER_EMAIL: str = "biduahosting@gmail.com"
     BREVO_SENDER_NAME: str = "BIDUA Hosting"
+    
+    # 🔹 Server Provider Email
+    SERVER_PROVIDER_EMAIL: str = "anandraj60094@gmail.com"
 
     model_config = SettingsConfigDict(
         env_file=".env",

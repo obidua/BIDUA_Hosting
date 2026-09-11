@@ -12,7 +12,6 @@ export interface HostingPlan {
   base_price: string;
   monthly_price: string;
   quarterly_price: string;
-  semiannual_price?: string | null;
   annual_price: string;
   biennial_price: string;
   triennial_price: string;

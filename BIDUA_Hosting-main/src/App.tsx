@@ -8,6 +8,11 @@ import { BackendStatusBanner } from './components/BackendStatusBanner';
 import { PublicLayout } from './layouts/PublicLayout';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import { AdminLayout } from './layouts/AdminLayout';
+import { ProviderLayout } from './provider-dashboard/layouts/ProviderLayout';
+import { Dashboard as ProviderDashboard } from './provider-dashboard/pages/Dashboard';
+import { ServersList } from './provider-dashboard/pages/ServersList';
+import { ServerDetails } from './provider-dashboard/pages/ServerDetails';
+import { ExpiryTracker } from './provider-dashboard/pages/ExpiryTracker';
 
 import { Home } from './pages/Home';
 import { Pricing } from './pages/Pricing';
@@ -224,6 +229,20 @@ function App() {
               <Route path="referrals" element={<ReferralManagement />} />
               <Route path="support" element={<SupportManagement />} />
               <Route path="employees" element={<EmployeeManagement />} />
+            </Route>
+
+            <Route
+              path="/provider"
+              element={
+                <ProtectedRoute requireProvider>
+                  <ProviderLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<ProviderDashboard />} />
+              <Route path="servers" element={<ServersList />} />
+              <Route path="servers/:serverId" element={<ServerDetails />} />
+              <Route path="expiry-tracker" element={<ExpiryTracker />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -17,7 +17,6 @@ class HostingPlanBase(BaseModel):
 class HostingPlanCreate(HostingPlanBase):
     monthly_price: Decimal
     quarterly_price: Decimal
-    semiannual_price: Optional[Decimal] = None
     annual_price: Decimal
     biennial_price: Decimal
     triennial_price: Decimal
@@ -44,7 +43,6 @@ class HostingPlanUpdate(BaseModel):
     base_price: Optional[Decimal] = None
     monthly_price: Optional[Decimal] = None
     quarterly_price: Optional[Decimal] = None
-    semiannual_price: Optional[Decimal] = None
     annual_price: Optional[Decimal] = None
     biennial_price: Optional[Decimal] = None
     triennial_price: Optional[Decimal] = None

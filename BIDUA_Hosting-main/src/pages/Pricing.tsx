@@ -109,35 +109,37 @@ export function Pricing() {
     return cycle?.discount || 0;
   };
 
-  // compute pricing for a plan (assumes plan.prices.<cycle> stores MARKET TOTAL for that cycle,
-  // and the selected cycle discount is applied on top -> final = exact selling price)
+  // compute pricing for a plan (assumes plan.prices.monthly is per-month rupees)
   const computePricing = (plan: Plan) => {
-    // market (pre-discount) TOTAL for the selected billing cycle
-    const cycleMarketRupees = Number(plan.prices?.[billingCycle] ?? 0) || 0;
+    // figure monthly rupees (defensive parsing)
+    const monthlyRupees = Number(plan.prices?.monthly ?? 0) || 0;
     const months = monthsForCycle(billingCycle);
     const discountPercent = getDiscountPercent();
 
     // convert to paise
-    const marketTotalPaise = toPaise(cycleMarketRupees);
+    const monthlyPaise = toPaise(monthlyRupees);
+
+    // cycle total before discount (paise)
+    const cycleTotalBeforePaise = Math.round(monthlyPaise * months);
 
     // cycle total after discount (apply integer math)
-    const cycleTotalAfterPaise = Math.round(marketTotalPaise * (100 - discountPercent) / 100);
+    const cycleTotalAfterPaise = Math.round(cycleTotalBeforePaise * (100 - discountPercent) / 100);
 
     // per-month after discount (paise) - divide then round to nearest paise
     const perMonthAfterPaise = Math.round(cycleTotalAfterPaise / months);
 
     return {
-      monthlyUnitRupees: Number(plan.prices?.monthly ?? 0) || 0,
+      monthlyUnitRupees: monthlyRupees,
       perMonthAfterDiscountRupees: fromPaise(perMonthAfterPaise),
       cycleTotalAfterDiscountRupees: fromPaise(cycleTotalAfterPaise),
-      // market (pre-discount) per-month for this cycle — strike-through display
-      originalPerMonthRupees: months > 0 ? cycleMarketRupees / months : cycleMarketRupees,
+      // original (per-month) for showing strike-through
+      originalPerMonthRupees: monthlyRupees,
     };
   };
 
   // Transform HostingPlan (backend) -> Plan (UI)
   const transformPlanToUI = (p: HostingPlan): Plan => {
-    // canonical: treat p.monthly_price as the per-month MARKET price
+    // canonical: treat p.monthly_price as per-month rupees (fallbacks included)
     const monthly = parseFloat(String(p.monthly_price ?? p.base_price ?? 0)) || 0;
 
     const monthsMap: Record<string, number> = {
@@ -149,19 +151,13 @@ export function Pricing() {
       triennially: 36,
     };
 
-    const num = (v: unknown, fb: number): number => {
-      const n = parseFloat(String(v ?? ''));
-      return Number.isFinite(n) && n > 0 ? n : fb;
-    };
-
-    // market (pre-discount) TOTAL per billing cycle, straight from the DB columns
     const prices: Plan['prices'] = {
       monthly: monthly,
-      quarterly: num(p.quarterly_price, monthly * monthsMap.quarterly),
-      semiannually: num(p.semiannual_price, monthly * monthsMap.semiannually),
-      annually: num(p.annual_price, monthly * monthsMap.annually),
-      biennially: num(p.biennial_price, monthly * monthsMap.biennially),
-      triennially: num(p.triennial_price, monthly * monthsMap.triennially),
+      quarterly: Math.round(monthly * monthsMap.quarterly),
+      semiannually: Math.round(monthly * monthsMap.semiannually),
+      annually: Math.round(monthly * monthsMap.annually),
+      biennially: Math.round(monthly * monthsMap.biennially),
+      triennially: Math.round(monthly * monthsMap.triennially),
     };
 
     const planTypeLabel = humanizePlanType(p.plan_type || '');
@@ -721,7 +717,7 @@ export function Pricing() {
             Contact our sales team for enterprise pricing, custom configurations, and dedicated support
           </p>
           <p className="text-lg mb-8 text-cyan-200">
-            📞 +91 95129 21903 • Mon-Sat 9:00-18:00 IST
+            📞 +91 120 416 8464 • Mon-Sat 9:00-18:00
           </p>
           <Link
             to="/contact"

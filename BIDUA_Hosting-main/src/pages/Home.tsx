@@ -1,245 +1,93 @@
-import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, useInView, animate } from 'framer-motion';
-import {
-  Server, Shield, Zap, Globe, Headphones as HeadphonesIcon,
-  CheckCircle, TrendingUp, Cpu, Database, ChevronDown, Star,
-  Gauge, Lock, ArrowRight,
-} from 'lucide-react';
-import { Seo, orgJsonLd, faqJsonLd } from '../components/Seo';
-
-/* ---------- Animation helpers ---------- */
-
-function Reveal({ children, delay = 0, className = '' }: { children: React.ReactNode; delay?: number; className?: string }) {
-  return (
-    <motion.div
-      className={className}
-      initial={{ opacity: 0, y: 28 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-60px' }}
-      transition={{ duration: 0.6, delay, ease: [0.21, 0.47, 0.32, 0.98] }}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-function Counter({ value, suffix = '' }: { value: number; suffix?: string }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true, margin: '-40px' });
-  const [display, setDisplay] = useState(0);
-
-  useEffect(() => {
-    if (!inView) return;
-    const controls = animate(0, value, {
-      duration: 1.6,
-      ease: 'easeOut',
-      onUpdate: (v) => setDisplay(Math.round(v)),
-    });
-    return () => controls.stop();
-  }, [inView, value]);
-
-  return (
-    <span ref={ref}>
-      {display.toLocaleString('en-IN')}
-      {suffix}
-    </span>
-  );
-}
-
-/* ---------- Data ---------- */
-
-const features = [
-  { icon: Zap, title: 'Lightning Fast NVMe', description: 'NVMe SSD storage paired with Intel Xeon Gold processors for blazing-fast I/O and compute performance.' },
-  { icon: Shield, title: 'Enterprise Security', description: 'Always-on DDoS protection, isolated network segments and hardened infrastructure out of the box.' },
-  { icon: Gauge, title: '99.9% Uptime SLA', description: 'Redundant power, network and storage with proactive monitoring — backed by a real SLA.' },
-  { icon: Globe, title: 'Global Network', description: 'Deploy across 150+ countries with a low-latency backbone built for Indian and global workloads.' },
-  { icon: HeadphonesIcon, title: '24/7 Expert Support', description: 'Real engineers on chat and tickets — average first response under 15 minutes, day or night.' },
-  { icon: TrendingUp, title: 'Scale in One Click', description: 'Upgrade vCPU, RAM and storage instantly. No redeploys, no downtime, no reinstallation.' },
-];
-
-const stats = [
-  { value: 50000, suffix: '+', label: 'Active Servers' },
-  { value: 150, suffix: '+', label: 'Countries Served' },
-  { value: 15, suffix: ' min', label: 'Avg. Response Time' },
-  { value: 7, suffix: ' days', label: 'Money-Back Guarantee' },
-];
-
-const solutions = [
-  {
-    icon: Server,
-    title: 'General Purpose',
-    tagline: 'Balanced CPU & RAM for most workloads',
-    items: ['Starting from 2 vCPU', 'Up to 256GB RAM', 'NVMe SSD Storage'],
-    to: '/pricing?type=general_purpose',
-    gradient: 'from-cyan-500 to-teal-500',
-    glow: 'hover:shadow-cyan-500/25',
-    border: 'hover:border-cyan-400/60',
-  },
-  {
-    icon: Cpu,
-    title: 'CPU Optimized',
-    tagline: 'Dedicated cores for compute-heavy apps',
-    items: ['Up to 32 vCPU', 'Dedicated CPU cores', 'High clock speed'],
-    to: '/pricing?type=cpu_optimized',
-    gradient: 'from-orange-500 to-red-500',
-    glow: 'hover:shadow-orange-500/25',
-    border: 'hover:border-orange-400/60',
-  },
-  {
-    icon: Database,
-    title: 'Memory Optimized',
-    tagline: 'High RAM for databases & caches',
-    items: ['Up to 384GB RAM', 'High memory-to-CPU ratio', 'Perfect for databases'],
-    to: '/pricing?type=memory_optimized',
-    gradient: 'from-emerald-500 to-green-500',
-    glow: 'hover:shadow-emerald-500/25',
-    border: 'hover:border-emerald-400/60',
-  },
-  {
-    icon: Lock,
-    title: 'Dedicated Servers',
-    tagline: 'Single-tenant bare-metal power',
-    items: ['AMD EPYC & Intel Gold', 'Full root access', 'Private VLAN'],
-    to: '/dedicated-servers',
-    gradient: 'from-violet-500 to-purple-500',
-    glow: 'hover:shadow-violet-500/25',
-    border: 'hover:border-violet-400/60',
-  },
-];
-
-const faqs = [
-  { question: 'What is BIDUA Hosting?', answer: 'BIDUA Hosting is an Indian cloud infrastructure provider offering enterprise-grade cloud servers (VPS), CPU/memory optimized instances and dedicated servers with 99.9% uptime SLA, NVMe SSD storage, DDoS protection and 24/7 expert support.' },
-  { question: 'How much does a cloud server cost?', answer: 'Cloud servers start at just ₹1,478/month for a General Purpose 4GB instance (2 vCPU, 4GB RAM, 80GB NVMe SSD). Longer billing cycles get up to 35% discount. All plans include 1TB bandwidth, IPv4, console access and full root access.' },
-  { question: 'Do you provide DDoS protection?', answer: 'Yes. Every BIDUA cloud server includes always-on DDoS protection at the network layer at no extra cost, along with isolated networking and hardened infrastructure.' },
-  { question: 'Can I upgrade my server later?', answer: 'Absolutely. You can upgrade vCPU, RAM and storage in one click from your dashboard without redeploys or downtime. Your data, IP and configuration stay intact.' },
-  { question: 'What operating systems are supported?', answer: 'We support all major Linux distributions (Ubuntu, Debian, CentOS, AlmaLinux, Rocky Linux) and Windows Server images. You can also mount your own ISO for custom installations.' },
-  { question: 'Is there a money-back guarantee?', answer: 'Yes, we offer a 7-day money-back guarantee on all cloud server plans. If you are not satisfied, contact our support team for a full refund — no questions asked.' },
-];
-
-const testimonials = [
-  { name: 'Rohit Sharma', role: 'CTO, FinTech Startup', text: 'Moved our entire production stack to BIDUA. Migration took an afternoon and our p95 latency dropped 40%. Support actually knows what they are doing.' },
-  { name: 'Priya Nair', role: 'Founder, D2C Brand', text: 'Their dashboard is the simplest I have used — spinning up a staging server takes under a minute. Pricing is transparent, no surprise invoices.' },
-  { name: 'Amit Verma', role: 'DevOps Lead, SaaS Company', text: 'Memory-optimized instances run our Redis and Postgres clusters flawlessly. Uptime has been rock solid for 14 months straight.' },
-];
-
-/* ---------- Component ---------- */
+import { Server, Shield, Zap, Clock, Globe, Headphones as HeadphonesIcon, CheckCircle, TrendingUp } from 'lucide-react';
 
 export function Home() {
-  const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const features = [
+    {
+      icon: Zap,
+      title: 'Lightning Fast',
+      description: 'NVMe SSD storage and high-performance processors for blazing fast speeds',
+    },
+    {
+      icon: Shield,
+      title: 'Enterprise Security',
+      description: 'Advanced DDoS protection and enterprise-grade security measures',
+    },
+    {
+      icon: Clock,
+      title: '99.9% Uptime',
+      description: 'Guaranteed uptime with redundant infrastructure and monitoring',
+    },
+    {
+      icon: Globe,
+      title: 'Global Network',
+      description: 'Multiple data centers worldwide for optimal performance',
+    },
+    {
+      icon: HeadphonesIcon,
+      title: '24/7 Support',
+      description: 'Expert support team available around the clock to help you',
+    },
+    {
+      icon: TrendingUp,
+      title: 'Easy Scaling',
+      description: 'Seamlessly upgrade resources as your business grows',
+    },
+  ];
+
+  const stats = [
+    { value: '50K+', label: 'Active Servers' },
+    { value: '99.9%', label: 'Uptime SLA' },
+    { value: '150+', label: 'Countries' },
+    { value: '24/7', label: 'Support' },
+  ];
 
   return (
     <div className="bg-slate-950">
-      <Seo
-        title="BIDUA Hosting - Enterprise Cloud Servers, VPS & Dedicated Hosting India"
-        description="High-performance cloud servers with 99.9% uptime SLA, NVMe SSD storage, DDoS protection and 24/7 expert support. Plans start at ₹1,478/month. Deploy in seconds."
-        path="/"
-        keywords="cloud hosting india, vps hosting, dedicated servers, cloud server price, best vps hosting india"
-        jsonLd={[orgJsonLd, faqJsonLd(faqs)]}
-      />
-
-      {/* ===== HERO ===== */}
-      <section className="relative text-white py-24 md:py-36 overflow-hidden">
-        {/* Animated gradient mesh */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-40 left-1/4 w-[600px] h-[600px] bg-cyan-500/20 rounded-full blur-[140px] animate-pulse" />
-          <div className="absolute top-1/3 -right-32 w-[500px] h-[500px] bg-violet-600/15 rounded-full blur-[130px]" />
-          <div className="absolute -bottom-40 left-0 w-[450px] h-[450px] bg-teal-500/10 rounded-full blur-[120px]" />
-          <div
-            className="absolute inset-0 opacity-[0.15]"
-            style={{
-              backgroundImage: 'linear-gradient(rgba(148,163,184,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.12) 1px, transparent 1px)',
-              backgroundSize: '56px 56px',
-              maskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%)',
-              WebkitMaskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%)',
-            }}
-          />
+      <section className="relative  text-white py-20 md:py-32 overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          {/* <div className="absolute inset-0" style={{
+            backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
+            backgroundSize: '40px 40px'
+          }}></div> */}
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center max-w-4xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-cyan-400/30 bg-cyan-400/10 backdrop-blur-md text-cyan-300 text-sm font-medium mb-8"
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
-              </span>
-              Now deploying on Intel Xeon Gold infrastructure
-            </motion.div>
-
-            <motion.h1
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-[1.1] tracking-tight"
-            >
-              Enterprise Cloud Hosting,
-              <br />
-              <span className="bg-gradient-to-r from-cyan-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
-                Built for Scale.
-              </span>
-            </motion.h1>
-
-            <motion.p
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-lg md:text-2xl mb-10 text-slate-400 max-w-2xl mx-auto leading-relaxed"
-            >
-              High-performance cloud servers with unmatched reliability and security.
-              Deploy in seconds, scale effortlessly.
-            </motion.p>
-
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="flex flex-col sm:flex-row gap-4 justify-center"
-            >
+            <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
+              Enterprise Cloud Hosting Solutions
+            </h1>
+            <p className="text-xl md:text-2xl mb-8 text-cyan-100">
+              High-performance cloud servers with unmatched reliability and security. Deploy in seconds, scale effortlessly.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 to="/pricing"
-                className="group px-8 py-4 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-xl font-semibold hover:shadow-cyan-500/40 hover:shadow-2xl transition-all duration-300 hover:scale-[1.03] relative overflow-hidden"
+                className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg font-semibold hover:from-cyan-400 hover:to-teal-400 transition transform hover:scale-105 shadow-lg shadow-cyan-500/50"
               >
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  View Pricing
-                  <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </span>
+                View Pricing
               </Link>
               <Link
-                to="/calculator"
-                className="px-8 py-4 rounded-xl font-semibold text-cyan-300 transition-all duration-300 border border-cyan-400/40 bg-cyan-400/5 backdrop-blur-md hover:bg-cyan-400/15 hover:border-cyan-300/60 hover:scale-[1.03]"
+                to="/signup"
+                className="px-8 py-4  rounded-lg font-semibold hover:bg-slate-700 transition border-2 border-cyan-500 hover:shadow-lg"
               >
-                Estimate Cost
+                Get Started Free
               </Link>
-            </motion.div>
-
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="mt-6 text-sm text-slate-500"
-            >
-              7-day money-back guarantee · No setup fees · Cancel anytime
-            </motion.p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ===== STATS ===== */}
-      <section className="py-14 border-y border-white/5 bg-white/[0.02]">
+      <section className="py-16 bg-white/5 backdrop-blur-md ">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
-              <Reveal key={index} delay={index * 0.08} className="text-center">
-                <div className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-cyan-300 to-teal-300 bg-clip-text text-transparent mb-2">
-                  <Counter value={stat.value} suffix={stat.suffix} />
+              <div key={index} className="text-center">
+                <div className="text-4xl md:text-5xl font-bold text-cyan-400 mb-2">
+                  {stat.value}
                 </div>
-                <div className="text-slate-500 font-medium text-sm md:text-base">{stat.label}</div>
-              </Reveal>
+                <div className="text-slate-400 font-medium">{stat.label}</div>
+              </div>
             ))}
           </div>
         </div>

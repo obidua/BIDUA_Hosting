@@ -134,15 +134,15 @@ export function Footer() {
             <ul className="space-y-3 text-sm">
               <li className="flex items-start space-x-2">
                 <Mail className="h-5 w-5 text-cyan-400 flex-shrink-0 mt-0.5" />
-                <span>support@biduapods.com</span>
+                <span>support@biduahosting.com</span>
               </li>
               <li className="flex items-start space-x-2">
                 <Phone className="h-5 w-5 text-cyan-400 flex-shrink-0 mt-0.5" />
-                <span>+91 95129 21903</span>
+                <span>+1 (555) 123-4567</span>
               </li>
               <li className="flex items-start space-x-2">
                 <MapPin className="h-5 w-5 text-cyan-400 flex-shrink-0 mt-0.5" />
-                <span>BIDUA Industries Pvt Ltd, Suite 209, C-104, Sector 65, Noida, Uttar Pradesh 201301, India<br />GSTIN: 09AANCB0882D1ZM</span>
+                <span>BIDUA Industries Pvt Ltd, Noida, Uttar Pradesh, India</span>
               </li>
             </ul>
           </div>

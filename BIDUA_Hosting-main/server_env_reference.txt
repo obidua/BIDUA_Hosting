@@ -1,8 +1,0 @@
--rw-rw-r-- 1 root root 174 Dec 19  2025 /var/www/biduahostingful/Hosting/hostingfrontend/.env
-# VITE_API_URL=http://localhost:8000
-
-VITE_API_URL=https://api.ramaerahosting.com
-
-
-VITE_RAZORPAY_KEY_ID=rzp_test_RjxYXvnP7x3l4V
-RAZORPAY_KEY_SECRET=QgblTGXPazxizp7BbHwqRCFD

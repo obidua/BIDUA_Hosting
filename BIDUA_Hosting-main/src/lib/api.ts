@@ -3,10 +3,21 @@
 // Move the constant to a separate file to avoid circular dependencies if any, 
 // but for now let's keep the logic here and just fix the syntax.
 
-const PRIMARY_BASE = (import.meta.env.VITE_API_URL || 'https://biduahosting.com').replace('http://', 'https://');
-const FALLBACK_BASE = PRIMARY_BASE.includes('localhost')
-  ? PRIMARY_BASE.replace('localhost', '127.0.0.1')
-  : PRIMARY_BASE;
+const rawBase = import.meta.env.VITE_API_URL || 'https://api.ramaerahosting.com';
+
+// In development with Vite, use empty string to leverage proxy config
+// In production, use the actual API URL
+const isDevelopment = import.meta.env.DEV;
+const PRIMARY_BASE = isDevelopment ? '' : (
+  (rawBase.includes('localhost') || rawBase.includes('127.0.0.1'))
+    ? rawBase
+    : rawBase.replace('http://', 'https://')
+);
+const FALLBACK_BASE = isDevelopment ? '' : (
+  PRIMARY_BASE.includes('localhost')
+    ? PRIMARY_BASE.replace('localhost', '127.0.0.1')
+    : PRIMARY_BASE
+);
 
 export const API_BASE_URL = PRIMARY_BASE;
 

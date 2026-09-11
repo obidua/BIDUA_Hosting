@@ -46,7 +46,6 @@ class PlanService:
             base_price=plan_data.base_price,
             monthly_price=plan_data.monthly_price,
             quarterly_price=plan_data.quarterly_price,
-            semiannual_price=plan_data.semiannual_price,
             annual_price=plan_data.annual_price,
             biennial_price=plan_data.biennial_price,
             triennial_price=plan_data.triennial_price,

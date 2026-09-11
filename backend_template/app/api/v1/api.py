@@ -4,9 +4,8 @@ from app.api.v1.endpoints import (
     billing, dashboard, payments, 
     referrals, affiliate, admin, settings,
     invoices, addons, admin_pricing, attachments,
-    support_enhanced, countries, services
+    support_enhanced, countries, services, pricing, provider
 )
-from app.api.v1.pricing import router as public_pricing
 
 api_router = APIRouter()
 
@@ -19,7 +18,7 @@ api_router.include_router(plans.router, prefix="/plans", tags=["plans"])
 api_router.include_router(addons.router, prefix="/addons", tags=["addons"])
 api_router.include_router(services.router, prefix="/services", tags=["services"])
 api_router.include_router(admin_pricing.router, prefix="/admin/pricing", tags=["admin-pricing"])
-api_router.include_router(public_pricing, tags=["pricing"])  # Public pricing endpoints (includes /quote)
+api_router.include_router(pricing.router, tags=["pricing"])  # Public pricing endpoints
 api_router.include_router(attachments.router, prefix="/attachments", tags=["attachments"])
 api_router.include_router(support_enhanced.router, prefix="/support", tags=["support"])
 api_router.include_router(countries.router, prefix="/countries", tags=["countries"])
@@ -32,3 +31,4 @@ api_router.include_router(invoices.router, prefix="/invoices", tags=["invoices"]
 api_router.include_router(referrals.router, prefix="/referrals", tags=["referrals"])
 api_router.include_router(affiliate.router, prefix="/affiliate", tags=["affiliate"])  # New affiliate system
 api_router.include_router(settings.router, prefix="/settings", tags=["settings"])
+api_router.include_router(provider.router, prefix="/provider", tags=["provider"])  # Provider dashboard

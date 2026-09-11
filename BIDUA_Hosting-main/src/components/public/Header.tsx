@@ -6,7 +6,7 @@ import logo from "../../assets/logo/biduahostinglogo.png"
 
 export function Header() {
   const [productsOpen, setProductsOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, isAdmin, isProvider } = useAuth();
   const location = useLocation();
 
   useEffect(() => {
@@ -86,7 +86,7 @@ export function Header() {
           <div className="hidden md:flex items-center space-x-4">
             {user ? (
               <Link
-                to="/dashboard"
+                to={isAdmin ? "/admin" : isProvider ? "/provider" : "/dashboard"}
                 className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg hover:from-cyan-400 hover:to-teal-400 transition shadow-lg shadow-cyan-500/50"
               >
                 Dashboard

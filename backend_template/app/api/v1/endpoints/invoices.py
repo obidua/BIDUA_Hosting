@@ -366,8 +366,8 @@ async def download_invoice(
 <body>
     <div class="header">
         <div class="company">BIDUA INDUSTRIES PVT LTD</div>
-        <p>Suite 209, C-104, Sector 65, Noida, UP 201301, India (GSTIN: 09AANCB0882D1ZM)</p>
-        <p>Email: support@biduapods.com | Phone: +91 95129 21903</p>
+        <p>Office 201, B 158, Sector 63, Noida, UP 201301, India</p>
+        <p>Email: support@bidua.com | Phone: +91 120 416 8464</p>
     </div>
     
     <h2>INVOICE</h2>

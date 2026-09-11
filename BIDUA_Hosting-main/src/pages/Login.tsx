@@ -10,7 +10,7 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, user, profile } = useAuth();
+  const { signIn, user, profile, isAdmin, isProvider } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -22,8 +22,16 @@ export function Login() {
   useEffect(() => {
     // If already logged in, redirect based on role
     if (user && profile) {
-      const isAdmin = profile.role === 'admin' || profile.role === 'super_admin';
-      const destination = isAdmin ? '/admin' : redirectUrl;
+      let destination = redirectUrl;
+      
+      // Prioritize role-based routing
+      if (isAdmin) {
+        destination = '/admin';
+      } else if (isProvider) {
+        destination = '/provider';
+      } else {
+        destination = redirectUrl;
+      }
 
       if (serverConfig) {
         navigate(destination, { state: { serverConfig }, replace: true });
@@ -31,7 +39,7 @@ export function Login() {
         navigate(destination, { replace: true });
       }
     }
-  }, [user, profile, navigate, redirectUrl, serverConfig]);
+  }, [user, profile, navigate, redirectUrl, serverConfig, isAdmin, isProvider]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

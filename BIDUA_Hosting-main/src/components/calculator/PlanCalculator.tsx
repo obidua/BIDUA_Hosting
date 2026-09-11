@@ -13,14 +13,6 @@ interface PlanConfig {
   vcpu: number;
   storage: number;
   basePrice: number;
-  cycleMarket: {
-    monthly: number;
-    quarterly: number;
-    semiannually: number;
-    annually: number;
-    biennially: number;
-    triennially: number;
-  };
 }
 
 const planTypeInfo = {
@@ -128,15 +120,7 @@ export function PlanCalculator() {
       ram: plan.ram_gb,
       vcpu: plan.cpu_cores,
       storage: plan.storage_gb,
-      basePrice: parseFloat(plan.monthly_price),
-      cycleMarket: {
-        monthly: parseFloat(plan.monthly_price) || 0,
-        quarterly: parseFloat(plan.quarterly_price) || (parseFloat(plan.monthly_price) || 0) * 3,
-        semiannually: parseFloat(plan.semiannual_price as any || '') || (parseFloat(plan.monthly_price) || 0) * 6,
-        annually: parseFloat(plan.annual_price) || (parseFloat(plan.monthly_price) || 0) * 12,
-        biennially: parseFloat(plan.biennial_price) || (parseFloat(plan.monthly_price) || 0) * 24,
-        triennially: parseFloat(plan.triennial_price) || (parseFloat(plan.monthly_price) || 0) * 36,
-      }
+      basePrice: parseFloat(plan.monthly_price)
     };
     planConfigurations[plan.plan_type as PlanType][plan.ram_gb] = config;
   });
@@ -232,23 +216,21 @@ export function PlanCalculator() {
   const BANDWIDTH_PRICE_PER_TB = 100;
 
   const calculatePricing = () => {
-    const addonsMonthly = extraStorage * STORAGE_PRICE_PER_GB + extraBandwidth * BANDWIDTH_PRICE_PER_TB;
+    const baseMonthly = currentConfig.basePrice;
+    const storageAddon = extraStorage * STORAGE_PRICE_PER_GB;
+    const bandwidthAddon = extraBandwidth * BANDWIDTH_PRICE_PER_TB;
 
-    // market (pre-discount) TOTAL for the selected cycle, straight from DB per-cycle columns
-    const marketCycleTotal = currentConfig.cycleMarket[billingCycle] || currentConfig.basePrice * cycleInfo.months;
-    // per-month market price for this cycle (used as 'Base Plan' strike-through basis)
-    const baseMonthly = marketCycleTotal / cycleInfo.months;
-
-    const totalBeforeDiscount = marketCycleTotal + addonsMonthly * cycleInfo.months;
+    const monthlyTotal = baseMonthly + storageAddon + bandwidthAddon;
+    const totalBeforeDiscount = monthlyTotal * cycleInfo.months;
     const discount = (totalBeforeDiscount * cycleInfo.discount) / 100;
     const totalAfterDiscount = totalBeforeDiscount - discount;
     const effectiveMonthly = totalAfterDiscount / cycleInfo.months;
 
     return {
       baseMonthly,
-      storageAddon: extraStorage * STORAGE_PRICE_PER_GB,
-      bandwidthAddon: extraBandwidth * BANDWIDTH_PRICE_PER_TB,
-      monthlyTotal: baseMonthly + addonsMonthly,
+      storageAddon,
+      bandwidthAddon,
+      monthlyTotal,
       totalBeforeDiscount,
       discount,
       totalAfterDiscount,

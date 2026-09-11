@@ -140,16 +140,7 @@ async def get_pricing_quote(
 
     qty = max(1, payload.quantity or 1)
 
-    # 3) Base plan cycle total (market pre-discount) and addons monthly
-    cycle_market_map = {
-        'monthly': plan.monthly_price,
-        'quarterly': plan.quarterly_price,
-        'semiannually': plan.semiannual_price or (plan.monthly_price * Decimal('6')),
-        'annually': plan.annual_price,
-        'biennially': plan.biennial_price,
-        'triennially': plan.triennial_price,
-    }
-    base_cycle_total = cycle_market_map.get(payload.billing_cycle, plan.monthly_price)
+    # 3) Base monthly and addons monthly
     base_monthly = Decimal(str(plan.monthly_price))
 
     addons_monthly = Decimal('0')
@@ -229,10 +220,8 @@ async def get_pricing_quote(
     months, label, discount_percent = cycle_map.get(payload.billing_cycle, (1, 'Monthly', Decimal('0')))
 
     # 5) Subtotals and totals
-    #   plan base = market total for the whole selected cycle (from DB per-cycle column)
-    #   addons    = monthly addons * months, then cycle discount is applied on top
-    per_server_cycle = base_cycle_total + (addons_monthly * Decimal(str(months)))
-    subtotal_before_discount = per_server_cycle * Decimal(str(qty))
+    per_server_monthly = base_monthly + addons_monthly
+    subtotal_before_discount = per_server_monthly * Decimal(str(months)) * Decimal(str(qty))
 
     discount_amount = (subtotal_before_discount * discount_percent / Decimal('100')).quantize(Decimal('1.00')) if discount_percent > 0 else Decimal('0.00')
     subtotal_after_discount = subtotal_before_discount - discount_amount

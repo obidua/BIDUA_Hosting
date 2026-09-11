@@ -10,7 +10,14 @@ export interface User {
 
 export async function signUp(email: string, password: string, username: string, fullName: string, referralCode?: string) {
     try {
-        const data = await api.signUp(email, password, username, fullName, referralCode);
+        // Create data object matching backend UserCreate schema
+        const userData = {
+            email,
+            password,
+            full_name: fullName,
+            referral_code: referralCode || undefined,
+        };
+        const data = await api.signUp(userData);
         return { data, error: null };
     } catch (error) {
         console.error('Sign up error:', error);
