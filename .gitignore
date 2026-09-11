@@ -52,3 +52,11 @@ temp/
 
 # Attached assets (optional - remove if you want to include)
 attached_assets/
+
+# Build caches and junk
+BIDUA_Hosting-main/.vite/
+BIDUA_Hosting-main/dist_backup_old_*/
+backend_template/CACHED
+backend_template/ERROR
+backend_template/=?
+backend_template/.env.server.production

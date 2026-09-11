@@ -1,52 +1,67 @@
 {
-  "hash": "c4517636",
-  "configHash": "8005ebde",
-  "lockfileHash": "050b83a7",
-  "browserHash": "282b8600",
+  "hash": "2428e67e",
+  "configHash": "aed509b7",
+  "lockfileHash": "d9d485b0",
+  "browserHash": "6e8a7f5d",
   "optimized": {
     "react": {
       "src": "../../node_modules/react/index.js",
       "file": "react.js",
-      "fileHash": "17c6d935",
+      "fileHash": "a518d04e",
       "needsInterop": true
     },
     "react-dom": {
       "src": "../../node_modules/react-dom/index.js",
       "file": "react-dom.js",
-      "fileHash": "2bdbac7a",
+      "fileHash": "0533f634",
       "needsInterop": true
     },
     "react/jsx-dev-runtime": {
       "src": "../../node_modules/react/jsx-dev-runtime.js",
       "file": "react_jsx-dev-runtime.js",
-      "fileHash": "8597efb6",
+      "fileHash": "892eb80b",
       "needsInterop": true
     },
     "react/jsx-runtime": {
       "src": "../../node_modules/react/jsx-runtime.js",
       "file": "react_jsx-runtime.js",
-      "fileHash": "b74e2bfe",
+      "fileHash": "cbc88373",
       "needsInterop": true
+    },
+    "axios": {
+      "src": "../../node_modules/axios/index.js",
+      "file": "axios.js",
+      "fileHash": "58c0ad3a",
+      "needsInterop": false
     },
     "react-dom/client": {
       "src": "../../node_modules/react-dom/client.js",
       "file": "react-dom_client.js",
-      "fileHash": "4a069011",
+      "fileHash": "9156dd02",
       "needsInterop": true
     },
     "react-router-dom": {
       "src": "../../node_modules/react-router-dom/dist/index.mjs",
       "file": "react-router-dom.js",
-      "fileHash": "33a2be60",
+      "fileHash": "1826f0b8",
+      "needsInterop": false
+    },
+    "zustand": {
+      "src": "../../node_modules/zustand/esm/index.mjs",
+      "file": "zustand.js",
+      "fileHash": "0bc9bebc",
       "needsInterop": false
     }
   },
   "chunks": {
-    "chunk-GT3PTVOL": {
-      "file": "chunk-GT3PTVOL.js"
+    "chunk-LER6W43O": {
+      "file": "chunk-LER6W43O.js"
     },
-    "chunk-UTEJFLXC": {
-      "file": "chunk-UTEJFLXC.js"
+    "chunk-32E4H3EV": {
+      "file": "chunk-32E4H3EV.js"
+    },
+    "chunk-G3PMV62Z": {
+      "file": "chunk-G3PMV62Z.js"
     }
   }
 }

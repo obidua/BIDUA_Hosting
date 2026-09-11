@@ -32,4 +32,3 @@ migrations/
 
 # Docker
 .dockerignore
-.env.server.production
