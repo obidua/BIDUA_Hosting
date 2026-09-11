@@ -4,9 +4,9 @@ import { motion, useInView, animate } from 'framer-motion';
 import {
   Server, Shield, Zap, Globe, Headphones as HeadphonesIcon,
   CheckCircle, TrendingUp, Cpu, Database, ChevronDown, Star,
-  Gauge, Lock,
+  Gauge, Lock, ArrowRight,
 } from 'lucide-react';
-import { Seo, faqJsonLd } from '../components/Seo';
+import { Seo, orgJsonLd, faqJsonLd } from '../components/Seo';
 
 /* ---------- Animation helpers ---------- */
 
@@ -135,7 +135,7 @@ export function Home() {
         description="High-performance cloud servers with 99.9% uptime SLA, NVMe SSD storage, DDoS protection and 24/7 expert support. Plans start at ₹1,478/month. Deploy in seconds."
         path="/"
         keywords="cloud hosting india, vps hosting, dedicated servers, cloud server price, best vps hosting india"
-        jsonLd={[orgJsonLd(), faqJsonLd(faqs)]}
+        jsonLd={[orgJsonLd, faqJsonLd(faqs)]}
       />
 
       {/* ===== HERO ===== */}

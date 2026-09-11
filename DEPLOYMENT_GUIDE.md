@@ -2,11 +2,207 @@
 
 > Server: `172.105.123.229` (Linode, Ubuntu 22.04)  
 > Domain: `biduahosting.com`  
-> Last Updated: 2026-09-12
+> Last Updated: **2026-09-12**
 
 ---
 
-## 🏗️ Architecture Overview
+## 🔴 TOP 10 DEPLOYMENT PITFALLS (Read Before Every Deploy!)
+
+| # | Pitfall | Symptom | Prevention |
+|---|---------|---------|------------|
+| **1** | **`VITE_API_URL` = localhost** | Calculator/Pricing pe `Failed to fetch` | Build se pehle `grep VITE_API_URL .env` karo — `https://biduahosting.com` hona chahiye |
+| **2** | **Function define se pehle use** | `orgJsonLd is not defined` / `ArrowRight is not defined` | Yaad rakho: pehle define, phir use karo |
+| **3** | **Browser purana cache** | Deploy ke baad bhi old UI dikhega | Hard refresh: `Cmd+Shift+R` + Cloudflare cache purge |
+| **4** | **`.env` file git me ghus jaaye** | GitHub push reject (Push Protection) | `.env` files `.gitignore` me hona chahiye |
+| **5** | **Frontend dist sirf Docker me, nginx pe nahi** | Nginx 404 dega ya purana content serve karega | `rsync` karke nginx ke dist folder me copy karo + `nginx -s reload` |
+| **6** | **Cloudflare cache API responses** | Price updates reflect nahi hoti | CF Dashboard → Caching → Purge Everything |
+| **7** | **Service Worker purana content serve kare** | Deploy ke bhi old page load ho | SW.js me cache-busting version update |
+| **8** | **Nginx `/api/` location missing** | `/api/` calls `index.html` return kare | Nginx config me `location /api/` block verify karo |
+| **9** | **JS bundle 4hr cache (max-age=14400)** | Browser purana JS use karta hai | HTML ke liye `no-cache`, JS ke liye versioned filename |
+| **10** | **Database sync direction galat** | Production data local pe overwrite ho | Hamesha pehle backup lo, phir sync karo |
+
+---
+
+## 🚀 Quick Deploy Checklist (Copy-Paste Ready)
+
+```bash
+# ===== STEP 1: Pre-flight Checks (LOCAL MACHINE) =====
+cd "/Users/dev/Downloads/Dev Folder/BIDUA Industries/BIDUA Hosting/BIDUA Hostin Live/BIDUA Hosting/BIDUA_Hosting-main"
+
+# CRITICAL #1: Verify .env has PRODUCTION URL
+grep VITE_API_URL .env
+# MUST show: VITE_API_URL=https://biduahosting.com
+# If it shows localhost:8000 → FIX IT FIRST (see Pitfall #1)
+
+# CRITICAL #2: Verify nginx API proxy is configured
+ssh root@172.105.123.229 'grep -A5 "location /api/" /etc/nginx/sites-enabled/biduahosting.com'
+# MUST show: proxy_pass http://127.0.0.1:8000
+
+# ===== STEP 2: Build Frontend =====
+npm run build
+# Wait for "build complete" — should take ~5-10 seconds
+# Output: dist/assets/index-XXXXX.js (new hash each build)
+
+# ===== STEP 3: Deploy to Server =====
+# Backup old dist (rollback ke liye)
+ssh root@172.105.123.229 'mv /var/www/biduahostingful/Hosting/hostingfrontend/dist /var/www/biduahostingful/Hosting/hostingfrontend/dist_backup_$(date +%Y%m%d_%H%M%S) 2>/dev/null; echo "backup done"'
+
+# Push new build
+rsync -az --delete -e ssh dist/ root@172.105.123.229:/var/www/biduahostingful/Hosting/hostingfrontend/dist/
+
+# Reload nginx
+ssh root@172.105.123.229 'nginx -s reload'
+
+# ===== STEP 4: Purge Cloudflare Cache (IF configured) =====
+# Agar Cloudflare use kar rahe ho:
+# Option A: CF Dashboard → Caching → Configuration → Purge Everything
+# Option B: CF API call (agar token hai)
+# curl -X POST "https://api.cloudflare.com/client/v4/zones/{zone_id}/purge_cache" \
+#   -H "Authorization: Bearer {api_token}" \
+#   -H "Content-Type: application/json" \
+#   --data '{"purge_everything":true}'
+
+# ===== STEP 5: Verify (wait 30s for propagation) =====
+sleep 30
+curl -s -o /dev/null -w '%{http_code}' https://biduahosting.com/ && echo ' home'
+curl -s -o /dev/null -w '%{http_code}' https://biduahosting.com/api/v1/pricing/plans && echo ' api'
+curl -s https://biduahosting.com/api/v1/pricing/plans | head -c 100
+
+# Verify new bundle is served
+NEW_JS=$(curl -s -A 'Mozilla/5.0' 'https://biduahosting.com/' | grep -oE 'index-[A-Za-z0-9_-]+\.js' | head -1)
+echo "Live bundle: $NEW_JS"
+curl -s "https://biduahosting.com/assets/$NEW_JS" | grep -oE 'orgJsonLd|faqJsonLd|ArrowRight' | sort | uniq -c
+
+# ===== STEP 6: Browser Test =====
+# Open https://biduahosting.com
+# HARD REFRESH: Cmd+Shift+R (Mac) or Ctrl+Shift+R (Windows)
+# Check:
+#   ✓ Home page loads (no white screen, no errors)
+#   ✓ /pricing shows prices
+#   ✓ /calculator loads plans (no "Failed to fetch")
+#   ✓ /contact shows GSTIN + Noida address
+#   ✓ Footer shows official details
+```
+
+---
+
+## 🔴 Runtime Errors & Quick Fixes
+
+### Error: `orgJsonLd is not defined` or `ArrowRight is not defined`
+**Cause:** Unnamed export or missing function in React component  
+**Fix:** Every function/component used in JSX must be exported or defined BEFORE use:
+```tsx
+// ✅ CORRECT — define before use
+const orgJsonLd = () => ({ ... });
+function Home() {
+  return <script>{JSON.stringify(orgJsonLd())}</script>;
+}
+
+// ❌ WRONG — using before defining
+function Home() {
+  return <script>{JSON.stringify(orgJsonLd())}</script>; // ERROR!
+}
+const orgJsonLd = () => ({ ... });
+```
+
+### Error: `Failed to fetch` on Calculator/Pricing pages
+**Cause:** Browser cached old JS bundle OR `VITE_API_URL` still pointing to localhost  
+**Fix (try in order):**
+1. Hard refresh browser: `Cmd+Shift+R` (Mac) or `Ctrl+Shift+R` (Windows)
+2. If still failing → check `.env` has `VITE_API_URL=https://biduahosting.com`
+3. Rebuild + redeploy (see Quick Deploy Checklist above)
+
+### Error: White screen / "Something went wrong"
+**Cause:** Build failed OR error in React component  
+**Fix:**
+```bash
+# Check browser console (F12 → Console) for exact error
+# Common causes:
+#   - Missing import (component not imported)
+#   - Undefined variable (typo in variable name)
+#   - Missing export (function not exported from file)
+```
+
+### Error: API returns HTML instead of JSON
+**Cause:** Nginx not proxying `/api/` to backend  
+**Fix:**
+```bash
+ssh root@172.105.123.229
+cat /etc/nginx/sites-enabled/biduahosting.com | grep -A10 "location /api"
+# Should show: proxy_pass http://127.0.0.1:8000
+# If missing → re-add the location block, then:
+nginx -t && nginx -s reload
+```
+
+---
+
+## 🔄 Rollback Procedure
+
+### Rollback Frontend (instant):
+```bash
+ssh root@172.105.123.229
+# List backups
+ls -lt /var/www/biduahostingful/Hosting/hostingfrontend/dist_backup_* | head -3
+# Restore latest backup
+rm -rf /var/www/biduahostingful/Hosting/hostingfrontend/dist
+mv /var/www/biduahostingful/Hosting/hostingfrontend/dist_backup_YYYYMMDD_HHMMSS /var/www/biduahostingful/Hosting/hostingfrontend/dist
+nginx -s reload
+echo "✅ Frontend rolled back"
+```
+
+### Rollback Database:
+```bash
+ssh root@172.105.123.229
+# Restore from backup
+docker exec biduahosting-db-1 psql -U postgres ramaerahostingdb < /root/backup_pricing_20260911/db_backup.sql
+```
+
+### Rollback Backend:
+```bash
+ssh root@172.105.123.229
+cd /var/www/biduahostingful/Hosting/hostingbackend
+# Revert git
+git log --oneline -5
+git revert HEAD  # or git reset --hard <commit-hash>
+# Restart
+docker compose restart backend
+```
+
+---
+
+## 🔄 Rollback Procedure
+
+### Rollback Frontend (instant):
+```bash
+ssh root@172.105.123.229
+# List backups
+ls -lt /var/www/biduahostingful/Hosting/hostingfrontend/dist_backup_* | head -3
+# Restore latest backup
+rm -rf /var/www/biduahostingful/Hosting/hostingfrontend/dist
+mv /var/www/biduahostingful/Hosting/hostingfrontend/dist_backup_YYYYMMDD_HHMMSS /var/www/biduahostingful/Hosting/hostingfrontend/dist
+nginx -s reload
+echo "✅ Frontend rolled back"
+```
+
+### Rollback Database:
+```bash
+ssh root@172.105.123.229
+# Restore from backup
+docker exec biduahosting-db-1 psql -U postgres ramaerahostingdb < /root/backup_pricing_20260911/db_backup.sql
+```
+
+### Rollback Backend:
+```bash
+ssh root@172.105.123.229
+cd /var/www/biduahostingful/Hosting/hostingbackend
+# Revert git
+git log --oneline -5
+git revert HEAD  # or git reset --hard <commit-hash>
+# Restart
+docker compose restart backend
+```
+
+---
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -755,6 +951,67 @@ systemctl reload nginx                # Apply if valid
 
 ---
 
+## 💰 Pricing System
+
+### How It Works (Option C — Implemented)
+
+| Component | Description |
+|-----------|-------------|
+| **Base Price** | VMHoster's current price for each plan |
+| **Selling Price** | Base + 20% markup (our cost + margin) |
+| **Market Price** | Monthly × 12 (shown as strike-through) |
+| **Discount** | Monthly 5% → Quarterly 10% → Semi-Annual 15% → Annual 20% → Biennial 25% → Triennial 35% |
+| **Final Price** | Market Price − Discount = exactly VMHoster price |
+
+### Discount Breakdown (G.8GB example)
+
+| Cycle | Market Price | Discount | Final Price |
+|-------|-------------|----------|-------------|
+| Monthly | ₹2,594 | 5% OFF | **₹2,464** |
+| Quarterly | ₹8,213 | 10% OFF | **₹7,392** |
+| Semi-Annually | ₹17,393 | 15% OFF | **₹14,784** |
+| Annually | ₹36,960 | 20% OFF | **₹29,568** |
+| Biennially | ₹78,848 | 25% OFF | **₹59,136** |
+| Triennially | ₹1,36,468 | 35% OFF | **₹88,704** |
+
+### Updating Prices (when VMHoster changes)
+
+```bash
+# Update database directly
+/Library/PostgreSQL/18/bin/psql -h localhost -p 5433 -U apple -d ramaera_hosting -c "
+  UPDATE hosting_plans SET monthly_price = monthly_price * 1.2 WHERE plan_type = 'general_purpose';
+"
+```
+
+---
+
+## 🖥️ Server Infrastructure
+
+### Docker Containers
+
+| Container | Port | Purpose |
+|-----------|------|---------|
+| `biduahosting-frontend-1` | 3000 | Frontend (not used directly) |
+| `biduahosting-backend-1` | 8000 | FastAPI backend |
+| `biduahosting-pgbouncer-1` | 6432 | Connection pooler |
+| `biduahosting-db-1` | 5432 | PostgreSQL 13 |
+
+---
+
+## 🔙 Rollback Procedure
+
+### Rollback Frontend (within 5 minutes)
+
+```bash
+ssh root@172.105.123.229
+ls -lt /var/www/biduahostingful/Hosting/hostingfrontend/dist_backup_*
+rm -rf /var/www/biduahostingful/Hosting/hostingfrontend/dist
+cp -r /var/www/biduahostingful/Hosting/hostingfrontend/dist_backup_YYYYMMDD_HHMMSS /var/www/biduahostingful/Hosting/hostingfrontend/dist
+nginx -s reload
+```
+
+---
+
 ## 📝 Important Notes
 
 1. **Frontend is served as static files** — always build locally and rsync `dist/` to server
@@ -765,6 +1022,22 @@ systemctl reload nginx                # Apply if valid
 6. **Git is your friend** — commit often, push to GitHub for version control
 7. **Never commit secrets** — `.env` files are in `.gitignore`
 8. **SSL auto-renews** via Let's Encrypt certbot
+9. **Always verify `.env` has production URL before building**
+10. **Hard refresh browser** after every deploy
+
+---
+
+## 📞 Contact & Business Details
+
+| Field | Value |
+|-------|-------|
+| **Company** | BIDUA Industries Pvt Ltd |
+| **Address** | Suite 209, C-104, Sector 65, Noida, UP 201301, India |
+| **GSTIN** | 09AANCB0882D1ZM |
+| **Phone** | +91 95129 21903 |
+| **Email** | support@biduapods.com |
+| **Hours** | Mon-Sat 9:00-18:00 IST |
+| **Support** | 24/7 Technical Support |
 
 ---
 
@@ -773,7 +1046,7 @@ systemctl reload nginx                # Apply if valid
 | Service | URL |
 |---------|-----|
 | Live Site | https://biduahosting.com |
-| API | https://api.ramaerahosting.com |
+| API | https://biduahosting.com/api/v1 |
 | VMHoster (pricing source) | https://vmhoster.com/cloud-solution.php |
 | GitHub Repo | https://github.com/obidua/BIDUA_Hosting |
 | Server IP | 172.105.123.229 |
@@ -782,58 +1055,4 @@ systemctl reload nginx                # Apply if valid
 ---
 
 *Document maintained by: BIDUA Industries Tech Team*  
-*Last updated: 2026-09-11*
-
-## 📊 Database Schema
-
-### Key Tables
-
-| Table | Purpose |
-|-------|---------|
-| `hosting_plans` | Server plans & pricing (36 plans) |
-| `services` | Additional services |
-| `addons` | Plan add-ons |
-| `users_profiles` | User accounts |
-| `orders` | Order history |
-| `invoices` | Billing invoices |
-| `payment_transactions` | Payment records |
-| `countries` | Country list (194) |
-
-### Plan Types
-- `general_purpose` (G.4GB to G.256GB) — 9 plans
-- `cpu_optimized` (C.4GB to C.256GB) — 9 plans
-- `memory_optimized` (M.8GB to M.384GB) — 9 plans
-- `dedicated_server` (DS-E3, DS-E5, DS-AMD, DS-GOLD, DS-PLATINUM) — 9 plans
-
-
-curl -s 'https://biduahosting.com/' | head -20
-```
-
-### Backend Deployment
-
-#### Option A: Docker Rebuild (recommended)
-
-```bash
-ssh root@172.105.123.229
-cd /var/www/biduahostingful/Hosting/hostingbackend
-
-# Rebuild and restart
-docker compose down
-docker compose build --no-cache
-docker compose up -d
-
-# Watch logs
-docker logs biduahosting-backend-1 -f
-```
-
-#### Option B: Hot Reload (quick fixes)
-
-```bash
-# Copy updated files
-scp app/api/v1/pricing.py root@172.105.123.229:/var/www/biduahostingful/Hosting/hostingbackend/app/api/v1/
-
-# Restart backend
-ssh root@172.105.123.229 'docker compose -f /var/www/biduahostingful/Hosting/hostingbackend/docker-compose.yml restart backend'
-```
-
-
+*Last updated: 2026-09-12*

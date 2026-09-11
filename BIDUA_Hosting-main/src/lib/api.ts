@@ -3,7 +3,7 @@
 // Move the constant to a separate file to avoid circular dependencies if any, 
 // but for now let's keep the logic here and just fix the syntax.
 
-const PRIMARY_BASE = (import.meta.env.VITE_API_URL || 'https://api.ramaerahosting.com').replace('http://', 'https://');
+const PRIMARY_BASE = (import.meta.env.VITE_API_URL || 'https://biduahosting.com').replace('http://', 'https://');
 const FALLBACK_BASE = PRIMARY_BASE.includes('localhost')
   ? PRIMARY_BASE.replace('localhost', '127.0.0.1')
   : PRIMARY_BASE;
