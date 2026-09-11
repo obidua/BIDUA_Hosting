@@ -721,7 +721,7 @@ export function Pricing() {
             Contact our sales team for enterprise pricing, custom configurations, and dedicated support
           </p>
           <p className="text-lg mb-8 text-cyan-200">
-            📞 +91 120 416 8464 • Mon-Sat 9:00-18:00
+            📞 +91 95129 21903 • Mon-Sat 9:00-18:00 IST
           </p>
           <Link
             to="/contact"

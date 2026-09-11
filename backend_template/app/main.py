@@ -24,7 +24,7 @@ app = FastAPI(
     contact={
         "name": "BIDUA IT Connect Support",
         "url": "https://bidua.com",
-        "email": "support@bidua.com",
+        "email": "support@biduapods.com",
     },
     license_info={
         "name": "Proprietary License",

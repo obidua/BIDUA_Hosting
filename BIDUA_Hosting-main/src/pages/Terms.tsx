@@ -58,7 +58,7 @@ export function Terms() {
     {
       title: '9. Contact & Notices',
       content: [
-        'Primary contact: BIDUA Industries Pvt Ltd, Noida, Uttar Pradesh, India. Email: support@biduahosting.com | Phone: +1 (555) 123-4567.'
+        'Primary contact: BIDUA Industries Pvt Ltd, Suite 209, C-104, Sector 65, Noida, Uttar Pradesh 201301, India (GSTIN: 09AANCB0882D1ZM). Email: support@biduapods.com | Phone: +91 95129 21903.'
       ]
     }
   ];

@@ -356,12 +356,12 @@ export function InvoiceView() {
                   <div className="text-xs font-semibold text-slate-500 uppercase mb-1">Issued By:</div>
                   <div className="font-semibold text-xs md:text-sm mb-1">BIDUA Industries Pvt Ltd</div>
                   <div className="text-xs text-slate-700 space-y-0.5">
-                    <p>Office 201, B 158, Sector 63,</p>
+                    <p>Suite 209, C-104, Sector 65,</p>
                     <p>Noida, Uttar Pradesh 201301, India</p>
-                    <p className="mt-1 font-medium">GSTIN: 09AAMCR4056L1ZS</p>
-                    <p>PAN: AAMCR4056L | SAC: 998315</p>
-                    <p className="mt-1">Email: support@bidua.com</p>
-                    <p>Phone: +91 120 416 8464</p>
+                    <p className="mt-1 font-medium">GSTIN: 09AANCB0882D1ZM</p>
+                    <p>PAN: AANCB0882D | SAC: 998315</p>
+                    <p className="mt-1">Email: support@biduapods.com</p>
+                    <p>Phone: +91 95129 21903</p>
                   </div>
                 </div>
               </div>
@@ -552,7 +552,7 @@ export function InvoiceView() {
                   This is a computer-generated invoice and does not require a signature.
                 </p>
                 <p className="text-[10px] md:text-xs text-slate-500 mt-1">
-                  For queries: <a href="mailto:support@bidua.com" className="text-teal-600">support@bidua.com</a> | +91 120 416 8464
+                  For queries: <a href="mailto:support@biduapods.com" className="text-teal-600">support@biduapods.com</a> | +91 95129 21903
                 </p>
                 <p className="text-[10px] text-slate-400 mt-2">© 2025 BIDUA Industries Pvt Ltd. All rights reserved.</p>
               </div>
