@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Private / app areas - no crawling
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /checkout
+Disallow: /invoice/
+Disallow: /pay-invoice/
+
+Sitemap: https://biduahosting.com/sitemap.xml
